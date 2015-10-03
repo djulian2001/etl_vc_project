@@ -2,28 +2,38 @@ from sqlalchemy import *
 from sqlalchemy.orm import *
 from sqlalchemy.ext.declarative import declarative_base
 
-class ClassName(object):
-    """docstring for ClassName"""
-    def __init__(self, arg):
-        super(ClassName, self).__init__()
-        self.arg = arg
-        
+################################################################################
+# Biodesign Filters:
+#   Using the ORM expression language of sqlalchemy to extract the various sub
+#   querries, or query patterns used frequently to extract the data from people
+#   soft
+################################################################################
 
 
 class AsuPsBioFilters():
     """
+    Biodesign Filters:
+        Using the ORM expression language of sqlalchemy to extract the various sub
+    querries, or query patterns used frequently to extract the data from people
+    soft
         There will be required filters that will be required and need to be pre-defined.
-        the primary example of this is the list of biodesign people that are a subset of
-        all the records in people soft.
+    the primary example of this is the list of biodesign people that are a subset of
+    all the records in people soft.
+    
+    Takes a sqlalchemy session to initializes the the class...
+
     """
     def __init__(self, session):
         self.session = session
 
     def getBiodesignDeptids(self, subQuery=True):
         """
-            The list of department ids that have the matching condition of '%Biodesign%'
+        The list of department ids that have the matching condition of '%Biodesign%'
+
 
         """
+        # biodesignDeptids = []
+
         sub_groups = (
             self.session.query(
                 AsuDwPsDepartments.deptid).filter(
@@ -39,11 +49,22 @@ class AsuPsBioFilters():
 
     def getBiodesignEmplidList(self, subQuery=True):
         """ 
-            The primary list of people that will be used to define the list of emplid we
-            are intrested in from peoplesoft
-        """
-        # build the select statement for the list of all the people
+        The primary list of people that will be used to define the list of emplid we
+        are intrested in from peoplesoft.
+        
+        The subaffiliation codes (subAffsCodes) were provided by the HR / Operations
+        team, these codes are manually assigned within people soft to capture the more
+        complex people relationships that can exist between Biodesign departments.
 
+        Each Job record in PS_JOB has an action code associated with them.  The ones
+        provided in the jobActionExcludeCodes indicate the removal of a person from 
+        the current ASU log, making them, inactive and not a record we wish to get.
+        """
+        # The following are the "where in" portion / filters to use, extend this list as needed...
+        # sub affiliation codes provided by the 
+        subAffsCodes = ['BDAF','BDRP','BDAS','BDFC','BDAG','BAPD','BVIP','BDAU','BDHV','NCON','BDEC','NVOL']
+        jobActionExcludeCodes = ['TER','RET']
+        
         sub_groups = self.getBiodesignDeptids()
 
         affiliation_emplid_list = (
@@ -52,7 +73,7 @@ class AsuPsBioFilters():
                     sub_groups, AsuDwPsSubAffiliations.deptid==sub_groups.c.deptid
                 ).filter(
                     AsuDwPsSubAffiliations.subaffiliation_code.in_(
-                        ['BDAF','BDRP','BDAS','BDFC','BDAG','BAPD','BVIP','BDAU','BDHV','NCON','BDEC','NVOL']
+                        subAffsCodes
                     )
                 )
             )
@@ -74,7 +95,7 @@ class AsuPsBioFilters():
             self.session.query(sub_jobs.c.emplid).join(
                 sub_groups, sub_jobs.c.deptid==sub_groups.c.deptid).filter(
                     sub_jobs.c.rn == 1).filter(
-                        ~sub_jobs.c.action.in_(['TER','RET']))
+                        ~sub_jobs.c.action.in_(jobActionExcludeCodes))
             )
 
         emplid_list = (employee_emplid_list.union(affiliation_emplid_list))
@@ -84,6 +105,10 @@ class AsuPsBioFilters():
         else:
             return emplid_list
 
+
+################################################################################
+# People Soft Models:
+################################################################################
 
 AsuDwPs = declarative_base()
 
