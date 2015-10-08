@@ -4,3 +4,4 @@ asutobio/tmp/**
 vm-asutobio/**
 .DS_Store
 .project
+*.pyc
