@@ -111,21 +111,21 @@ class BioPsAddresses(BioPs):
     country_descr = Column(String(31), nullable=False)
     last_update = Column(DateTime(), nullable=False)
 
-# #
-# class BioPsSubAffiliations(BioPs):
-#     __tablename__ = 'person_subaffiliations'
-#     # below are the data fields out of peopleSoft
-#     emplid = Column(Integer, nullable=False)
-#     deptid = Column(String(15), nullable=False)
-#     subaffiliation_code = Column(String(7), nullable=False)
-#     campus = Column(String(7), nullable=False)
-#     title = Column(String(39), nullable=False)
-#     short_description = Column(String(23), nullable=False)
-#     description = Column(String(47), nullable=False)
-#     directory_publish = Column(String(7), nullable=False)
-#     department = Column(String(31), nullable=False)
-#     last_update = Column(DateTime(), nullable=False)
-#     department_directory = Column(String(255), nullable=True)
+
+class BioPsSubAffiliations(BioPs):
+    __tablename__ = 'person_subaffiliations'
+    # below are the data fields out of peopleSoft
+    emplid = Column(Integer, nullable=False)
+    deptid = Column(String(15), nullable=False)
+    subaffiliation_code = Column(String(7), nullable=False)
+    campus = Column(String(7), nullable=False)
+    title = Column(String(39), nullable=False)
+    short_description = Column(String(23), nullable=False)
+    description = Column(String(47), nullable=False)
+    directory_publish = Column(String(7), nullable=False)
+    department = Column(String(31), nullable=False)
+    last_update = Column(DateTime(), nullable=False)
+    department_directory = Column(String(255), nullable=True)
 
 
 # class BioPsJobHistory(BioPs):

@@ -406,6 +406,73 @@ except Exception, e:
 ###############################################################################
 
 
+###############################################################################
+# Extract the oracle person jobs table and cut up into:
+# 	oracle:
+#		
+#	mysql:
+#		bio_ps.person_subaffiliations
+#
+
+srcPersonSubAffiliations = sesSource.query(
+	AsuDwPsSubAffiliations ).join(
+		srcEmplidsSubQry, AsuDwPsSubAffiliations.emplid==srcEmplidsSubQry.c.emplid ).order_by(
+			AsuDwPsSubAffiliations.emplid ).all()
+
+iPersonSubAffiliations = 1
+
+for personSubAffiliation in srcPersonSubAffiliations:
+	
+	personSubAffiliationList = [
+		personSubAffiliation.emplid,
+		personSubAffiliation.deptid,
+		personSubAffiliation.subaffiliation_code,
+		personSubAffiliation.campus,
+		personSubAffiliation.title,
+		personSubAffiliation.short_description,
+		personSubAffiliation.description,
+		personSubAffiliation.directory_publish,
+		personSubAffiliation.department,
+		personSubAffiliation.last_update,
+		personSubAffiliation.department_directory ]
+
+	personSubAffiliationHash = hashThisList( personSubAffiliationList )
+
+	tgtPersonSubAffiliation = BioPsSubAffiliations(
+		source_hash = personSubAffiliationHash,
+		emplid = personSubAffiliation.emplid,
+		deptid = personSubAffiliation.deptid,
+		subaffiliation_code = personSubAffiliation.subaffiliation_code,
+		campus = personSubAffiliation.campus,
+		title = personSubAffiliation.title,
+		short_description = personSubAffiliation.short_description,
+		description = personSubAffiliation.description,
+		directory_publish = personSubAffiliation.directory_publish,
+		department = personSubAffiliation.department,
+		last_update = personSubAffiliation.last_update,
+		department_directory = personSubAffiliation.department_directory )
+
+	sesTarget.add( tgtPersonSubAffiliation )
+
+	if iPersonSubAffiliations % 1000 == 0:
+		try:
+			sesTarget.flush()
+		except Exception, e:
+			sesTarget.rollback()
+			raise e
+
+	iPersonSubAffiliations += 1
+
+try:
+	sesTarget.commit()
+except Exception, e:
+	sesTarget.rollback()
+	raise e
+
+#
+# end of for srcPersonJobs
+###############################################################################
+
 
 # print srcPersons
 
