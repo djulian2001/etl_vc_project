@@ -47,7 +47,7 @@ class AsuPsBioFilters():
             return sub_groups
 
 
-    def getBiodesignEmplidList(self, subQuery=True):
+    def getAllBiodesignEmplidList(self, subQuery=True):
         """ 
         The primary list of people that will be used to define the list of emplid we
         are intrested in from peoplesoft.
@@ -69,7 +69,7 @@ class AsuPsBioFilters():
 
         affiliation_emplid_list = (
             self.session.query(
-                AsuDwPsSubAffiliations.emplid).join(
+                AsuDwPsSubAffiliations.emplid.label("emplid")).join(
                     sub_groups, AsuDwPsSubAffiliations.deptid==sub_groups.c.deptid
                 ).filter(
                     AsuDwPsSubAffiliations.subaffiliation_code.in_(
@@ -92,7 +92,7 @@ class AsuPsBioFilters():
             ).subquery()
 
         employee_emplid_list = (
-            self.session.query(sub_jobs.c.emplid).join(
+            self.session.query(sub_jobs.c.emplid.label("emplid")).join(
                 sub_groups, sub_jobs.c.deptid==sub_groups.c.deptid).filter(
                     sub_jobs.c.rn == 1).filter(
                         ~sub_jobs.c.action.in_(jobActionExcludeCodes))
@@ -112,7 +112,7 @@ class AsuPsBioFilters():
 
 AsuDwPs = declarative_base()
 
-class AsuPsPerson(AsuDwPs):
+class AsuDwPsPerson(AsuDwPs):
     __tablename__ = 'PERSON'
     schema = 'DIRECTORY'
     # below are the data fields out of peopleSoft
@@ -129,7 +129,7 @@ class AsuPsPerson(AsuDwPs):
     email_address = Column(String(95))
     eid = Column(String(384))
     birthdate = Column(Date)
-    last_update = Column(String(31), nullable=False)
+    last_update = Column(String(31), nullable=False)    # in source this is a TIMESTAMP() do we care to preserve data type?
     facebook = Column( String(255), nullable=True)
     twitter = Column( String(255), nullable=True)
     google_plus = Column( String(255), nullable=True)
