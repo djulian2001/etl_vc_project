@@ -275,6 +275,137 @@ except Exception, e:
 ###############################################################################
 
 
+###############################################################################
+# Extract the oracle person phones table and cut up into:
+# 	oracle:
+#		filter on list 'CELL','WORK' 
+#	mysql:
+#		bio_ps.person_phones
+#
+
+srcPersonPhones = sesSource.query(
+	AsuDwPsPhones ).join(
+		srcEmplidsSubQry, AsuDwPsPhones.emplid==srcEmplidsSubQry.c.emplid ).filter(
+			AsuDwPsPhones.phone_type.in_( 
+				['CELL','WORK'] ) ).order_by(
+					AsuDwPsPhones.emplid ).all()
+
+iPersonPhones = 1
+
+for personPhone in srcPersonPhones:
+	
+	personPhoneList = [
+		personPhone.emplid,
+		personPhone.phone_type,
+		personPhone.phone,
+		personPhone.last_update]
+
+	personPhoneHash = hashThisList(personPhoneList)
+
+	tgtPersonPhone = BioPsPhones(
+		source_hash = personPhoneHash,
+		emplid = personPhone.emplid,
+		phone_type = personPhone.phone_type,
+		phone = personPhone.phone,
+		last_update = personPhone.last_update )
+
+	sesTarget.add( tgtPersonPhone )
+
+	if iPersonPhones % 1000 == 0:
+		try:
+			sesTarget.flush()
+		except Exception, e:
+			sesTarget.rollback()
+			raise e
+
+	iPersonPhones += 1
+
+try:
+	sesTarget.commit()
+except Exception, e:
+	sesTarget.rollback()
+	raise e
+
+#
+# end of for srcPersonPhones
+###############################################################################
+
+
+
+###############################################################################
+# Extract the oracle person jobs table and cut up into:
+# 	oracle:
+#		
+#	mysql:
+#		bio_ps.person_jobs
+#
+
+srcPersonJobs = sesSource.query(
+	AsuDwPsJobs ).join(
+		srcEmplidsSubQry, AsuDwPsJobs.emplid==srcEmplidsSubQry.c.emplid ).order_by(
+			AsuDwPsJobs.emplid ).all()
+
+iPersonJobs = 1
+
+for personJob in srcPersonJobs:
+	
+	personJobList = [
+		personJob.emplid,
+		personJob.empl_rcd,
+		personJob.title,
+		personJob.department,
+		personJob.mailcode,
+		personJob.empl_class,
+		personJob.job_indicator,
+		personJob.location,
+		personJob.hr_status,
+		personJob.deptid,
+		personJob.empl_status,
+		personJob.fte,
+		personJob.last_update,
+		personJob.department_directory]
+
+	personJobHash = hashThisList(personJobList)
+
+	tgtPersonJob = BioPsJobs(
+		source_hash = personJobHash,
+		emplid = personJob.emplid,
+		empl_rcd = personJob.empl_rcd,
+		title = personJob.title,
+		department = personJob.department,
+		mailcode = personJob.mailcode,
+		empl_class = personJob.empl_class,
+		job_indicator = personJob.job_indicator,
+		location = personJob.location,
+		hr_status = personJob.hr_status,
+		deptid = personJob.deptid,
+		empl_status = personJob.empl_status,
+		fte = personJob.fte,
+		last_update = personJob.last_update,
+		department_directory = personJob.department_directory)
+
+	sesTarget.add( tgtPersonJob )
+
+	if iPersonJobs % 1000 == 0:
+		try:
+			sesTarget.flush()
+		except Exception, e:
+			sesTarget.rollback()
+			raise e
+
+	iPersonJobs += 1
+
+try:
+	sesTarget.commit()
+except Exception, e:
+	sesTarget.rollback()
+	raise e
+
+#
+# end of for srcPersonJobs
+###############################################################################
+
+
 
 # print srcPersons
 

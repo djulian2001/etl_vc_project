@@ -34,7 +34,7 @@ class BioPsPeople(BioPs):
     email_address = Column(String(95))
     eid = Column(String(384))
     birthdate = Column(Date)
-    last_update = Column(String(31), nullable=False)
+    last_update = Column(DateTime(), nullable=False)
 
 # DONE
 class BioPsPersonExternalLinks(BioPs):
@@ -109,7 +109,7 @@ class BioPsAddresses(BioPs):
     postal = Column(String(15), nullable=False)
     country_code = Column(String(7), nullable=False)
     country_descr = Column(String(31), nullable=False)
-    last_update = Column(DateTime(31), nullable=False)
+    last_update = Column(DateTime(), nullable=False)
 
 # #
 # class BioPsSubAffiliations(BioPs):

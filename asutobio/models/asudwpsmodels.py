@@ -129,7 +129,7 @@ class AsuDwPsPerson(AsuDwPs):
     email_address = Column(String(95))
     eid = Column(String(384))
     birthdate = Column(Date)
-    last_update = Column(String(31), nullable=False)    # in source this is a TIMESTAMP() do we care to preserve data type?
+    last_update = Column(DateTime(), nullable=False)    # in source this is a TIMESTAMP() do we care to preserve data type?
     facebook = Column( String(255), nullable=True)
     twitter = Column( String(255), nullable=True)
     google_plus = Column( String(255), nullable=True)
