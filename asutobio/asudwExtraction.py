@@ -70,19 +70,12 @@ def hashThisList(theList):
 #		person_externallinks
 #		person_webprofile, 
 # 	
-###############################################################################
 
 # srcPersons = sesSource.query( AsuDwPsPerson ).join(srcEmplidsSubQry, AsuDwPsPerson.emplid==srcEmplidsSubQry.c.emplid).order_by( AsuDwPsPerson.emplid)[1:5]
 # srcPersons = sesSource.query( AsuDwPsPerson ).join(srcEmplidsSubQry, AsuDwPsPerson.emplid==srcEmplidsSubQry.c.emplid).order_by( AsuDwPsPerson.emplid).all()
-srcPersons = sesSource.query( AsuDwPsPerson ).join(srcEmplidsSubQry, AsuDwPsPerson.emplid==srcEmplidsSubQry.c.emplid).order_by( AsuDwPsPerson.emplid)
+srcPersons = sesSource.query( AsuDwPsPerson ).join(srcEmplidsSubQry, AsuDwPsPerson.emplid==srcEmplidsSubQry.c.emplid).order_by( AsuDwPsPerson.emplid).all()
 
-
-
-print srcPersons
-
-exit()
-
-i = 1
+iPerson = 1
 for srcPerson in srcPersons:
 
 	# map AsuDwpsPerson the columns where they will be extracted to into the bio_ps database
@@ -124,6 +117,7 @@ for srcPerson in srcPersons:
 
 	sesTarget.add(tgtPerson)
 
+	# not required but needed data... no nulls
 	personLinksList = [
 		srcPerson.emplid,
 		srcPerson.facebook,
@@ -132,17 +126,18 @@ for srcPerson in srcPersons:
 		srcPerson.linkedin
 	]
 
-	personLinksHash = hashThisList(personLinksList)
+	if any( personLinksList[1:] ):
+		personLinksHash = hashThisList(personLinksList)
 	
-	tgtPersonLinks = BioPsPersonExternalLinks(
-		source_hash = personLinksHash,
-		emplid = srcPerson.emplid,
-		facebook = srcPerson.facebook,
-		twitter = srcPerson.twitter,
-		google_plus = srcPerson.google_plus,
-		linkedin = srcPerson.linkedin)
+		tgtPersonLinks = BioPsPersonExternalLinks(
+			source_hash = personLinksHash,
+			emplid = srcPerson.emplid,
+			facebook = srcPerson.facebook,
+			twitter = srcPerson.twitter,
+			google_plus = srcPerson.google_plus,
+			linkedin = srcPerson.linkedin)
 	
-	sesTarget.add(tgtPersonLinks)
+		sesTarget.add(tgtPersonLinks)
 
 	personWebProfileList = [
 		srcPerson.emplid,
@@ -161,36 +156,127 @@ for srcPerson in srcPersons:
 		srcPerson.editorships,
 		srcPerson.presentations]
 
-	personWebProfileHash = hashThisList(personWebProfileList)
+	if any( personWebProfileList[1:] ):
+		personWebProfileHash = hashThisList(personWebProfileList)
 
-	personWebProfile = BioPsPersonWebProfile(
-		source_hash = personWebProfileHash,
-		emplid = srcPerson.emplid,
-		bio = srcPerson.bio,
-		research_interests = srcPerson.research_interests,
-		cv = srcPerson.cv,
-		website = srcPerson.website,
-		teaching_website = srcPerson.teaching_website,
-		grad_faculties = srcPerson.grad_faculties,
-		professional_associations = srcPerson.professional_associations,
-		work_history = srcPerson.work_history,
-		education = srcPerson.education,
-		research_group = srcPerson.research_group,
-		research_website = srcPerson.research_website,
-		honors_awards = srcPerson.honors_awards,
-		editorships = srcPerson.editorships,
-		presentations = srcPerson.presentations)
+		personWebProfile = BioPsPersonWebProfile(
+			source_hash = personWebProfileHash,
+			emplid = srcPerson.emplid,
+			bio = srcPerson.bio,
+			research_interests = srcPerson.research_interests,
+			cv = srcPerson.cv,
+			website = srcPerson.website,
+			teaching_website = srcPerson.teaching_website,
+			grad_faculties = srcPerson.grad_faculties,
+			professional_associations = srcPerson.professional_associations,
+			work_history = srcPerson.work_history,
+			education = srcPerson.education,
+			research_group = srcPerson.research_group,
+			research_website = srcPerson.research_website,
+			honors_awards = srcPerson.honors_awards,
+			editorships = srcPerson.editorships,
+			presentations = srcPerson.presentations)
 
+		sesTarget.add(personWebProfile)
 
-	if i % 1000 == 0:
+	if iPerson % 333 == 0:
 		try:
 			sesTarget.flush()
 		except Exception, e:
 			sesTarget.rollback()
 			raise e
-	i += 1
+	
+	iPerson += 1
 
+
+
+try:
+	sesTarget.commit()
+except Exception, e:
+	sesTarget.rollback()
+	raise e
+# finally:
+# 	sesTarget.close()
+# 	sesSource.close()
+#
 # end of for srcPersons
+###############################################################################
+
+###############################################################################
+# Extract the oracle person addresses table and cut up into:
+# 	oracle:
+#		filter on 'CLOC'  campus location (only)
+#	mysql:
+#		person_addresses
+#
+
+srcPersonAddresses = sesSource.query(
+	AsuDwPsAddresses ).join(
+		srcEmplidsSubQry, AsuDwPsAddresses.emplid==srcEmplidsSubQry.c.emplid ).filter(
+			AsuDwPsAddresses.address_type=='CLOC' ).order_by(
+				AsuDwPsAddresses.emplid ).all()
+
+iPersonAddress = 1
+
+for personAddress in srcPersonAddresses:
+	
+	personAddressList = [
+		personAddress.emplid,
+		personAddress.address_type,
+		personAddress.address1,
+		personAddress.address2,
+		personAddress.address3,
+		personAddress.address4,
+		personAddress.city,
+		personAddress.state,
+		personAddress.postal,
+		personAddress.country_code,
+		personAddress.country_descr,
+		personAddress.last_update
+	]
+
+	personAddressHash = hashThisList(personAddressList)
+
+	tgtPersonAddress = BioPsAddresses(
+		source_hash = personAddressHash,
+		emplid = personAddress.emplid,
+		address_type = personAddress.address_type,
+		address1 = personAddress.address1,
+		address2 = personAddress.address2,
+		address3 = personAddress.address3,
+		address4 = personAddress.address4,
+		city = personAddress.city,
+		state = personAddress.state,
+		postal = personAddress.postal,
+		country_code = personAddress.country_code,
+		country_descr = personAddress.country_descr,
+		last_update = personAddress.last_update)
+
+	sesTarget.add(tgtPersonAddress)
+
+
+	if iPersonAddress % 1000 == 0:
+		try:
+			sesTarget.flush()
+		except Exception, e:
+			sesTarget.rollback()
+			raise e
+
+	iPersonAddress += 1
+
+try:
+	sesTarget.commit()
+except Exception, e:
+	sesTarget.rollback()
+	raise e
+
+#
+# end of for srcPersonAddresses
+###############################################################################
+
+
+
+# print srcPersons
 
 try:
 	sesTarget.commit()
@@ -198,11 +284,8 @@ except Exception, e:
 	sesTarget.rollback()
 	raise e
 finally:
-	sesTarget.close() 
-
-
-# print srcPersons
-
+	sesTarget.close()
+	sesSource.close()
 
 
 
