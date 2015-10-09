@@ -6,32 +6,43 @@ from peopleSoftTables import *
 from bioPublicTables import *
 
 # connections...
-# eng_src = create_engine('mysql+mysqldb://app_sqlalchemy:forthegipperNotReagan4show@dbdev.biodesign.asu.edu/bio_public_ps', echo=True)
-eng_src = create_engine('mysql+mysqldb://app_sqlalchemy:forthegipperNotReagan4show@dbdev.biodesign.asu.edu/bio_public_ps')
-# eng_tgt = create_engine('mysql+mysqldb://app_sqlalchemy:forthegipperNotReagan4show@dbdev.biodesign.asu.edu/bio_public', echo=True)
-eng_tgt = create_engine('mysql+mysqldb://app_sqlalchemy:forthegipperNotReagan4show@dbdev.biodesign.asu.edu/bio_public')
+# engineSource = create_engine('mysql+mysqldb://app_sqlalchemy:forthegipperNotReagan4show@dbdev.biodesign.asu.edu/bio_public_ps', echo=True)
 
-# BioPublic.metadata.drop_all(eng_tgt)
+sourceDbUser = 'app_asutobioetl'
+sourceDbPw = 'forthegipperNotReagan4show'
+sourceDbHost = 'dbdev.biodesign.asu.edu'
+sourceDbName = 'bio_ps'
+engSourceString = 'mysql+mysqldb://%s:%s@%s/%s' % (sourceDbUser, sourceDbPw, sourceDbHost, sourceDbName)
+engineSource = create_engine( engSourceString, echo=True )
 
-BioPublic.metadata.create_all(eng_tgt)
+targetDbUser = 'app_asutobioetl'
+targetDbPw = 'forthegipperNotReagan4show'
+targetDbHost = 'dbdev.biodesign.asu.edu'
+targetDbName = 'bio_public'
+engTargetString = 'mysql+mysqldb://%s:%s@%s/%s' % (targetDbUser, targetDbPw, targetDbHost, targetDbName)
+engineTarget = create_engine( engTargetString, echo=True )
 
-# source_conn = eng_src.connect()
-# bind the model to eng_tgt engine
-PsPublic.metadata.bind = eng_src
-BioPublic.metadata.bind = eng_tgt
+# Not sure how I'm going to deal with this...
+BioPublic.metadata.drop_all(engineTarget)
+BioPublic.metadata.create_all(engineTarget)
 
-SrcSession = scoped_session(sessionmaker(bind=eng_src))
-TgtSession = scoped_session(sessionmaker(bind=eng_tgt))
+# source_conn = engineSource.connect()
+# bind the model to engineTarget engine
+PsPublic.metadata.bind = engineSource
+BioPublic.metadata.bind = engineTarget
+
+SrcSession = scoped_session(sessionmaker(bind=engineSource))
+TgtSession = scoped_session(sessionmaker(bind=engineTarget))
 
 true, false = literal(True), literal(False)
 
-# src_session_people = SrcSession()
-# tgt_session_people = TgtSession()
+# sesSource_people = SrcSession()
+# sesTarget_people = TgtSession()
 
-src_session = SrcSession()
-tgt_session = TgtSession()
+sesSource = SrcSession()
+sesTarget = TgtSession()
 
-src_people = src_session.query(PsPeople).all()
+src_people = sesSource.query(PsPeople).all()
 
 i = 1
 for src_person in src_people:
@@ -51,7 +62,7 @@ for src_person in src_people:
 			pass
 		else:
 			# update the the database with the data changes.
-			update_person = tgt_session.query(People).filter(People.emplid==src_person.emplid).one()
+			update_person = sesTarget.query(People).filter(People.emplid==src_person.emplid).one()
 
 			update_person.source_hash = src_person.source_hash
 			update_person.emplid = src_person.emplid
@@ -71,7 +82,7 @@ for src_person in src_people:
 
 			print "updated_at:\t" + update_person.updated_at
 
-			tgt_session.add(update_person)
+			sesTarget.add(update_person)
 			# print i
 			
 			# tgt_person = People()
@@ -95,25 +106,25 @@ for src_person in src_people:
 			created_at = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 			# last_update = src_person.last_update
 		)
-		tgt_session.add(tgt_person)
+		sesTarget.add(tgt_person)
 
 	if i % 1000 == 0:
 		try:
-			tgt_session.flush()
+			sesTarget.flush()
 		except Exception, e:
-			tgt_session.rollback()
+			sesTarget.rollback()
 			raise e
 	i += 1
 
 try:
-	tgt_session.commit()
+	sesTarget.commit()
 except Exception, e:
-	tgt_session.rollback()
+	sesTarget.rollback()
 	raise e
 finally:
-	tgt_session.close() 
+	sesTarget.close() 
 
-	# tgt_session_people.query(or_(
+	# sesTarget_people.query(or_(
 	# 	exists().select_from
 	# 	People).filter(People.emplid==src_person.emplid)
 	# 	)

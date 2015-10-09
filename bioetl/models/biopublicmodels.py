@@ -60,6 +60,7 @@ class People(BioPublic):
 
     addresses = relationship("Addresses", backref="people")
     phone_numbers = relationship("Phones", backref="people")
+    jobs = relationship("Jobs", backref="people")
 
 
 class Addresses(BioPublic):
@@ -92,8 +93,7 @@ class Phones(BioPublic):
         The filtered down people data we want out of peopleSoft
         Commented out are the attributes removed.
     """
-    __tablename__ = 'person_phone_numbers'
-    # below are the data fields out of peopleSoft
+    __tablename__ = 'person_phones'
     person_id = Column(Integer, ForeignKey('people.id'))
     # below are the data fields out of peopleSoft
     emplid = Column(Integer, nullable=False)
@@ -101,43 +101,27 @@ class Phones(BioPublic):
     phone = Column(String(31), nullable=False)
     ### last_update = Column(String(31), nullable=False)
 
-
-# class CommonBase(object):
-
-
-#   id = Column(Integer, primary_key=True)
-#   record_hash = Column(String(56), nullable=False)
-
-# BioPublic = declarative_base(cls=CommonBase)
-
-# class Addresses(BioPublic):
-    
-#   def __init__(self):
-
-
-
-# class ClassName(object):
-#   """docstring for ClassName"""
-#   def __init__(self, arg):
-#       super(ClassName, self).__init__()
-#       self.arg = arg
-        
-
-
-
-
-
-# BELOW WORKS, but don't wrong 'domain' for the model.
-# class CommonBase(object):
-#   record_hash = Column(String(56), nullable=False)
-
-# BioPublic = declarative_base(cls=CommonBase)
-
-
-
-# # Worked But I want
-# class People(bio.People, BioPublic):
-#   # new column...
-    
-#   addresses = relationship("Addresses", backref="directory_people")
-
+class Jobs(BioPublic):
+    """
+        Origin: Asu directory wharehouse, directory.jobs table.
+        The data appears to represent the current job(s) or position here at the
+        university.  The conent provides into insight as to what department over-
+        sees the position.
+    """
+    __tablename__ = 'person_jobs'
+    person_id = Column(Integer, ForeignKey('people.id'))
+    # below are the data fields out of peopleSoft
+    emplid = Column(Integer, nullable=False)
+    empl_rcd = Column(Numeric(asdecimal=False), nullable=False)
+    title = Column(String(255))
+    department = Column(String(31))
+    mailcode = Column(Integer)
+    empl_class = Column(String(31))
+    job_indicator = Column(String(7), nullable=False)
+    location = Column(String(15), nullable=False)
+    hr_status = Column(String(7), nullable=False)
+    deptid = Column(String(15), nullable=False)
+    empl_status = Column(String(7), nullable=False)
+    fte = Column(Numeric(7,6), nullable=False)
+    ### last_update = Column(DateTime(), nullable=False)
+    department_directory = Column(String(255))
