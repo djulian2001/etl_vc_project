@@ -33,7 +33,7 @@ engineSource = create_engine(engSourceString, echo=True)
 
 conn = engineSource.connect()
 
-# insp = reflection.Inspector.from_engine(engineSource)
+insp = reflection.Inspector.from_engine(engineSource)
 #  In python terminal... going to test the "raw sql statements"...
 
 for tbl in insp.get_table_names('asudw'):
@@ -76,7 +76,7 @@ for tbl in insp.get_table_names('asudw'):
 # principal
 
 #list of person columns:
-for col in insp.get_columns('PS_DEPT_TBL', schema='SYSADM'):
+for col in insp.get_columns('PERSON', schema='DIRECTORY'):
 	print col
 
 
