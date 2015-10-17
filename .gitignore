@@ -5,3 +5,4 @@ vm-asutobio/**
 .DS_Store
 .project
 *.pyc
+*.egg-info
