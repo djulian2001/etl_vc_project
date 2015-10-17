@@ -1,0 +1,11 @@
+Metadata-Version: 1.1
+Name: asuToBiodesign
+Version: 0.1
+Summary: Extract Translate Load ASU people soft data from the directory warehouse into the biodesign database(s) for use, reporting, etc.
+Home-page: https://git.biodesign.asu.edu/primusdj/asuToBiodesign/tree/master
+Author: David Julian
+Author-email: david.julian@asu.edu
+License: UNKNOWN
+Download-URL: https://git.biodesign.asu.edu/primusdj/asuToBiodesign.git
+Description: UNKNOWN
+Platform: UNKNOWN

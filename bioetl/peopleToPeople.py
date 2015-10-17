@@ -3,7 +3,7 @@ from sqlalchemy import *
 from sqlalchemy.orm import *
 
 from models.biopublicmodels import *
-from asutobio.models.biopsmodels import *
+from models.biopsmodels import *
 # from ..asutobio.models.biopsmodels import *
 
 # connections...
@@ -24,7 +24,7 @@ engTargetString = 'mysql+mysqldb://%s:%s@%s/%s' % (targetDbUser, targetDbPw, tar
 engineTarget = create_engine( engTargetString, echo=True )
 
 # Not sure how I'm going to deal with this...
-BioPublic.metadata.drop_all(engineTarget)
+# BioPublic.metadata.drop_all(engineTarget)
 BioPublic.metadata.create_all(engineTarget)
 
 # source_conn = engineSource.connect()
@@ -43,9 +43,9 @@ true, false = literal(True), literal(False)
 sesSource = SrcSession()
 sesTarget = TgtSession()
 
-src_people = sesSource.query(PsPeople).all()
+src_people = sesSource.query( BioPsPeople ).all()
 
-i = 1
+iPerson = 1
 for src_person in src_people:
 	# determine the person exists in the target database.
 	(person_exists, ), = sesTarget.query(exists().where(People.emplid==src_person.emplid))
@@ -109,13 +109,25 @@ for src_person in src_people:
 		)
 		sesTarget.add(tgt_person)
 
-	if i % 1000 == 0:
+	if iPerson % 1000 == 0:
 		try:
 			sesTarget.flush()
 		except Exception, e:
 			sesTarget.rollback()
 			raise e
-	i += 1
+	iPerson += 1
+
+try:
+	sesTarget.commit()
+except Exception, e:
+	sesTarget.rollback()
+	raise e
+# finally:
+# 	sesTarget.close()
+# 	sesSource.close()
+
+
+
 
 try:
 	sesTarget.commit()
@@ -125,6 +137,7 @@ except Exception, e:
 finally:
 	sesTarget.close()
 	sesSource.close()
+
 
 	# sesTarget_people.query(or_(
 	# 	exists().select_from

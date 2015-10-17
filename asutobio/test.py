@@ -80,7 +80,7 @@ for col in insp.get_columns('PERSON', schema='DIRECTORY'):
 	print col
 
 
-sql = "SELECT * FROM DIRECTORY.PERSON WHERE ROWNUM <=10"
+sql = "SELECT * FROM DIRECTORY.PERSON WHERE asurite_id = 'primusdj' AND ROWNUM <=10"
 
 sql = "SELECT MAX(LENGTH(empl_rcd)) FROM DIRECTORY.JOB WHERE ROWNUM <=10"
 sql = "SELECT MAX(empl_rcd) FROM DIRECTORY.JOB WHERE 1=1"
@@ -90,7 +90,7 @@ sql = "SELECT j.emplid, j.effdt, j.action_dt, j.job_entry_dt, j.dept_entry_dt, j
 sql = "SELECT D.DEPTID, D.DESCR, D.EFFDT, D.DESCRSHORT, D.COMPANY, D.LOCATION, D.SETID, D.SRC_SYS_ID, D.EFF_STATUS,  LISTAGG(D.DESCR, ': ') WITHIN GROUP (ORDER BY D.EFFDT) OVER (PARTITION BY D.DEPTID) dept_titles, ROW_NUMBER() OVER (PARTITION BY D.DEPTID ORDER BY D.EFFDT desc) rn FROM SYSADM.PS_DEPT_TBL D WHERE D.DESCR LIKE '%Biodesign%'"
 
 # the raw sql we want to use....
-sql = "SELECT job.emplid \
+sql = "select u.emplid from ( SELECT job.emplid \
 FROM ( \
 	SELECT  \
 		emplid, deptid, jobcode, effdt, action, \
@@ -105,15 +105,34 @@ INNER JOIN ( \
 ) dept ON (job.deptid=dept.deptid) \
 WHERE job.rn = 1 AND job.action NOT IN ('TER','RET') \
 UNION \
-SELECT aff.emplid \
-FROM DIRECTORY.SUBAFFILIATION aff \
-INNER JOIN ( \
-	SELECT deptid \
-	FROM SYSADM.PS_DEPT_TBL \
-	WHERE descr like '%Biodesign%' \
-	GROUP BY deptid \
-) dept ON (aff.deptid=dept.deptid) \
-WHERE aff.subaffiliation_code IN ('BDAF','BDRP','BDAS','BDFC','BDAG','BAPD','BVIP','BDAU','BDHV','NCON','BDEC','NVOL')"
+SELECT aff.emplid FROM DIRECTORY.SUBAFFILIATION aff INNER JOIN ( SELECT deptid FROM SYSADM.PS_DEPT_TBL WHERE descr like '%Biodesign%' GROUP BY deptid ) dept ON (aff.deptid=dept.deptid) INNER JOIN DIRECTORY.PERSON P ON ( aff.emplid=P.emplid ) WHERE P.asurite_id IS NOT NULL AND aff.subaffiliation_code IN ('BDAF','BDRP','BDAS','BDFC','BDAG','BAPD','BVIP','BDAU','BDHV','NCON','BDEC','NVOL')
+) as u WHERE u.emplid = 1000091891
+
+
+
+
+
+"""looking for the reason i'm not in the etl..."""
+# job history with window (IN)
+sql = "SELECT emplid, deptid, jobcode, effdt, action, ROW_NUMBER() OVER (PARTITION BY emplid, main_appt_num_jpn ORDER BY effdt DESC) rn FROM SYSADM.PS_JOB WHERE emplid = 1000091891"
+('1000091891', 'E0802004', '191706', datetime.datetime(2014, 12, 15, 0, 0), 'XFR', 1)
+# job history joined against the departments filter.
+sql = "SELECT job.emplid FROM ( SELECT  emplid, deptid, jobcode, effdt, action, ROW_NUMBER() OVER (PARTITION BY emplid, main_appt_num_jpn ORDER BY effdt DESC) rn FROM SYSADM.PS_JOB ) job INNER JOIN ( SELECT deptid FROM SYSADM.PS_DEPT_TBL WHERE descr like '%Biodesign%' GROUP BY deptid ) dept ON (job.deptid=dept.deptid) WHERE job.rn = 1 AND job.action NOT IN ('TER','RET') AND job.emplid=1000091891"
+('1000091891',)
+# now look into the sub affiliations:
+sql = "SELECT aff.emplid FROM DIRECTORY.SUBAFFILIATION aff INNER JOIN ( SELECT deptid FROM SYSADM.PS_DEPT_TBL WHERE descr like '%Biodesign%' GROUP BY deptid ) dept ON (aff.deptid=dept.deptid) INNER JOIN DIRECTORY.PERSON P ON ( aff.emplid=P.emplid ) WHERE P.asurite_id IS NOT NULL AND aff.emplid = 1000091891 AND aff.subaffiliation_code IN ('BDAF','BDRP','BDAS','BDFC','BDAG','BAPD','BVIP','BDAU','BDHV','NCON','BDEC','NVOL')"
+None
+# look just at the subaffiliations:
+sql = "SELECT aff.emplid FROM DIRECTORY.SUBAFFILIATION aff WHERE aff.emplid = 1000091891 "
+('1000091891',)
+# subaffiliations with groups:
+sql = "SELECT aff.emplid FROM DIRECTORY.SUBAFFILIATION aff INNER JOIN ( SELECT deptid FROM SYSADM.PS_DEPT_TBL WHERE descr like '%Biodesign%' GROUP BY deptid ) dept ON (aff.deptid=dept.deptid)  WHERE aff.emplid = 1000091891"
+None
+
+# Now, why does the union not return my id in the list?
+sql = "SELECT u.emplid from ( SELECT job.emplid FROM ( SELECT  emplid, deptid, jobcode, effdt, action, ROW_NUMBER() OVER (PARTITION BY emplid, main_appt_num_jpn ORDER BY effdt DESC) rn FROM SYSADM.PS_JOB ) job INNER JOIN ( SELECT deptid FROM SYSADM.PS_DEPT_TBL WHERE descr like '%Biodesign%' GROUP BY deptid ) dept ON (job.deptid=dept.deptid) WHERE job.rn = 1 AND job.action NOT IN ('TER','RET') UNION SELECT aff.emplid FROM DIRECTORY.SUBAFFILIATION aff INNER JOIN ( SELECT deptid FROM SYSADM.PS_DEPT_TBL WHERE descr like '%Biodesign%' GROUP BY deptid ) dept ON (aff.deptid=dept.deptid) INNER JOIN DIRECTORY.PERSON P ON ( aff.emplid=P.emplid ) WHERE P.asurite_id IS NOT NULL AND aff.subaffiliation_code IN ('BDAF','BDRP','BDAS','BDFC','BDAG','BAPD','BVIP','BDAU','BDHV','NCON','BDEC','NVOL') ) u ORDER BY u.emplid"
+
+
 
 # sqlalchemy sql expression language equivelent:
 # Get the GROUPS list...

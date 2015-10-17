@@ -12,7 +12,7 @@ config = {
     'download_url': 'https://git.biodesign.asu.edu/primusdj/asuToBiodesign.git',
     'author_email': 'david.julian@asu.edu',
     'version': '0.1',
-    'install_requires': ['nose'],
+    'install_requires': [],
     'packages': ['bioetl','asutobio',],
     'scripts': [],
     'name': 'asuToBiodesign'

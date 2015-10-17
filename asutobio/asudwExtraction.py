@@ -18,7 +18,8 @@ targetDbPw = 'forthegipperNotReagan4show'
 targetDbHost = 'dbdev.biodesign.asu.edu'
 targetDbName = 'bio_ps'
 engTargetString = 'mysql+mysqldb://%s:%s@%s/%s' % (targetDbUser, targetDbPw, targetDbHost, targetDbName)
-engineTarget = create_engine( engTargetString, echo=True )
+# engineTarget = create_engine( engTargetString, echo=True )
+engineTarget = create_engine( engTargetString )
 
 # Drop and Recreate the database objects and data.....
 BioPs.metadata.drop_all(engineTarget)
@@ -42,7 +43,7 @@ srcFilters = AsuPsBioFilters(sesSource)
 
 srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
 
-print srcFilters.getAllBiodesignEmplidList(False)
+# print srcFilters.getAllBiodesignEmplidList(False)
 
 ###############################################################################
 # Utilitie Functions:
@@ -95,6 +96,9 @@ for srcPerson in srcPersons:
 		srcPerson.eid,
 		srcPerson.birthdate,
 		srcPerson.last_update]
+
+	# if srcPerson.emplid == 1000091891:
+	# 	print personList
 
 	personHash = hashThisList(personList)
 

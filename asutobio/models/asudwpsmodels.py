@@ -70,6 +70,8 @@ class AsuPsBioFilters():
         affiliation_emplid_list = (
             self.session.query(
                 AsuDwPsSubAffiliations.emplid.label("emplid")).join(
+                    AsuDwPsPerson, AsuDwPsPerson.emplid==AsuDwPsSubAffiliations.emplid
+                ).filter(AsuDwPsPerson.asurite_id.isnot(None)).join(
                     sub_groups, AsuDwPsSubAffiliations.deptid==sub_groups.c.deptid
                 ).filter(
                     AsuDwPsSubAffiliations.subaffiliation_code.in_(
@@ -86,7 +88,7 @@ class AsuPsBioFilters():
                 AsuDwPsJobLog.action,
                 func.row_number().over(
                     partition_by=[AsuDwPsJobLog.emplid, AsuDwPsJobLog.main_appt_num_jpn],
-                    order_by=AsuDwPsJobLog.effdt
+                    order_by=AsuDwPsJobLog.effdt.desc()
                     ).label('rn')
                 )
             ).subquery()
@@ -98,7 +100,7 @@ class AsuPsBioFilters():
                         ~sub_jobs.c.action.in_(jobActionExcludeCodes))
             )
 
-        emplid_list = (employee_emplid_list.union(affiliation_emplid_list))
+        emplid_list = ( employee_emplid_list.union(affiliation_emplid_list) )
 
         if subQuery == True:
             return emplid_list.subquery()
