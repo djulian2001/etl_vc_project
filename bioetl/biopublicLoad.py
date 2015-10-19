@@ -56,90 +56,120 @@ sesTarget = TgtSession()
 #		bio_ps.people to bio_public.people
 # 	
 
+import personProcessing
+
 srcPeople = sesSource.query( BioPsPeople ).all()
 
 iPerson = 1
 for srcPerson in srcPeople:
-	"""
-		Takes in a source person object from biopsmodels (mysql.bio_ps.people)
-		and determines if the object needs to be updated, inserted in the target
-		database (mysql.bio_public.people).
-	"""
-	# determine the person exists in the target database.
-	( personExists, ), = sesTarget.query(
-		exists().where(
-			People.emplid == srcPerson.emplid ) )
-	
-	if personExists == True:
-		# determine if the person that exists requires an update.
-		( noPersonUpdateRequired, ), = sesTarget.query(
-			exists().where(
-				People.emplid == srcPerson.emplid ).where(
-				People.source_hash == srcPerson.source_hash )	)
-		
-		if noPersonUpdateRequired == True:
-			pass
-		else:
-			# update the the database with the data changes.
-			updatePerson = sesTarget.query( 
-				People ).filter(
-					People.emplid == srcPerson.emplid ).one()
 
-			updatePerson.source_hash = srcPerson.source_hash
-			updatePerson.emplid = srcPerson.emplid
-			updatePerson.asurite_id = srcPerson.asurite_id
-			updatePerson.asu_id = srcPerson.asu_id
-			updatePerson.ferpa = srcPerson.ferpa
-			updatePerson.last_name = srcPerson.last_name
-			updatePerson.first_name = srcPerson.first_name
-			updatePerson.middle_name = srcPerson.middle_name
-			updatePerson.display_name = srcPerson.display_name
-			updatePerson.preferred_first_name = srcPerson.preferred_first_name
-			updatePerson.affiliations = srcPerson.affiliations
-			updatePerson.email_address = srcPerson.email_address
-			updatePerson.eid = srcPerson.eid
-			updatePerson.birthdate = srcPerson.birthdate
-			updatePerson.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-			updatePerson.deleted_at = None
+	# addThis = personProcessing.processPerson( srcPerson, sesTarget )
 
-			# print "updated_at:\t" + updatePerson.updated_at
+	# if addThis is None:
+	# 	continue
 
-			sesTarget.add( updatePerson)
-			
+	try:
+		addThis = personProcessing.processPerson( srcPerson, sesTarget )
+	except TypeError as e:
+		print e
 	else:
-		# person wasn't in the target databases, add them now
-		insertPerson = People(
-			source_hash = srcPerson.source_hash,
-			emplid = srcPerson.emplid,
-			asurite_id = srcPerson.asurite_id,
-			asu_id = srcPerson.asu_id,
-			ferpa = srcPerson.ferpa,
-			last_name = srcPerson.last_name,
-			first_name = srcPerson.first_name,
-			middle_name = srcPerson.middle_name,
-			display_name = srcPerson.display_name,
-			preferred_first_name = srcPerson.preferred_first_name,
-			affiliations = srcPerson.affiliations,
-			email_address = srcPerson.email_address,
-			eid = srcPerson.eid,
-			birthdate = srcPerson.birthdate,
-			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
-		
-		sesTarget.add( insertPerson )
+		sesTarget.add(addThis)
 
-	if iPerson % 1000 == 0:
-		try:
-			sesTarget.flush()
-		except Exception, e:
-			sesTarget.rollback()
-			raise e
-	iPerson += 1
+		if iPerson % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception, e:
+				sesTarget.rollback()
+				raise e
+		iPerson += 1
 
 try:
 	sesTarget.commit()
 except Exception, e:
 	sesTarget.rollback()
 	raise e
+
+# for srcPerson in srcPeople:
+	# """
+	# 	Takes in a source person object from biopsmodels (mysql.bio_ps.people)
+	# 	and determines if the object needs to be updated, inserted in the target
+	# 	database (mysql.bio_public.people).
+	# """
+	# # determine the person exists in the target database.
+	# ( personExists, ), = sesTarget.query(
+	# 	exists().where(
+	# 		People.emplid == srcPerson.emplid ) )
+	
+	# if personExists == True:
+	# 	# determine if the person that exists requires an update.
+	# 	( noPersonUpdateRequired, ), = sesTarget.query(
+	# 		exists().where(
+	# 			People.emplid == srcPerson.emplid ).where(
+	# 			People.source_hash == srcPerson.source_hash )	)
+		
+	# 	if noPersonUpdateRequired == True:
+	# 		pass
+	# 	else:
+	# 		# update the the database with the data changes.
+	# 		updatePerson = sesTarget.query( 
+	# 			People ).filter(
+	# 				People.emplid == srcPerson.emplid ).one()
+
+	# 		updatePerson.source_hash = srcPerson.source_hash
+	# 		updatePerson.emplid = srcPerson.emplid
+	# 		updatePerson.asurite_id = srcPerson.asurite_id
+	# 		updatePerson.asu_id = srcPerson.asu_id
+	# 		updatePerson.ferpa = srcPerson.ferpa
+	# 		updatePerson.last_name = srcPerson.last_name
+	# 		updatePerson.first_name = srcPerson.first_name
+	# 		updatePerson.middle_name = srcPerson.middle_name
+	# 		updatePerson.display_name = srcPerson.display_name
+	# 		updatePerson.preferred_first_name = srcPerson.preferred_first_name
+	# 		updatePerson.affiliations = srcPerson.affiliations
+	# 		updatePerson.email_address = srcPerson.email_address
+	# 		updatePerson.eid = srcPerson.eid
+	# 		updatePerson.birthdate = srcPerson.birthdate
+	# 		updatePerson.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+	# 		updatePerson.deleted_at = None
+
+	# 		# print "updated_at:\t" + updatePerson.updated_at
+
+	# 		sesTarget.add( updatePerson)
+			
+	# else:
+	# 	# person wasn't in the target databases, add them now
+	# 	insertPerson = People(
+	# 		source_hash = srcPerson.source_hash,
+	# 		emplid = srcPerson.emplid,
+	# 		asurite_id = srcPerson.asurite_id,
+	# 		asu_id = srcPerson.asu_id,
+	# 		ferpa = srcPerson.ferpa,
+	# 		last_name = srcPerson.last_name,
+	# 		first_name = srcPerson.first_name,
+	# 		middle_name = srcPerson.middle_name,
+	# 		display_name = srcPerson.display_name,
+	# 		preferred_first_name = srcPerson.preferred_first_name,
+	# 		affiliations = srcPerson.affiliations,
+	# 		email_address = srcPerson.email_address,
+	# 		eid = srcPerson.eid,
+	# 		birthdate = srcPerson.birthdate,
+	# 		created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
+		
+	# 	sesTarget.add( insertPerson )
+
+# 	if iPerson % 1000 == 0:
+# 		try:
+# 			sesTarget.flush()
+# 		except Exception, e:
+# 			sesTarget.rollback()
+# 			raise e
+# 	iPerson += 1
+
+# try:
+# 	sesTarget.commit()
+# except Exception, e:
+# 	sesTarget.rollback()
+# 	raise e
 
 # need to update the update_flags if they exist...
 
