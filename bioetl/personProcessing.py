@@ -8,19 +8,28 @@ def processPerson(srcPerson, sesTarget ):
 		and determines if the object needs to be updated, inserted in the target
 		database (mysql.bio_public.people).
 	"""
-	# determine the person exists in the target database.
-	( personExists, ), = sesTarget.query(
-		exists().where(
-			People.emplid == srcPerson.emplid ) )
-	
-	if personExists:
-		# determine if the person that exists requires an update.
-		( noPersonUpdateRequired, ), = sesTarget.query(
+
+	def personExists(emplid):
+		"""determine the person exists in the target database."""
+		return sesTarget.query(
 			exists().where(
-				People.emplid == srcPerson.emplid ).where(
-				People.source_hash == srcPerson.source_hash )	)
+				People.emplid == emplid ) )
+	
+	
+	if personExists(srcPerson.emplid):
+
+		def personUpdateRequired(emplid, source_hash):
+			"""
+				Determine if the person that exists requires an update.
+				@True: returned from this function if hash is unchangeed
+				@False: returned if hash is changed, indicating a need to updated record.
+			"""
+			return not sesTarget.query(
+				exists().where(
+					People.emplid == emplid ).where(
+					People.source_hash == source_hash )	)
 		
-		if not noPersonUpdateRequired:
+		if personUpdateRequired( srcPerson.emplid, srcPerson.source_hash ):
 			# update the the database with the data changes.
 			updatePerson = sesTarget.query( 
 				People ).filter(
