@@ -58,7 +58,8 @@ sesTarget = TgtSession()
 
 import personProcessing
 
-srcPeople = sesSource.query( BioPsPeople ).all()
+# srcPeople = sesSource.query( BioPsPeople ).all()
+srcPeople = personProcessing.getSourcePeople( sesSource )
 
 iPerson = 1
 for srcPerson in srcPeople:
@@ -87,9 +88,8 @@ except Exception, e:
 
 # need to update the update_flags if they exist...
 
-# need to flag
-tgtMissingPeople = sesTarget.query(	People ).filter(
-		People.deleted_at.is_( None ) ).all()
+# "REMOVE" with a soft delete of person records no longer found in the source database
+tgtMissingPeople = personProcessing.getTargetPeople( sesTarget )
 
 iMissingPerson = 1
 for tgtMissingPerson in tgtMissingPeople:
@@ -100,7 +100,6 @@ for tgtMissingPerson in tgtMissingPeople:
 		# print e
 		pass
 	else:
-		
 		sesTarget.add( personMissing )
 		
 		if iMissingPerson % 1000 == 0:
@@ -109,7 +108,6 @@ for tgtMissingPerson in tgtMissingPeople:
 			except Exception, e:
 				sesTarget.rollback()
 				raise e
-
 		iMissingPerson += 1
 
 try:
@@ -117,16 +115,6 @@ try:
 except Exception, e:
 	sesTarget.rollback()
 	raise e
-# finally:
-# 	sesTarget.close()
-# 	sesSource.close()
-
-# def softDeleteRecords( srcObjectList, tgtObjectList ):
-# 	"""
-# 		Update a table record(s) where the emplid was not found in the source
-# 		database equivelent database.
-# 	"""
-# 	pass
 
 
 
@@ -137,97 +125,29 @@ except Exception, e:
 # 	
 # Using Group By on the source to limit likely duplicates.
 
-srcPersonPhones = sesSource.query(
-	BioPsPhones ).group_by(
-		BioPsPhones.emplid ).group_by(
-		BioPsPhones.phone_type ).group_by(
-		BioPsPhones.source_hash ).all()
+import personPhoneProcessing
+
+srcPersonPhones = personPhoneProcessing.getSourcePhones( sesSource )
 
 iPersonPhone = 1
 for srcPersonPhone in srcPersonPhones:
-	# determine the person exists in the target database.
-	( personPhoneExists, ), = sesTarget.query(
-			exists().where( 
-				Phones.emplid == srcPersonPhone.emplid ).where(
-				Phones.phone_type == srcPersonPhone.phone_type ) )
-	if personPhoneExists == True:
-		# determine if the person that exists requires an update.
-		( noUpdateRequired, ), = sesTarget.query(
-				exists().where(
-					Phones.emplid == srcPersonPhone.emplid ).where(
-					Phones.phone_type == srcPersonPhone.phone_type ).where(
-					Phones.source_hash == srcPersonPhone.source_hash )	)
-
-		if noUpdateRequired == False:
-
-			updatePersonPhone = sesTarget.query(
-					Phones ).filter( 
-						Phones.emplid == srcPersonPhone.emplid ).filter(
-						Phones.phone_type == srcPersonPhone.phone_type ).filter(
-						Phones.source_hash != srcPersonPhone.source_hash ).filter(
-						Phones.updated_flag == False ).first()
-
-			# for tgtPhone in tgtPhones:
-			# 	# which record exists in the source unchanged?
-			# 	( srcPersonPhoneUpdated, ), = sesSource.query(
-			# 			exists().where( 
-			# 				BioPsPhones.emplid == tgtPhone.emplid ).where(
-			# 				BioPsPhones.phone_type == tgtPhone.phone_type ).where(
-			# 				tgtPhone.updated_flag == False ).where( 
-			# 				BioPsPhones.source_hash != tgtPhone.source_hash ) )
-				
-			# 	if srcPersonPhoneUpdated == True:
-			# 		updateThisId = tgtPhone.id
-			# 		break
-
-			# updatePersonPhone = sesTarget.query(
-			# 	Phones ).filter(
-			# 		Phones.id == updateThisId ).one()
-
-			# update the source_hash to the new hash.
-			updatePersonPhone.source_hash = srcPersonPhone.source_hash
-			# set the updated_flag to true
-			updatePersonPhone.updated_flag = True
-			# updates from people soft
-			updatePersonPhone.phone = srcPersonPhone.phone
-			# update the bio timestamp
-			updatePersonPhone.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-			# add the object to the session to commit the updated
-			sesTarget.add( updatePersonPhone )
-
-			# print "UPDATED_AT: " + updatePersonPhone.updated_at
-			
+	
+	try:
+		processPhone = personPhoneProcessing.processPhone( srcPersonPhone, sesTarget )
+	except Exception, e:
+		print e
+		# raise e
+		pass
 	else:
-		# person wasn't in the target databases, add them now
-		# get the person_id from the bio_public.people table...
-		# note: might have to test the existance of the person prior... 
-		# 	but lets assume our origional scrits worked and there is only one emplid (for now)
-		srcGetPersonId = sesTarget.query(
-			People ).filter(
-				People.emplid == srcPersonPhone.emplid ).one()
+		sesTarget.add( processPhone )
 
-		tgtPerson = Phones(
-			person_id = srcGetPersonId.id,
-			updated_flag = True,
-			source_hash = srcPersonPhone.source_hash,
-			emplid = srcPersonPhone.emplid,
-			phone_type = srcPersonPhone.phone_type,
-			phone = srcPersonPhone.phone,
-			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-		)
-
-		sesTarget.add( tgtPerson )
-		# return tgtPerson
-
-	if iPersonPhone % 1000 == 0:
-		try:
-			sesTarget.flush()
-		except Exception, e:
-			sesTarget.rollback()
-			raise e
-	iPersonPhone += 1
-
-
+		if iPersonPhone % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception, e:
+				sesTarget.rollback()
+				raise e
+		iPersonPhone += 1
 
 try:
 	sesTarget.commit()

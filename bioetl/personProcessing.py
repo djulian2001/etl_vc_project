@@ -4,6 +4,13 @@ from sqlalchemy import exists
 from models.biopublicmodels import People
 from asutobio.models.biopsmodels import BioPsPeople
 
+def getSourcePeople( sesSource ):
+	"""
+		Isolate the imports for the ORM records into this file
+		Returns the set of person records from the people table of the source database.
+	"""
+	return sesSource.query( BioPsPeople ).all()
+
 def processPerson( srcPerson, sesTarget ):
 	"""Testing if i can functionalize my program
 		
@@ -79,6 +86,17 @@ def processPerson( srcPerson, sesTarget ):
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
 		
 		return insertPerson
+
+def getTargetPeople( sesTarget ):
+	"""
+		Returns a set of People object from the target database where the records are not flagged
+		deleted_at.
+	"""
+
+	return sesTarget.query(
+			People ).filter(
+				People.deleted_at.is_( None ) ).all()
+
 
 def softDeletePerson( tgtMissingPerson, sesSource ):
 	"""

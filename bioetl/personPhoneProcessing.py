@@ -1,0 +1,91 @@
+import datetime
+from sqlalchemy import exists
+
+from models.biopublicmodels import People, Phones
+from asutobio.models.biopsmodels import BioPsPhones
+
+
+def getSourcePhones( sesSource ):
+	"""Returns a collection of phone records from the source database"""
+
+	return sesSource.query(
+		BioPsPhones ).group_by(
+			BioPsPhones.emplid ).group_by(
+			BioPsPhones.phone_type ).group_by(
+			BioPsPhones.source_hash ).all()
+
+def processPhone( srcPersonPhone, sesTarget ):
+	"""
+		Takes in source phone object and determines what shall be done with the object.
+		Returns a Phone object to be either ignored, updated, or inserted into the target database
+	"""
+	
+	def personPhoneExists( emplid, phone_type ):
+		"""
+			determine the person exists in the target database.
+			@True: There is a phone record for emplid and type already in the target database
+			@False: The record does not exist and requires insert.
+		"""
+		return sesTarget.query(
+			exists().where( 
+				Phones.emplid == emplid ).where(
+				Phones.phone_type == phone_type ) )
+	
+	if personPhoneExists( srcPersonPhone.emplid, srcPersonPhone.phone_type ):
+		
+		def phoneRequiresUpdate( emplid, phone_type, source_hash ):
+			"""
+				determine if the person that exists requires an update.
+				@True:  The source record object requires update.
+				@False:  The record doesn't require an update
+			"""
+			return not sesTarget.query(
+				exists().where(
+					Phones.emplid == emplid ).where(
+					Phones.phone_type == phone_type ).where(
+					Phones.source_hash == source_hash )	)
+
+		if phoneRequiresUpdate( srcPersonPhone.emplid, srcPersonPhone.phone_type, srcPersonPhone.source_hash):
+
+			updatePersonPhone = sesTarget.query(
+				Phones ).filter( 
+					Phones.emplid == srcPersonPhone.emplid ).filter(
+					Phones.phone_type == srcPersonPhone.phone_type ).filter(
+					Phones.source_hash != srcPersonPhone.source_hash ).filter(
+					Phones.updated_flag == False ).first()
+
+			updatePersonPhone.source_hash = srcPersonPhone.source_hash
+			updatePersonPhone.updated_flag = True
+			updatePersonPhone.phone = srcPersonPhone.phone
+			updatePersonPhone.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+
+			return updatePersonPhone
+
+		else:
+			raise TypeError('source person phone record already exists and requires no updates!')
+
+	else:
+
+		srcGetPersonId = sesTarget.query(
+			People ).filter(
+				People.emplid == srcPersonPhone.emplid ).one()
+
+		insertPhone = Phones(
+			person_id = srcGetPersonId.id,
+			updated_flag = True,
+			source_hash = srcPersonPhone.source_hash,
+			emplid = srcPersonPhone.emplid,
+			phone_type = srcPersonPhone.phone_type,
+			phone = srcPersonPhone.phone,
+			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
+
+		return insertPhone
+
+
+def getTargetPhones():
+	"""pass"""
+	pass
+
+def removePhones():
+	"""pass"""
+	pass
