@@ -2,6 +2,8 @@ import datetime
 
 from sqlalchemy import *
 from sqlalchemy.orm import *
+from sqlalchemy.exc import *
+
 
 from models.biopublicmodels import *
 from asutobio.models.biopsmodels import *
@@ -31,8 +33,8 @@ engineTarget = create_engine( engTargetString, echo=True )
 # Not sure how I'm going to deal with this...
 # BioPublic.metadata.drop_all( engineTarget )
 
-
 BioPublic.metadata.create_all( engineTarget )
+
 
 # source_conn = engineSource.connect()
 # bind the model to engineTarget engine
@@ -51,49 +53,59 @@ sesSource = SrcSession()
 sesTarget = TgtSession()
 
 ###############################################################################
+# Utility functions...
+def resetSourceUpdatedFlag( tblName ):
+	"""
+		Each run of the script requires that the updated_flag field be set to False
+		Build and pass back the string that will do this update.
+	"""
+	# updateSql = text( "UPDATE %s SET updated_flag = :resetFlag" % ( tblName ) ), { "resetFlag" : 0 }
+	updateSql = "UPDATE %s SET updated_flag = :resetFlag" % ( tblName )
+	
+	return updateSql
+
+# End of Utility functions...
+###############################################################################
+
+
+
+###############################################################################
 # Load the mysql.bio_ps people table in into the final destination:
 #	mysql:
 #		bio_ps.people to bio_public.people
-# 	
-
+# 
 import personProcessing
 
-# srcPeople = sesSource.query( BioPsPeople ).all()
 srcPeople = personProcessing.getSourcePeople( sesSource )
 
 iPerson = 1
 for srcPerson in srcPeople:
-
 	try:
 		personStatus = personProcessing.processPerson( srcPerson, sesTarget )
 	except TypeError as e:
-		# print e
 		pass
 	else:
 		sesTarget.add( personStatus )
-
 		if iPerson % 1000 == 0:
 			try:
 				sesTarget.flush()
-			except Exception, e:
+			except Exception as e:
 				sesTarget.rollback()
 				raise e
+			except RuntimeError as e:
+				pass
 		iPerson += 1
-
 try:
 	sesTarget.commit()
-except Exception, e:
+except Exception as e:
 	sesTarget.rollback()
 	raise e
-
-# need to update the update_flags if they exist...
-
+# 
 # "REMOVE" with a soft delete of person records no longer found in the source database
 tgtMissingPeople = personProcessing.getTargetPeople( sesTarget )
 
 iMissingPerson = 1
 for tgtMissingPerson in tgtMissingPeople:
-	
 	try:
 		personMissing = personProcessing.softDeletePerson( tgtMissingPerson, sesSource )
 	except TypeError as e:
@@ -101,21 +113,20 @@ for tgtMissingPerson in tgtMissingPeople:
 		pass
 	else:
 		sesTarget.add( personMissing )
-		
 		if iMissingPerson % 1000 == 0:
 			try:
 				sesTarget.flush()
-			except Exception, e:
+			except Exception as e:
 				sesTarget.rollback()
 				raise e
 		iMissingPerson += 1
-
 try:
 	sesTarget.commit()
-except Exception, e:
+except Exception as e:
 	sesTarget.rollback()
 	raise e
-
+# End of the process for the person data 
+###############################################################################
 
 
 ###############################################################################
@@ -124,7 +135,7 @@ except Exception, e:
 #		bio_ps.person_phones to bio_public.person_phones
 # 	
 # Using Group By on the source to limit likely duplicates.
-
+#
 import personPhoneProcessing
 
 srcPersonPhones = personPhoneProcessing.getSourcePhones( sesSource )
@@ -134,8 +145,8 @@ for srcPersonPhone in srcPersonPhones:
 	
 	try:
 		processPhone = personPhoneProcessing.processPhone( srcPersonPhone, sesTarget )
-	except Exception, e:
-		print e
+	except Exception as e:
+		# print e
 		# raise e
 		pass
 	else:
@@ -144,59 +155,57 @@ for srcPersonPhone in srcPersonPhones:
 		if iPersonPhone % 1000 == 0:
 			try:
 				sesTarget.flush()
-			except Exception, e:
+			except Exception as e:
 				sesTarget.rollback()
 				raise e
 		iPersonPhone += 1
 
 try:
 	sesTarget.commit()
-except Exception, e:
+except Exception as e:
 	sesTarget.rollback()
 	raise e
 
 # Remove the data that was no longer was found for an active person.
-tgtMissingPersonPhones = sesTarget.query(
-	Phones ).filter( 
-		Phones.updated_flag == False ).join(
-	People ).filter(
-		People.deleted_at.isnot( None ) ).all()
+tgtMissingPersonPhones = personPhoneProcessing.getTargetPhones( sesTarget )
 
 iRemovePhone = 1
 for tgtMissingPersonPhone in tgtMissingPersonPhones:
 	# if the phone no longer is found we remove it but only if the person is active...
-	( foundPhoneExists, ), = sesSource.query(
-			exists().where( 
-				BioPsPhones.emplid == tgtMissingPersonPhone.emplid ).where(
-				BioPsPhones.phone_type == tgtMissingPersonPhone.phone_type ).where(
-				BioPsPhones.phone == tgtMissingPersonPhone.phone) )
-
-	if foundPhoneExists == False:
-
+	try:
+		removePhone = personPhoneProcessing.cleanupSourcePhones()
+	except TypeError, e:
+		# print e
+		pass
+	else:
 		sesTarget.delete( tgtMissingPersonPhone )
 
-
-	if iRemovePhone % 1000 == 0:
-		try:
-			sesTarget.flush()
-		except Exception, e:
-			sesTarget.rollback()
-			raise e
-	iRemovePhone += 1
+		if iRemovePhone % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemovePhone += 1
 
 try:
 	sesTarget.commit()
-except Exception, e:
+except Exception as e:
 	sesTarget.rollback()
 	raise e
 
 # reset the updated_flag for all records for the next round of changes.
 # engineTarget.execute("UPDATE person_phones SET updated_flag = 0;")
-sesTarget.execute( text( "UPDATE person_phones SET updated_flag = :resetFlag" ),{ "resetFlag" : 0 } )
-""""""
+try:
+	resetFlags = resetSourceUpdatedFlag( "person_phones" )
+except Exception as e:
+	print e
+else:
+	sesTarget.execute( text( resetFlags ), { "resetFlag" : 0 } )
+
 try:
 	sesTarget.commit()
-except Exception, e:
+except Exception as e:
 	sesTarget.rollback()
 	raise e
 
@@ -310,14 +319,14 @@ for srcPersonAddress in srcPersonAddresses:
 	if iPersonAddresses % 1000 == 0:
 		try:
 			sesTarget.flush()
-		except Exception, e:
+		except Exception as e:
 			sesTarget.rollback()
 			raise e
 	iPersonAddresses += 1
 
 try:
 	sesTarget.commit()
-except Exception, e:
+except Exception as e:
 	sesTarget.rollback()
 	raise e
 
@@ -348,14 +357,14 @@ for tgtMissingPersonAddress in tgtMissingPersonAddresses:
 	if iRemoveAddresses % 1000 == 0:
 		try:
 			sesTarget.flush()
-		except Exception, e:
+		except Exception as e:
 			sesTarget.rollback()
 			raise e
 	iRemoveAddresses += 1
 
 try:
 	sesTarget.commit()
-except Exception, e:
+except Exception as e:
 	sesTarget.rollback()
 	raise e
 
@@ -364,7 +373,7 @@ sesTarget.execute( text( "UPDATE person_addresses SET updated_flag = :resetFlag"
 """"""
 try:
 	sesTarget.commit()
-except Exception, e:
+except Exception as e:
 	sesTarget.rollback()
 	raise e
 finally:

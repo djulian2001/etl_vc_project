@@ -119,7 +119,7 @@ class AsuDwPsPerson(AsuDwPs):
     schema = 'DIRECTORY'
     # below are the data fields out of peopleSoft
     emplid = Column(Integer, nullable=False)
-    asurite_id = Column(String(23))
+    asurite_id = Column(String(23), nullable=True)
     asu_id = Column(String(23), nullable=False)
     ferpa = Column(String(7), nullable=False)
     last_name = Column(String(31), nullable=False)

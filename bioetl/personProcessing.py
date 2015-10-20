@@ -65,7 +65,7 @@ def processPerson( srcPerson, sesTarget ):
 			return updatePerson 
 		else:
 			raise TypeError('source person already exists and requires no updates!')
-			
+
 	else:
 		# person wasn't in the target databases, add them now
 		insertPerson = People(
@@ -126,4 +126,3 @@ def softDeletePerson( tgtMissingPerson, sesSource ):
 		# sesTarget.add( tgtMissingPerson )
 	else:
 		raise TypeError('source person still exists and requires no soft delete!')
-

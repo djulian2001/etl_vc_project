@@ -82,10 +82,32 @@ def processPhone( srcPersonPhone, sesTarget ):
 		return insertPhone
 
 
-def getTargetPhones():
+def getTargetPhones( sesTarget ):
 	"""pass"""
-	pass
+	return sesTarget.query(
+		Phones ).filter( 
+			Phones.updated_flag == False ).join(
+		People ).filter(
+			People.deleted_at.isnot( None ) ).all()
 
-def removePhones():
-	"""pass"""
-	pass
+def cleanupSourcePhones( tgtMissingPersonPhone, sesSource ):
+	"""Determine if an existing phone for an active person is still an active phone for that person."""
+	
+	def removeExistingPhone( emplid, phone_type, phone ):
+		"""
+			Does the phone in the target database exist in the source database:
+			@True: The phone was not found and should be removed.
+			@False: The phone was found and should not be removed.
+		"""
+		return sesSource.query(
+			exists().where( 
+				BioPsPhones.emplid == emplid ).where(
+				BioPsPhones.phone_type == phone_type ).where(
+				BioPsPhones.phone == phone) )
+
+	if removeExistingPhone( tgtMissingPersonPhone.emplid, tgtMissingPersonPhone.phone_type, tgtMissingPersonPhone.phone ):
+
+		return tgtMissingPersonPhone
+	else:
+		raise TypeError('source person phone is active and requires no removal.')
+
