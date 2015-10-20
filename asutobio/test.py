@@ -132,6 +132,15 @@ None
 # Now, why does the union not return my id in the list?
 sql = "SELECT u.emplid from ( SELECT job.emplid FROM ( SELECT  emplid, deptid, jobcode, effdt, action, ROW_NUMBER() OVER (PARTITION BY emplid, main_appt_num_jpn ORDER BY effdt DESC) rn FROM SYSADM.PS_JOB ) job INNER JOIN ( SELECT deptid FROM SYSADM.PS_DEPT_TBL WHERE descr like '%Biodesign%' GROUP BY deptid ) dept ON (job.deptid=dept.deptid) WHERE job.rn = 1 AND job.action NOT IN ('TER','RET') UNION SELECT aff.emplid FROM DIRECTORY.SUBAFFILIATION aff INNER JOIN ( SELECT deptid FROM SYSADM.PS_DEPT_TBL WHERE descr like '%Biodesign%' GROUP BY deptid ) dept ON (aff.deptid=dept.deptid) INNER JOIN DIRECTORY.PERSON P ON ( aff.emplid=P.emplid ) WHERE P.asurite_id IS NOT NULL AND aff.subaffiliation_code IN ('BDAF','BDRP','BDAS','BDFC','BDAG','BAPD','BVIP','BDAU','BDHV','NCON','BDEC','NVOL') ) u ORDER BY u.emplid"
 
+sql = "SELECT p.emplid FROM DIRECTORY.PERSON p JOIN ( SELECT aff.emplid FROM DIRECTORY.SUBAFFILIATION aff INNER JOIN ( SELECT deptid FROM SYSADM.PS_DEPT_TBL WHERE descr like '%Biodesign%' GROUP BY deptid ) dept ON (aff.deptid=dept.deptid) WHERE aff.subaffiliation_code IN ('BDAF','BDRP','BDAS','BDFC','BDAG','BAPD','BVIP','BDAU','BDHV','NCON','BDEC','NVOL') ) thisaff ON ( p.emplid=thisaff.emplid ) WHERE p.asurite_id IS NULL"
+
+sql = "SELECT emplid FROM DIRECTORY.PERSON WHERE asurite_id IS NULL and ROWNUM <= 5"
+
+sql = "SELECT aff.emplid FROM DIRECTORY.SUBAFFILIATION aff INNER JOIN ( SELECT deptid FROM SYSADM.PS_DEPT_TBL WHERE descr like '%Biodesign%' GROUP BY deptid ) dept ON (aff.deptid=dept.deptid) INNER JOIN DIRECTORY.PERSON P ON ( aff.emplid=P.emplid ) WHERE aff.subaffiliation_code IN ('BDAF','BDRP','BDAS','BDFC','BDAG','BAPD','BVIP','BDAU','BDHV','NCON','BDEC','NVOL')"
+
+for row in conn.execute(sql):
+	print row
+
 
 
 # sqlalchemy sql expression language equivelent:

@@ -30,8 +30,8 @@ BioPs.metadata.create_all(engineTarget)
 BioPs.metadata.bind = engineTarget
 AsuDwPs.metadata.bind = engineSource
 
-TgtSessions = scoped_session(sessionmaker(bind=engineTarget))
-SrcSessions = scoped_session(sessionmaker(bind=engineSource))
+TgtSessions = scoped_session( sessionmaker( bind=engineTarget ) )
+SrcSessions = scoped_session( sessionmaker( bind=engineSource ) )
 
 true, false = literal(True), literal(False)
 

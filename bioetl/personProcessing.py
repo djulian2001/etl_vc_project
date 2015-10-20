@@ -1,7 +1,10 @@
+import datetime
 from sqlalchemy import exists
-from models.biopublicmodels import People
 
-def processPerson(srcPerson, sesTarget ):
+from models.biopublicmodels import People
+from asutobio.models.biopsmodels import BioPsPeople
+
+def processPerson( srcPerson, sesTarget ):
 	"""Testing if i can functionalize my program
 		
 		Takes in a source person object from biopsmodels (mysql.bio_ps.people)
@@ -9,16 +12,16 @@ def processPerson(srcPerson, sesTarget ):
 		database (mysql.bio_public.people).
 	"""
 
-	def personExists(emplid):
+	def personExists( emplid ):
 		"""determine the person exists in the target database."""
 		return sesTarget.query(
 			exists().where(
 				People.emplid == emplid ) )
 	
 	
-	if personExists(srcPerson.emplid):
+	if personExists( srcPerson.emplid ):
 
-		def personUpdateRequired(emplid, source_hash):
+		def personUpdateRequired( emplid, source_hash ):
 			"""
 				Determine if the person that exists requires an update.
 				@True: returned from this function if hash is unchangeed
@@ -30,7 +33,7 @@ def processPerson(srcPerson, sesTarget ):
 					People.source_hash == source_hash )	)
 		
 		if personUpdateRequired( srcPerson.emplid, srcPerson.source_hash ):
-			# update the the database with the data changes.
+			# update the database with the source data and return the target object with changes.
 			updatePerson = sesTarget.query( 
 				People ).filter(
 					People.emplid == srcPerson.emplid ).one()
@@ -54,7 +57,7 @@ def processPerson(srcPerson, sesTarget ):
 
 			return updatePerson 
 		else:
-			raise TypeError('person exists BUT personupdaterequired is false!')
+			raise TypeError('source person already exists and requires no updates!')
 			
 	else:
 		# person wasn't in the target databases, add them now
@@ -76,3 +79,33 @@ def processPerson(srcPerson, sesTarget ):
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
 		
 		return insertPerson
+
+def softDeletePerson( tgtMissingPerson, sesSource ):
+	"""
+		The list of people changes as time moves on, the people removed from the list are not
+		deleted, but flaged removed by the deleted_at field.
+
+		The return of this function returns a sqlalchemy object to update a person object.
+	"""
+
+	def flagPersonMissing( emplid ):
+		"""
+			Determine that the people in the target database are still in the active source database.
+			@True: If the data was not found and requires and update against the target database.
+			@False: If the data was found and no action is required. 
+		"""
+		return not sesSource.query(
+			exists().where(
+				BioPsPeople.emplid == emplid ) )
+
+
+	if flagPersonMissing( tgtMissingPerson.emplid ):
+
+		tgtMissingPerson.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+
+		return tgtMissingPerson
+		
+		# sesTarget.add( tgtMissingPerson )
+	else:
+		raise TypeError('source person still exists and requires no soft delete!')
+
