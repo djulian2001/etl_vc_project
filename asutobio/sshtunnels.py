@@ -10,15 +10,18 @@ class SshTunnels(object):
 		the database server.  We pivot off a sever that has fire wall access
 
 		System Admin Requirements:
-			RSA key for the user has been established on biodb.biodesign.asu.edu
+			RSA key for the user has been established on pivot/proxy server
 			All libraries that are required to run ssh on the localhost server 
 				are installed
 	"""
 	
 	def __init__(self):
-		# the container that keeps track of 'all' of the tunnels open	
+		"""	
+			Initialize the class
+			@processList: a list that keeps track of 'all' of the tunnels open
+			@processListIds: a list of all the process ids created by this class
+		"""
 		self.processList = []
-		# list of all the process ids created by this class
 		self.processListIds = []
 
 	def createSshTunnel(self, localport, dbServer, dbPort, user, server):
