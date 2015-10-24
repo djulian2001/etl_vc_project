@@ -15,7 +15,7 @@ class SshTunnels(object):
 				are installed
 	"""
 	
-	def __init__(self):
+	def __init__( self ):
 		"""	
 			Initialize the class
 			@processList: a list that keeps track of 'all' of the tunnels open
@@ -24,7 +24,7 @@ class SshTunnels(object):
 		self.processList = []
 		self.processListIds = []
 
-	def createSshTunnel(self, localport, dbServer, dbPort, user, server):
+	def createSshTunnel( self, localport, dbServer, dbPort, user, server ):
 		"""
 			Create an ssh tunnel to the dbServer (the database connection server).
 			The tunnel requires an RSA key be in place.
@@ -35,18 +35,18 @@ class SshTunnels(object):
 			localport, dbServer, dbPort, user, server)
 
 		# create the subprocess (aka the ssh tunnel)
-		sshArgs = shlex.split(sshTunnelCmd)
-		sshTunnel = subprocess.Popen(sshArgs)
+		sshArgs = shlex.split( sshTunnelCmd )
+		sshTunnel = subprocess.Popen( sshArgs )
 		
 		# LET THE SSH TUNNEL subprocess cmd OPEN BEFORE MOVING ON with the script...
 		time.sleep(2)
 
 		# save the process details for closing time
-		self.processListIds.append(sshTunnel.pid)
-		self.processList.append(sshTunnel)
+		self.processListIds.append( sshTunnel.pid )
+		self.processList.append( sshTunnel )
 
 
-	def closeSshTunnels(self):
+	def closeSshTunnels( self ):
 		"""
 			The method closes the list of processes appended to the attribute 
 			processList, the ssh tunnel process, created by the processList class

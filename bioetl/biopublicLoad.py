@@ -1,56 +1,11 @@
 import datetime
 
-from sqlalchemy import *
-from sqlalchemy.orm import *
-from sqlalchemy.exc import *
+from app.connectdb import etlconnections
 
+appRun = etlconnections("bioetl")
 
-from models.biopublicmodels import *
-from asutobio.models.biopsmodels import *
-# import processController as pc
-
-# from ..asutobio.models.biopsmodels import *
-
-# connections...
-# engineSource = create_engine('mysql+mysqldb://app_sqlalchemy:forthegipperNotReagan4show@dbdev.biodesign.asu.edu/bio_public_ps', echo=True)
-
-sourceDbUser = 'app_asutobioetl'
-sourceDbPw = 'forthegipperNotReagan4show'
-sourceDbHost = 'dbdev.biodesign.asu.edu'
-sourceDbName = 'bio_ps'
-engSourceString = 'mysql+mysqldb://%s:%s@%s/%s' % ( sourceDbUser, sourceDbPw, sourceDbHost, sourceDbName )
-engineSource = create_engine( engSourceString, echo=True )
-# engineSource = create_engine( engSourceString )
-
-targetDbUser = 'app_asutobioetl'
-targetDbPw = 'forthegipperNotReagan4show'
-targetDbHost = 'dbdev.biodesign.asu.edu'
-targetDbName = 'bio_public'
-engTargetString = 'mysql+mysqldb://%s:%s@%s/%s' % ( targetDbUser, targetDbPw, targetDbHost, targetDbName )
-engineTarget = create_engine( engTargetString, echo=True )
-# engineTarget = create_engine( engTargetString )
-
-# Not sure how I'm going to deal with this...
-# BioPublic.metadata.drop_all( engineTarget )
-
-BioPublic.metadata.create_all( engineTarget )
-
-
-# source_conn = engineSource.connect()
-# bind the model to engineTarget engine
-BioPs.metadata.bind = engineSource
-BioPublic.metadata.bind = engineTarget
-
-SrcSession = scoped_session( sessionmaker( bind=engineSource ) )
-TgtSession = scoped_session( sessionmaker( bind=engineTarget ) )
-
-true, false = literal(True), literal(False)
-
-# sesSource_people = SrcSession()
-# sesTarget_people = TgtSession()
-
-sesSource = SrcSession()
-sesTarget = TgtSession()
+sesSource = appRun.getSourceSession()
+sesTarget = appRun.getTargetSession()
 
 ###############################################################################
 # Utility functions...
@@ -277,6 +232,9 @@ except Exception as e:
 finally:
 	sesTarget.close()
 	sesSource.close()
+
+	appRun.cleanUp()
+
 
 # End the processing of person addresses records
 ###############################################################################
