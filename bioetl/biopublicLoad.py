@@ -1,28 +1,13 @@
 import datetime
 
+import sharedProcesses
+
 from app.connectdb import etlconnections
 
 appRun = etlconnections("bioetl")
 
 sesSource = appRun.getSourceSession()
 sesTarget = appRun.getTargetSession()
-
-###############################################################################
-# Utility functions...
-def resetSourceUpdatedFlag( tblName ):
-	"""
-		Each run of the script requires that the updated_flag field be set to False
-		Build and pass back the string that will do this update.
-	"""
-	# updateSql = text( "UPDATE %s SET updated_flag = :resetFlag" % ( tblName ) ), { "resetFlag" : 0 }
-	updateSql = "UPDATE %s SET updated_flag = :resetFlag" % ( tblName )
-	
-	return updateSql
-
-# End of Utility functions...
-###############################################################################
-
-
 
 ###############################################################################
 # Load the mysql.bio_ps people table in into the final destination:
@@ -148,11 +133,9 @@ except Exception as e:
 # reset the updated_flag for all records for the next round of changes.
 # engineTarget.execute("UPDATE person_phones SET updated_flag = 0;")
 try:
-	resetPhoneFlags = resetSourceUpdatedFlag( "person_phones" )
+	sharedProcesses.resetUpdatedFlag( sesTarget, "person_phones" )
 except Exception as e:
 	print e
-else:
-	sesTarget.execute( text( resetPhoneFlags ), { "resetFlag" : 0 } )
 
 try:
 	sesTarget.commit()
@@ -218,11 +201,9 @@ except Exception as e:
 
 # RESET the updated_flag for all records for the next round of changes.
 try:
-	resetAddressFlags = resetSourceUpdatedFlag( "person_addresses" )
+	sharedProcesses.resetUpdatedFlag( sesTarget, "person_addresses" )
 except Exception as e:
 	print e
-else:
-	sesTarget.execute( text( resetAddressFlags ), { "resetFlag" : 0 } )
 
 try:
 	sesTarget.commit()
