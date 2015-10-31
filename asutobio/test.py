@@ -3,8 +3,9 @@ from models.biopsmodels import BioPsPeople
 e = etlconnections("bioetl")
 
 sess = e.getSourceSession()
-print help(sess)
+# print help(sess)
 print dir(sess)
+
 
 
 # for i in sess.query( BioPsPeople ).first():

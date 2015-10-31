@@ -56,7 +56,7 @@ class SshTunnels(object):
 		 		# call the subprocess and kill it, bye bye
 		 		sshTunnel.kill()
 		 	except OSError:
-		 		pass
+		 		raise
 
 
 # POTENTIAL Future way to clean up left over processes that have to be dealt with because of un-closed tunnels.

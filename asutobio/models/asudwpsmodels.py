@@ -28,17 +28,17 @@ class AsuPsBioFilters():
 
     def getBiodesignDeptids(self, subQuery=True):
         """
-        The list of department ids that have the matching condition of '%Biodesign%'
-
+            The list of department ids that have the matching condition of 'E08%' in the
+            deptid.
 
         """
         # biodesignDeptids = []
 
         sub_groups = (
             self.session.query(
-                AsuDwPsDepartments.deptid).filter(
-                    AsuDwPsDepartments.descr.like("%Biodesign%")
-                ).group_by(AsuDwPsDepartments.deptid)
+                AsuDwPsDepartments.deptid ).filter(
+                    AsuDwPsDepartments.deptid.like( "E08%" )
+                ).group_by( AsuDwPsDepartments.deptid )
             )
         
         if subQuery == True:

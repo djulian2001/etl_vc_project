@@ -2,12 +2,12 @@ import datetime
 
 import sharedProcesses
 
-from app.connectdb import etlconnections
+from app.connectdb import EtlConnections
 
-appRun = etlconnections("bioetl")
+bioetlAppRun = EtlConnections("bioetl")
 
-sesSource = appRun.getSourceSession()
-sesTarget = appRun.getTargetSession()
+sesSource = bioetlAppRun.getSourceSession()
+sesTarget = bioetlAppRun.getTargetSession()
 
 ###############################################################################
 # Load the mysql.bio_ps people table in into the final destination:
@@ -214,7 +214,7 @@ finally:
 	sesTarget.close()
 	sesSource.close()
 
-	appRun.cleanUp()
+	bioetlAppRun.cleanUp()
 
 
 # End the processing of person addresses records

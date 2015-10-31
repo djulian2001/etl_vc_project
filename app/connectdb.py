@@ -1,7 +1,8 @@
 from sqlalchemy import create_engine
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-class etlconnections(object):
+class EtlConnections(object):
 	"""docstring for ClassName"""
 	def __init__( self, appScope ):
 		self.appScope = appScope
@@ -10,7 +11,7 @@ class etlconnections(object):
 			from configs import ConfigAsuToBio
 			
 			self.config = ConfigAsuToBio()
-			# self.setupAsuToBio()
+			self.setupAsuToBio()
 			pass
 		elif self.appScope == 'bioetl':
 			from configs import ConfigBioetl
@@ -26,8 +27,8 @@ class etlconnections(object):
 		engineString = 'oracle+cx_oracle://%s:%s@%s' % ( oracleUser, oraclePw, netServiceName )
 		try:
 			engine = create_engine( engineString, echo=True )
-		except Exception as e:
-			raise e
+		except DBAPIError:
+			raise
 		
 		return engine
 
@@ -38,12 +39,11 @@ class etlconnections(object):
 			@Return: an sqlalchemy mysql+mysqldb engine
 		"""
 		engineString = 'mysql+mysqldb://%s:%s@%s/%s' % ( dbUser, dbPw, dbHost, dbName )
-		print engineString
 
 		try:
 			engine = create_engine( engineString, echo=True )
-		except Exception as e:
-			raise e
+		except DBAPIError:
+			raise
 
 		return engine
 
@@ -83,17 +83,64 @@ class etlconnections(object):
 
 
 	def setupAsuToBio( self ):
-		"""pass"""
+		"""
+			When the application scope is set appropriately we then setup the object accordingly
+			Sets the target and source session factories, to be referenced when a session is 
+			required.  The sessions are scoped so they should all be equivelent.
 
-		# sourceEngine = getOracleEngine(
-		# 	self.config.
-		# 	)
+			In addition to the sessions, when this scope is set, an ssh tunnel is required to 
+			reach the source database.  The sub process is run seperate from the python script,
+			so there could be issues cleaning up the tunnel(s)... Expand as required...
 
-		# sourceDbUser = "ASU_BDI_EXTRACT_APP"
-		# sourceDbPw = "np55adW_G1_Um-ii"
-		# sourceDbNetServiceName = "ASUPMDEV"
+		"""
 
-		pass
+		self.config.setSshTunnel()
+
+		try:
+			from app.sshtunnels import SshTunnels
+
+			self.sshtunnel = SshTunnels()
+
+			self.sshtunnel.createSshTunnel(
+				self.config.localport,
+				self.config.oracleServer,
+				self.config.oraclePort,
+				self.config.sshUser,
+				self.config.proxyServer )
+
+		except OSError as e:
+			print "Error trying to create the ssh tunnel!"
+			raise e
+		else:
+			from asutobio.models.biopsmodels import BioPs
+			from asutobio.models.asudwpsmodels import AsuDwPs
+			
+			self.config.setDbSource()
+
+			sourceEngine = self.getOracleEngine(
+				self.config.sourceUser,
+				self.config.sourceUserPw,
+				self.config.sourceNetServiceName )
+
+			self.config.setDbTarget()
+
+			targetEngine = self.getMysqlEngine(
+				self.config.targetUser,
+				self.config.targetUserPw,
+				self.config.targetDbHost,
+				self.config.targetDbName )
+
+			# This should get factored out later?
+			BioPs.metadata.drop_all( targetEngine )
+			BioPs.metadata.create_all( targetEngine )
+
+			AsuDwPs.metadata.bind = sourceEngine
+			BioPs.metadata.bind = targetEngine
+
+			self.SrcSession = scoped_session( sessionmaker( bind=sourceEngine ) )
+			self.TgtSession = scoped_session( sessionmaker( bind=targetEngine ) )
+
+
 
 	def getTargetSession( self ):
 		"""This method returns a configured session scoped as a target database"""
@@ -109,3 +156,11 @@ class etlconnections(object):
 		"""Close all session, engines, tunnels, etc..."""
 		self.SrcSession.close()
 		self.TgtSession.close()
+		
+		if self.appScope == 'asutobio':
+			try:
+				self.sshtunnel.closeSshTunnels()
+			except OSError:
+				raise
+
+

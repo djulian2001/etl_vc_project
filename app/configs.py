@@ -18,7 +18,7 @@ class ConfigAsuToBio( object ):
 		parser = configparser.RawConfigParser()
 		try:
 			parser.read( self.configFile )
-		except Exception, e:
+		except Exception as e:
 			raise e
 
 		self.sshUser 		= parser.get( 'sshTunnel', 'sshUser' )
@@ -31,7 +31,7 @@ class ConfigAsuToBio( object ):
 		parser = configparser.RawConfigParser()
 		try:
 			parser.read( self.configFile )
-		except Exception, e:
+		except Exception as e:
 			raise e
 
 		self.sourceUser				= parser.get( 'oracleDb', 'dbUser' )
@@ -42,7 +42,7 @@ class ConfigAsuToBio( object ):
 		parser = configparser.RawConfigParser()
 		try:
 			parser.read( self.configFile )
-		except Exception, e:
+		except Exception as e:
 			raise e
 		else:
 			self.targetUser 	= parser.get( 'mysqlBioPsDb', 'dbUser' )
@@ -67,7 +67,7 @@ class ConfigBioetl( object ):
 		parser = configparser.RawConfigParser()
 		try:
 			parser.read( self.configFile )
-		except Exception, e:
+		except Exception as e:
 			raise e
 		else:
 			self.targetUser		= parser.get( 'mysqlBioPublicDb', 'dbUser' )
@@ -79,7 +79,7 @@ class ConfigBioetl( object ):
 		parser = configparser.RawConfigParser()
 		try:
 			parser.read( self.configFile )
-		except Exception, e:
+		except Exception as e:
 			raise e
 		else:
 			self.sourceUser		= parser.get( 'mysqlBioPsDb', 'dbUser' )
