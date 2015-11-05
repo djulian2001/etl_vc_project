@@ -1,10 +1,61 @@
-from app.connectdb import *
-from models.biopsmodels import BioPsPeople
-e = etlconnections("bioetl")
+from app.connectdb import EtlConnections
 
-sess = e.getSourceSession()
-# print help(sess)
-print dir(sess)
+
+###############################################################################
+# application connection manager:
+# 	imports connections to source and target, pass in the application scope
+#	and the manager scopes how the application will be used.
+asuDwPsAppRun = EtlConnections("asutobio")
+
+
+try:
+
+	sesSource = asuDwPsAppRun.getSourceSession()
+	sesTarget = asuDwPsAppRun.getTargetSession()
+
+
+	import asudwDepartmentsToBioPs
+
+	srcDepartments = asudwDepartmentsToBioPs.getSourceDepartmentsData( sesSource )
+
+	iDepartments = 1
+	for srcDepartment in srcDepartments:
+
+		addDepartment = asudwDepartmentsToBioPs.processDepartmentsData( srcDepartment )
+		sesTarget.add( srcDepartment )
+
+		if iDepartments % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+
+		iDepartments += 1
+
+	try:
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
+
+
+except Exception as e:
+	raise e
+finally:
+	sesTarget.close()
+	sesSource.close()
+
+	asuDwPsAppRun.cleanUp()
+
+
+# from app.connectdb import *
+# from models.biopsmodels import BioPsPeople
+# e = etlconnections("bioetl")
+
+# sess = e.getSourceSession()
+# # print help(sess)
+# print dir(sess)
 
 
 

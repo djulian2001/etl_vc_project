@@ -130,7 +130,7 @@ class EtlConnections(object):
 				self.config.targetDbHost,
 				self.config.targetDbName )
 
-			# This should get factored out later?
+			# This should get factored out later
 			BioPs.metadata.drop_all( targetEngine )
 			BioPs.metadata.create_all( targetEngine )
 

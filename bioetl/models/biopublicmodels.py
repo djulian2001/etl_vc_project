@@ -21,7 +21,7 @@ class BioCommonBase(object):
     updated_at = Column( DateTime, nullable=True )
     """Timestamp convention of laravel the frame work being used"""
     deleted_at = Column( DateTime, nullable=True )
-    """ Timestamp convention of laravel the frame work being used
+    """ Timestamp convention of laravel the front end frame work being used
         There is not always a need to add this to all of the tables.  People are softdeleted
         NOTE: This could be a class 'mixin' class TimestampThis(object): with above Column declarative
         The below table classes would have it passed in, the same as BioPublic. 
@@ -131,3 +131,23 @@ class Jobs( BioPublic ):
     fte = Column( Numeric(7,6), nullable=False )
     ### last_update = Column( DateTime(), nullable=False )
     department_directory = Column( String(255) )
+
+class Departments( BioPublic ):
+    """
+        Origin: Asu directory wharehouse, SYSADM.PS_DEPT_TBL table.
+        The data has to be filter with a windows function prior to moving to mysql
+        because of mysql limitations.  We filter out the descr that has an 
+        'Inactive' value.
+        The deptid is required to capture association data between many to many
+        values.
+    """
+    __tablename__ = 'departments'
+    # below are the data fields out of peopleSoft
+    deptid = Column( String(15), nullable = False )
+    effdt = Column( DATE(), nullable = False )
+    eff_status = Column( String(7), nullable = False )
+    descr = Column( String(31), nullable = False )
+    descrshort = Column( String(15), nullable = False )
+    location = Column( String(15), nullable = False )
+    budget_deptid = Column( String(15), nullable = False )
+

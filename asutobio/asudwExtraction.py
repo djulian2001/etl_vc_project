@@ -1,48 +1,23 @@
-from sqlalchemy import *
+from app.connectdb import EtlConnections
+
+# from sqlalchemy import *
 # import cx_Oracle
 
-from models.asudwpsmodels import *
-from models.biopsmodels import *
+# from models.asudwpsmodels import *
+# from models.biopsmodels import *
 
-from app.connectdb import EtlConnections
-from sharedProcesses import hashThisList
 
+###############################################################################
+# application connection manager:
+# 	imports connections to source and target, pass in the application scope
+#	and the manager scopes how the application will be used.
 asuDwPsAppRun = EtlConnections("asutobio")
 
-sesSource = asuDwPsAppRun.getSourceSession()
-sesTarget = asuDwPsAppRun.getTargetSession()
 
-true, false = literal(True), literal(False)
+try:
 
-# sesTarget = TgtSessions()
-# sesSource = SrcSessions()
-
-
-####### TIME TO REFACTOR ########
-
-# the source database sub query object used to extract all emplid's for biodesign data... 
-srcFilters = AsuPsBioFilters( sesSource ) # remove after the refactoring has been completed
-
-srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
-
-# print srcFilters.getAllBiodesignEmplidList(False)
-
-# ###############################################################################
-# # Utilitie Functions:
-# ###############################################################################
-# def hashThisList(theList):
-# 	"""
-# 		The following takes in a list of variable data types, casts them to a
-# 		string, then concatenates them together, then hashs the string value
-# 		and returns it.
-# 	"""
-# 	thisString = ""
-# 	for i in theList:
-# 		thisString += str(i)
-
-# 	thisSha256Hash = hashlib.sha256(thisString).hexdigest()
-
-# 	return thisSha256Hash
+	sesSource = asuDwPsAppRun.getSourceSession()
+	sesTarget = asuDwPsAppRun.getTargetSession()
 
 
 
@@ -54,10 +29,7 @@ srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
 #		person_webprofile, 
 # 	
 
-# srcPersons = sesSource.query( AsuDwPsPerson ).join(srcEmplidsSubQry, AsuDwPsPerson.emplid==srcEmplidsSubQry.c.emplid).order_by( AsuDwPsPerson.emplid)[1:5]
-# srcPersons = sesSource.query( AsuDwPsPerson ).join(srcEmplidsSubQry, AsuDwPsPerson.emplid==srcEmplidsSubQry.c.emplid).order_by( AsuDwPsPerson.emplid).all()
-# sesSource.query( AsuDwPsPerson ).join(srcEmplidsSubQry, AsuDwPsPerson.emplid==srcEmplidsSubQry.c.emplid).order_by( AsuDwPsPerson.emplid).all()
-try:
+
 	import asudwPeopleToBioPs
 
 	srcPersons = asudwPeopleToBioPs.getSourcePerson( sesSource )
@@ -130,12 +102,6 @@ try:
 		sesTarget.rollback()
 		raise e
 
-
-
-except Exception as e:
-	asuDwPsAppRun.cleanUp()
-	raise e
-
 #
 # end of for srcPersonAddresses
 ###############################################################################
@@ -149,54 +115,34 @@ except Exception as e:
 #		bio_ps.person_phones
 #
 
-srcPersonPhones = sesSource.query(
-	AsuDwPsPhones ).join(
-		srcEmplidsSubQry, AsuDwPsPhones.emplid==srcEmplidsSubQry.c.emplid ).filter(
-			AsuDwPsPhones.phone_type.in_( 
-				['CELL','WORK'] ) ).order_by(
-					AsuDwPsPhones.emplid ).all()
+	import asudwPhonesToBioPs
 
-iPersonPhones = 1
+	srcPersonPhones = asudwPhonesToBioPs.getSourcePhonesData( sesSource )
 
-for personPhone in srcPersonPhones:
-	
-	personPhoneList = [
-		personPhone.emplid,
-		personPhone.phone_type,
-		personPhone.phone,
-		personPhone.last_update]
+	iPersonPhones = 1
+	for personPhone in srcPersonPhones:
+		
+		addPersonPhone = asudwPhonesToBioPs.processPhonesData( personPhone )
+		sesTarget.add( addPersonPhone )
 
-	personPhoneHash = hashThisList(personPhoneList)
+		if iPersonPhones % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
 
-	tgtPersonPhone = BioPsPhones(
-		source_hash = personPhoneHash,
-		emplid = personPhone.emplid,
-		phone_type = personPhone.phone_type,
-		phone = personPhone.phone,
-		last_update = personPhone.last_update )
+		iPersonPhones += 1
 
-	sesTarget.add( tgtPersonPhone )
-
-	if iPersonPhones % 1000 == 0:
-		try:
-			sesTarget.flush()
-		except Exception, e:
-			sesTarget.rollback()
-			raise e
-
-	iPersonPhones += 1
-
-try:
-	sesTarget.commit()
-except Exception, e:
-	sesTarget.rollback()
-	raise e
+	try:
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
 
 #
 # end of for srcPersonPhones
 ###############################################################################
-
-
 
 ###############################################################################
 # Extract the oracle person jobs table and cut up into:
@@ -206,70 +152,35 @@ except Exception, e:
 #		bio_ps.person_jobs
 #
 
-srcPersonJobs = sesSource.query(
-	AsuDwPsJobs ).join(
-		srcEmplidsSubQry, AsuDwPsJobs.emplid==srcEmplidsSubQry.c.emplid ).order_by(
-			AsuDwPsJobs.emplid ).all()
+	import asudwJobsToBioPs
+	srcPersonJobs = asudwJobsToBioPs.getSourceJobsData( sesSource )
 
-iPersonJobs = 1
+	iPersonJobs = 1
 
-for personJob in srcPersonJobs:
-	
-	personJobList = [
-		personJob.emplid,
-		personJob.empl_rcd,
-		personJob.title,
-		personJob.department,
-		personJob.mailcode,
-		personJob.empl_class,
-		personJob.job_indicator,
-		personJob.location,
-		personJob.hr_status,
-		personJob.deptid,
-		personJob.empl_status,
-		personJob.fte,
-		personJob.last_update,
-		personJob.department_directory]
+	for personJob in srcPersonJobs:
+		
+		addPersonJob = asudwJobsToBioPs.processJobsData( personJob )
+		sesTarget.add( addPersonJob )
 
-	personJobHash = hashThisList(personJobList)
+		if iPersonJobs % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
 
-	tgtPersonJob = BioPsJobs(
-		source_hash = personJobHash,
-		emplid = personJob.emplid,
-		empl_rcd = personJob.empl_rcd,
-		title = personJob.title,
-		department = personJob.department,
-		mailcode = personJob.mailcode,
-		empl_class = personJob.empl_class,
-		job_indicator = personJob.job_indicator,
-		location = personJob.location,
-		hr_status = personJob.hr_status,
-		deptid = personJob.deptid,
-		empl_status = personJob.empl_status,
-		fte = personJob.fte,
-		last_update = personJob.last_update,
-		department_directory = personJob.department_directory)
+		iPersonJobs += 1
 
-	sesTarget.add( tgtPersonJob )
-
-	if iPersonJobs % 1000 == 0:
-		try:
-			sesTarget.flush()
-		except Exception, e:
-			sesTarget.rollback()
-			raise e
-
-	iPersonJobs += 1
-
-try:
-	sesTarget.commit()
-except Exception, e:
-	sesTarget.rollback()
-	raise e
+	try:
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
 
 #
 # end of for srcPersonJobs
 ###############################################################################
+
 
 
 ###############################################################################
@@ -280,82 +191,86 @@ except Exception, e:
 #		bio_ps.person_subaffiliations
 #
 
-srcPersonSubAffiliations = sesSource.query(
-	AsuDwPsSubAffiliations ).join(
-		srcEmplidsSubQry, AsuDwPsSubAffiliations.emplid==srcEmplidsSubQry.c.emplid ).order_by(
-			AsuDwPsSubAffiliations.emplid ).all()
+	import asudwSubAffiliationsToBioPs
+	srcPersonSubAffiliations = asudwSubAffiliationsToBioPs.getSourceSubAffiliationsData( sesSource )
 
-iPersonSubAffiliations = 1
+	iPersonSubAffiliations = 1
+	for personSubAffiliation in srcPersonSubAffiliations:
+		
+		addPersonSubAffiliation = asudwSubAffiliationsToBioPs.processSubAffiliationsData( personSubAffiliation )
+		sesTarget.add( addPersonSubAffiliation )
 
-for personSubAffiliation in srcPersonSubAffiliations:
-	
-	personSubAffiliationList = [
-		personSubAffiliation.emplid,
-		personSubAffiliation.deptid,
-		personSubAffiliation.subaffiliation_code,
-		personSubAffiliation.campus,
-		personSubAffiliation.title,
-		personSubAffiliation.short_description,
-		personSubAffiliation.description,
-		personSubAffiliation.directory_publish,
-		personSubAffiliation.department,
-		personSubAffiliation.last_update,
-		personSubAffiliation.department_directory ]
+		if iPersonSubAffiliations % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
 
-	personSubAffiliationHash = hashThisList( personSubAffiliationList )
+		iPersonSubAffiliations += 1
 
-	tgtPersonSubAffiliation = BioPsSubAffiliations(
-		source_hash = personSubAffiliationHash,
-		emplid = personSubAffiliation.emplid,
-		deptid = personSubAffiliation.deptid,
-		subaffiliation_code = personSubAffiliation.subaffiliation_code,
-		campus = personSubAffiliation.campus,
-		title = personSubAffiliation.title,
-		short_description = personSubAffiliation.short_description,
-		description = personSubAffiliation.description,
-		directory_publish = personSubAffiliation.directory_publish,
-		department = personSubAffiliation.department,
-		last_update = personSubAffiliation.last_update,
-		department_directory = personSubAffiliation.department_directory )
-
-	sesTarget.add( tgtPersonSubAffiliation )
-
-	if iPersonSubAffiliations % 1000 == 0:
-		try:
-			sesTarget.flush()
-		except Exception, e:
-			sesTarget.rollback()
-			raise e
-
-	iPersonSubAffiliations += 1
-
-try:
-	sesTarget.commit()
-except Exception, e:
-	sesTarget.rollback()
-	raise e
+	try:
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
 
 #
-# end of for srcPersonJobs
+# end of for srcPersonSubAffiliations
+###############################################################################
+
+###############################################################################
+# Extract the oracle person jobs table and cut up into:
+# 	oracle:
+#		
+#	mysql:
+#		bio_ps.departments
+#
+	import asudwDepartmentsToBioPs
+
+	srcDepartments = asudwDepartmentsToBioPs.getSourceDepartmentsData( sesSource )
+
+	iDepartments = 1
+	for srcDepartment in srcDepartments:
+
+		addDepartment = asudwDepartmentsToBioPs.processDepartmentsData( srcDepartment )
+		sesTarget.add( addDepartment )
+
+		if iDepartments % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+
+		iDepartments += 1
+
+	try:
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
+#
+# end of for srcDepartments
 ###############################################################################
 
 
-# print srcPersons
 
-try:
-	sesTarget.commit()
-except Exception, e:
-	sesTarget.rollback()
+	# try:
+	# 	sesTarget.commit()
+	# except Exception as e:
+	# 	sesTarget.rollback()
+	# 	raise e
+	# finally:
+	# 	sesTarget.close()
+	# 	sesSource.close()
+
+	# 	asuDwPsAppRun.cleanUp()
+
+except Exception as e:
 	raise e
 finally:
 	sesTarget.close()
 	sesSource.close()
 
 	asuDwPsAppRun.cleanUp()
-
-# for this in emplid_list:
-# 	print this.emplid
-
-# id_list = sesSource.execute(sql).fetchall()
-# for an_id in id_list:
-# 	print an_id
