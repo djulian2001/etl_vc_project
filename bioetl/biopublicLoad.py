@@ -210,6 +210,69 @@ try:
 except Exception as e:
 	sesTarget.rollback()
 	raise e
+
+###############################################################################
+# 
+#
+
+import departmentProcessing
+
+srcDepartments = departmentProcessing.getSourceDepartments( sesSource )
+
+iDepartment = 1
+for srcDepartment in srcDepartments:
+	try:
+		processedDepartment = departmentProcessing.processDepartment( srcDepartment, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedDepartment )
+		if iDepartment % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iDepartment += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+tgtMissingDepartments = departmentProcessing.getTargetDepartments( sesTarget )
+
+iRemoveDepartment = 1
+for tgtMissingDepartment in tgtMissingDepartments:
+	try:
+		removeDepartment = departmentProcessing.softDeleteDepartment( tgtMissingDepartment )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeDepartment )
+		if iRemoveDepartment % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveDepartment += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+# end of for tgtMissingDepartments
+###############################################################################
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
 finally:
 	sesTarget.close()
 	sesSource.close()

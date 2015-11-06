@@ -12,13 +12,13 @@ class EtlConnections(object):
 			
 			self.config = ConfigAsuToBio()
 			self.setupAsuToBio()
-			pass
+			
 		elif self.appScope == 'bioetl':
 			from configs import ConfigBioetl
 
 			self.config = ConfigBioetl()
 			self.setupBioetl()
-			pass
+			
 		else:
 			raise TypeError('Applications scope not correctly defined, no connections setup!')
 	
@@ -73,6 +73,8 @@ class EtlConnections(object):
 			self.config.targetDbHost,
 			self.config.targetDbName )
 
+		# BioPublic.metadata.drop_all( targetEngine )
+		BioPublic.metadata.create_all( targetEngine )
 		
 		BioPs.metadata.bind = sourceEngine
 		BioPublic.metadata.bind = targetEngine
@@ -144,13 +146,13 @@ class EtlConnections(object):
 
 	def getTargetSession( self ):
 		"""This method returns a configured session scoped as a target database"""
-		session = self.TgtSession()
-		return session
+		sesTarget = self.TgtSession()
+		return sesTarget
 	
 	def getSourceSession( self ):
 		"""This method returns a configured session bound to a source database"""
-		session = self.SrcSession()
-		return session
+		sesSource = self.SrcSession()
+		return sesSource
 
 	def cleanUp( self ):
 		"""Close all session, engines, tunnels, etc..."""

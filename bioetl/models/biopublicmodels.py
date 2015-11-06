@@ -143,7 +143,7 @@ class Departments( BioPublic ):
     """
     __tablename__ = 'departments'
     # below are the data fields out of peopleSoft
-    deptid = Column( String(15), nullable = False )
+    deptid = Column( String(15), unique = True, nullable = False )
     effdt = Column( DATE(), nullable = False )
     eff_status = Column( String(7), nullable = False )
     descr = Column( String(31), nullable = False )

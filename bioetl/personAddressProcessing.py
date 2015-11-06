@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import exists
+from sqlalchemy import exists, literal
 
 from models.biopublicmodels import People, Addresses
 from asutobio.models.biopsmodels import BioPsAddresses
@@ -19,7 +19,14 @@ def processAddress( srcPersonAddress, sesTarget ):
 		from the source database.  Using the target database as the test, a record will be
 		either returned as ingored record (no changes), insert new object, or update an
 		existing object.
+	
+		Selecting Booleans from the databases.  Using conjunctions to make the exists()
+		a boolean return from the query() method.  Bit more syntax but a sqlalchemy object
+		returned will not be truthy/falsey.
+		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
+
+	true, false = literal(True), literal(False)
 
 	def personAddressExists( emplid, address_type ):
 		"""
@@ -27,10 +34,12 @@ def processAddress( srcPersonAddress, sesTarget ):
 			@True: The person address exists and requires update checks
 			@False: The person doesn't exist and will prepare for insert
 		"""
-		return sesTarget.query(
+		(ret, ), = sesTarget.query(
 			exists().where(
 				Addresses.emplid == emplid ).where(
 				Addresses.address_type == address_type ) )
+
+		return ret
 
 	if personAddressExists( srcPersonAddress.emplid, srcPersonAddress.address_type ):
 
@@ -40,12 +49,13 @@ def processAddress( srcPersonAddress, sesTarget ):
 				@True: The record was not found and in the target database and should be updated
 				@False: The record was found and should be ingnored with no changes required
 			"""
-			return not sesTarget.query(
+			(ret, ), = sesTarget.query(
 				exists().where( 
 					Addresses.emplid == srcPersonAddress.emplid ).where( 
 					Addresses.address_type == srcPersonAddress.address_type ).where(
 					Addresses.source_hash == srcPersonAddress.source_hash ) )
 
+			return not ret
 
 		if addressRequiresUpdate( srcPersonAddress.emplid, srcPersonAddress.address_type, srcPersonAddress.source_hash ):
 			
@@ -121,7 +131,7 @@ def cleanupSourceAddresses( personAddress, sesSource ):
 			@True: If the person address record is not found
 			@False: If the person address was found in the source database
 		"""
-		return not sesSource.query(
+		(ret, ), = sesSource.query(
 			exists().where( 
 				BioPsPhones.emplid == personAddress.emplid ).where(
 				BioPsPhones.address_type == personAddress.address_type ).where(
@@ -129,6 +139,8 @@ def cleanupSourceAddresses( personAddress, sesSource ):
 				BioPsPhones.address1 == personAddress.address2 ).where(
 				BioPsPhones.address1 == personAddress.address3 ).where(
 				BioPsPhones.address1 == personAddress.address4 ) )
+
+		return not ret
 
 	if removeMissingAddress():
 		return personAddress

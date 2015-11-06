@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import exists
+from sqlalchemy import exists, literal
 
 from models.biopublicmodels import People
 from asutobio.models.biopsmodels import BioPsPeople
@@ -12,20 +12,32 @@ def getSourcePeople( sesSource ):
 	return sesSource.query( BioPsPeople ).all()
 
 def processPerson( srcPerson, sesTarget ):
-	"""Testing if i can functionalize my program
-		
+	"""
 		Takes in a source person object from biopsmodels (mysql.bio_ps.people)
 		and determines if the object needs to be updated, inserted in the target
-		database (mysql.bio_public.people).
+		database (mysql.bio_public.people), or that nothing needs doing.
+
+		Selecting Booleans from the databases.  Using conjunctions to make the exists()
+		a boolean return from the query() method.  Bit more syntax but a sqlalchemy object
+		returned will not be truthy/falsey.
+		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
+	true, false = literal(True), literal(False)
+
 	def personExists( emplid ):
-		"""determine the person exists in the target database."""
-		return sesTarget.query(
+		"""
+			Determine the person exists in the target database.
+			@True: The person exists in the database
+			@False: The person does not exist in the database
+
+		"""
+		(ret, ), = sesTarget.query(
 			exists().where(
 				People.emplid == emplid ) )
-	
-	
+		
+		return ret
+
 	if personExists( srcPerson.emplid ):
 
 		def personUpdateRequired( emplid, source_hash ):
@@ -34,10 +46,12 @@ def processPerson( srcPerson, sesTarget ):
 				@True: returned from this function if hash is unchangeed
 				@False: returned if hash is changed, indicating a need to updated record.
 			"""
-			return not sesTarget.query(
+			(ret, ), = sesTarget.query(
 				exists().where(
 					People.emplid == emplid ).where(
 					People.source_hash == source_hash )	)
+
+			return not ret
 		
 		if personUpdateRequired( srcPerson.emplid, srcPerson.source_hash ):
 			# update the database with the source data and return the target object with changes.
@@ -112,9 +126,11 @@ def softDeletePerson( tgtMissingPerson, sesSource ):
 			@True: If the data was not found and requires and update against the target database.
 			@False: If the data was found and no action is required. 
 		"""
-		return not sesSource.query(
+		(ret, ), = sesSource.query(
 			exists().where(
 				BioPsPeople.emplid == emplid ) )
+		
+		return not ret
 
 
 	if flagPersonMissing( tgtMissingPerson.emplid ):
@@ -123,6 +139,5 @@ def softDeletePerson( tgtMissingPerson, sesSource ):
 
 		return tgtMissingPerson
 		
-		# sesTarget.add( tgtMissingPerson )
 	else:
 		raise TypeError('source person still exists and requires no soft delete!')
