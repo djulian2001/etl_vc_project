@@ -111,12 +111,12 @@ iRemovePhone = 1
 for tgtMissingPersonPhone in tgtMissingPersonPhones:
 	# if the phone no longer is found we remove it but only if the person is active...
 	try:
-		removePhone = personPhoneProcessing.cleanupSourcePhones()
+		removePhone = personPhoneProcessing.cleanupSourcePhones( tgtMissingPersonPhone, sesSource )
 	except TypeError, e:
 		# print e
 		pass
 	else:
-		sesTarget.delete( tgtMissingPersonPhone )
+		sesTarget.add( tgtMissingPersonPhone )
 		if iRemovePhone % 1000 == 0:
 			try:
 				sesTarget.flush()
@@ -181,11 +181,11 @@ tgtMissingPersonAddresses = personAddressProcessing.getTargetAddresses( sesTarge
 iRemoveAddresses = 1
 for tgtMissingPersonAddress in tgtMissingPersonAddresses:
 	try:
-		removePersonAddress = personAddressProcessing.cleanupSourceAddresses( tgtMissingPersonAddress )
+		removePersonAddress = personAddressProcessing.cleanupSourceAddresses( tgtMissingPersonAddress, sesSource )
 	except TypeError as e:
 		pass
 	else:
-		sesTarget.delete( tgtMissingPersonAddress )
+		sesTarget.add( tgtMissingPersonAddress )
 		if iRemoveAddresses % 1000 == 0:
 			try:
 				sesTarget.flush()
@@ -213,7 +213,123 @@ except Exception as e:
 
 ###############################################################################
 # 
-#
+#   personWebProfileProcessing
+
+
+import personWebProfileProcessing
+
+srcPersonWebProfiles = personWebProfileProcessing.getSourcePersonWebProfile( sesSource )
+
+iPersonWebProfile = 1
+for srcPersonWebProfile in srcPersonWebProfiles:
+	try:
+		processedpersonWebProfile = personWebProfileProcessing.processPersonWebProfile( srcPersonWebProfile, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedpersonWebProfile )
+		if iPersonWebProfile % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iPersonWebProfile += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingPersonWebProfiles = personWebProfileProcessing.getTargetPersonWebProfiles( sesTarget )
+
+iRemove_Y_ = 1
+for tgtMissingPersonWebProfile in tgtMissingPersonWebProfiles:
+	try:
+		removePersonWebProfile = personWebProfileProcessing.softDeletePersonWebProfile( tgtMissingPersonWebProfile, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removePersonWebProfile )
+		if iRemove_Y_ % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemove_Y_ += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+# 	End of personWebProfileProcessing
+###############################################################################
+
+
+###############################################################################
+# 
+#   File Import:  personExternalLinkProcessing
+
+import personExternalLinkProcessing
+
+srcPersonExternalLinks = personExternalLinkProcessing.getSourcePersonExternalLinks( sesSource )
+
+iPersonExternalLink = 1
+for srcPersonExternalLink in srcPersonExternalLinks:
+	try:
+		processedpersonExternalLink = personExternalLinkProcessing.processPersonExternalLink( srcPersonExternalLink, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedpersonExternalLink )
+		if iPersonExternalLink % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iPersonExternalLink += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingPersonExternalLinks = personExternalLinkProcessing.getTargetPersonExternalLinks( sesTarget )
+
+iRemovePersonExternalLink = 1
+for tgtMissingPersonExternalLink in tgtMissingPersonExternalLinks:
+	try:
+		removePersonExternalLink = personExternalLinkProcessing.softDeletePersonExternalLink( tgtMissingPersonExternalLink, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removePersonExternalLink )
+		if iRemovePersonExternalLink % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemovePersonExternalLink += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of personExternalLinkProcessing
+###############################################################################
+
+###############################################################################
+# 
+# xxxx
 
 import departmentProcessing
 
@@ -241,6 +357,7 @@ except Exception as e:
 	sesTarget.rollback()
 	raise e
 
+
 tgtMissingDepartments = departmentProcessing.getTargetDepartments( sesTarget )
 
 iRemoveDepartment = 1
@@ -266,6 +383,62 @@ except Exception as e:
 	raise e
 
 # end of for tgtMissingDepartments
+###############################################################################
+
+###############################################################################
+# 
+#
+import personJobsProcessing
+
+srcPersonJobs = personJobsProcessing.getSourcePersonJobs( sesSource )
+
+iPersonJob = 1
+for srcPersonJob in srcPersonJobs:
+	try:
+		processedPersonJob = personJobsProcessing.processPersonJob( srcPersonJob, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedPersonJob )
+		if iPersonJob % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iPersonJob += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+tgtMissingPersonJobs = personJobsProcessing.getTargetPersonJobs( sesTarget )
+
+iRemovePersonJob = 1
+for tgtMissingPersonJob in tgtMissingPersonJobs:
+	try:
+		removePersonJob = personJobsProcessing.softDeletePersonJob( tgtMissingPersonJob, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removePersonJob )
+		if iRemovePersonJob % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemovePersonJob += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+# end of for tgtMissingPersonJobs
 ###############################################################################
 
 try:

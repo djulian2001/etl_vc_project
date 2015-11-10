@@ -30,7 +30,7 @@ def process_Y_( src_Y_, sesTarget ):
 #template mapping... column where(s) _yyy_ 
 	true, false = literal(True), literal(False)
 
-	def _y_Exists( _yyy_ ):
+	def _y_Exists():
 		"""
 			determine the _y_ exists in the target database.
 			@True: The _y_ exists in the database
@@ -38,13 +38,13 @@ def process_Y_( src_Y_, sesTarget ):
 		"""
 		(ret, ), = sesTarget.query(
 			exists().where(
-				_X_._yyy_ == _yyy_ ) )
+				_X_._yyy_ == src_Y_._yyy_ ) )
 
 		return ret
 
-	if _y_Exists( src_Y_._yyy_ ):
+	if _y_Exists():
 
-		def _y_UpdateRequired( _yyy_, source_hash ):
+		def _y_UpdateRequired():
 			"""
 				Determine if the _y_ that exists requires and update.
 				@True: returned if source_hash is unchanged
@@ -52,12 +52,12 @@ def process_Y_( src_Y_, sesTarget ):
 			"""	
 			(ret, ), = sesTarget.query(
 				exists().where(
-					_X_._yyy_ == _yyy_).where(
-					_X_.source_hash == source_hash ) )
+					_X_._yyy_ == src_Y_._yyy_ ).where(
+					_X_.source_hash == src_Y_.source_hash ) )
 
 			return not ret
 
-		if _y_UpdateRequired( src_Y_._yyy_, src_Y_.source_hash ):
+		if _y_UpdateRequired():
 			# retrive the tables object to update.
 			update_Y_ = sesTarget.query(
 				_X_ ).filter(
@@ -67,7 +67,8 @@ def process_Y_( src_Y_, sesTarget ):
 			update_Y_.source_hash = src_Y_.source_hash
 			update_Y_._yyy_ = src_Y_._yyy_
 
-			update_Y_.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
+			update_Y_.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			update_Y_.deleted_at = None
 
 			return update_Y_
 		else:
@@ -100,7 +101,7 @@ def softDelete_Y_( tgtMissing_Y_, sesSource ):
 		The return of this function returns a sqlalchemy object to update a person object.
 	"""
 
-	def flag_Y_Missing( _yyy_ ):
+	def flag_Y_Missing():
 		"""
 			Determine that the _y_ object is still showing up in the source database.
 			@True: If the data was not found and requires an update against the target database.
@@ -108,11 +109,11 @@ def softDelete_Y_( tgtMissing_Y_, sesSource ):
 		"""
 		(ret, ), = sesSource.query(
 			exists().where(
-				BioPs_X_._yyy_ == _yyy_ ) )
+				BioPs_X_._yyy_ == tgtMissing_Y_._yyy_ ) )
 
 		return not ret
 
-	if flag_Y_Missing( tgtMissing_Y_._yyy_ ):
+	if flag_Y_Missing():
 
 		tgtMissing_Y_.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 
@@ -120,3 +121,66 @@ def softDelete_Y_( tgtMissing_Y_, sesSource ):
 
 	else:
 		raise TypeError('source person still exists and requires no soft delete!')
+
+
+###############################################################################
+### biopublicLoad.py cut and paste into proper stop in the file all below:
+###############################################################################
+
+
+###############################################################################
+# 
+#   File Import:  _y_Processing
+
+import _y_Processing
+
+src_X_ = _y_Processing.getSource_X_( sesSource )
+
+i_Y_ = 1
+for src_Y_ in src_X_:
+	try:
+		processed_y_ = _y_Processing.process_Y_( src_Y_, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processed_y_ )
+		if i_Y_ % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		i_Y_ += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissing_X_ = _y_Processing.getTarget_X_( sesTarget )
+
+iRemove_Y_ = 1
+for tgtMissing_Y_ in tgtMissing_X_:
+	try:
+		remove_Y_ = _y_Processing.softDelete_Y_( tgtMissing_Y_, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( remove_Y_ )
+		if iRemove_Y_ % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemove_Y_ += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of _y_Processing
+###############################################################################

@@ -68,7 +68,8 @@ def processDepartment( srcDepartment, sesTarget ):
 			updateDepartment.location = srcDepartment.location
 			updateDepartment.budget_deptid = srcDepartment.budget_deptid
 			updateDepartment.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
+			updateDepartment.deleted_at = None
+			
 			return updateDepartment
 		else:
 			raise TypeError('source department already exists and requires no updates!')

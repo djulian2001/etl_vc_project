@@ -19,7 +19,7 @@ def getSourceJobLogData( sesSource ):
             AsuDwPsJobLog.emplid, AsuDwPsJobLog.jobcode, AsuDwPsJobLog.deptid, AsuDwPsJobLog.effdt, AsuDwPsJobLog.action, 
             func.row_number().over(
                 partition_by=[AsuDwPsJobLog.emplid, AsuDwPsJobLog.main_appt_num_jpn],
-                order_by=AsuDwPsJobLog.effdt.desc() ).label( 'rn' ) ) ).join(	
+                order_by=AsuDwPsJobLog.effdt.desc() ).label( 'rn' ) ).join(	
     		srcEmplidsSubQry, AsuDwPsJobLog.emplid == srcEmplidsSubQry.c.emplid ) ).subquery()
 
 	return sesSource.query(

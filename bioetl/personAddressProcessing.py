@@ -80,18 +80,19 @@ def processAddress( srcPersonAddress, sesTarget ):
 			updatePersonAddress.country_descr = srcPersonAddress.country_descr
 			# update the bio timestamp
 			updatePersonAddress.updated_at = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+			updatePersonAddress.deleted_at = None
 			# add the object to the session to commit the updated
 			return updatePersonAddress
 
 		else:
 			raise TypeError('Person address record required no insert or updates.')
 	else:
-		tgtPerson = sesTarget.query(
-			People ).filter(
+		getPersonId = sesTarget.query(
+			People.id ).filter(
 				People.emplid == srcPersonAddress.emplid ).one()
 
 		insertPersonAddress = Addresses(
-			person_id = tgtPerson.id,
+			person_id = getPersonId.id,
 			source_hash = srcPersonAddress.source_hash,
 			updated_flag = True,
 			emplid = srcPersonAddress.emplid,
@@ -117,7 +118,7 @@ def getTargetAddresses( sesTarget ):
 		People ).filter(
 			People.deleted_at.isnot( None ) ).all()
 
-def cleanupSourceAddresses( personAddress, sesSource ):
+def cleanupSourceAddresses( tgtPersonAddress, sesSource ):
 	"""
 		If the phone no longer is found we remove it but only if the person is active.
 		Returns a record that is no longer found in the source database and needs to be
@@ -133,17 +134,20 @@ def cleanupSourceAddresses( personAddress, sesSource ):
 		"""
 		(ret, ), = sesSource.query(
 			exists().where( 
-				BioPsPhones.emplid == personAddress.emplid ).where(
-				BioPsPhones.address_type == personAddress.address_type ).where(
-				BioPsPhones.address1 == personAddress.address1 ).where(
-				BioPsPhones.address1 == personAddress.address2 ).where(
-				BioPsPhones.address1 == personAddress.address3 ).where(
-				BioPsPhones.address1 == personAddress.address4 ) )
+				BioPsPhones.emplid == tgtPersonAddress.emplid ).where(
+				BioPsPhones.address_type == tgtPersonAddress.address_type ).where(
+				BioPsPhones.address1 == tgtPersonAddress.address1 ).where(
+				BioPsPhones.address1 == tgtPersonAddress.address2 ).where(
+				BioPsPhones.address1 == tgtPersonAddress.address3 ).where(
+				BioPsPhones.address1 == tgtPersonAddress.address4 ) )
 
 		return not ret
 
 	if removeMissingAddress():
-		return personAddress
+		
+		tgtPersonAddress.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		
+		return tgtPersonAddress
 	else:
 		raise TypeError('No need to remove the target database person address record.')
 

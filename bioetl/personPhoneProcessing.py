@@ -68,6 +68,7 @@ def processPhone( srcPersonPhone, sesTarget ):
 			updatePersonPhone.updated_flag = True
 			updatePersonPhone.phone = srcPersonPhone.phone
 			updatePersonPhone.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			updatePersonPhone.deleted_at = None
 
 			return updatePersonPhone
 
@@ -77,7 +78,7 @@ def processPhone( srcPersonPhone, sesTarget ):
 	else:
 
 		srcGetPersonId = sesTarget.query(
-			People ).filter(
+			People.id ).filter(
 				People.emplid == srcPersonPhone.emplid ).one()
 
 		insertPhone = Phones(
@@ -119,6 +120,8 @@ def cleanupSourcePhones( tgtMissingPersonPhone, sesSource ):
 
 	if removeExistingPhone( tgtMissingPersonPhone.emplid, tgtMissingPersonPhone.phone_type, tgtMissingPersonPhone.phone ):
 
+		tgtMissingPersonPhone.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		
 		return tgtMissingPersonPhone
 	else:
 		raise TypeError('source person phone is active and requires no removal.')

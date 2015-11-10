@@ -55,14 +55,49 @@ class People( BioPublic ):
     ### last_update = Column(String(31), nullable=False)
 
     # one to one patern:
-    # person_webprofile = relationship("child_table", userlist=False, backref="people")
+    web_profile = relationship("PersonWebProfile", uselist=False, backref="people")
+    external_links = relationship("PersonExternalLinks", uselist=False, backref="people")
     # on child_table put
     # person_id = Column( Integer, ForeignKey( 'people.id' ) )
 
     # one to many patern:
     addresses = relationship( "Addresses", cascade="all, delete-orphan" )
     phone_numbers = relationship( "Phones", cascade="all, delete-orphan" )
-    jobs = relationship( "Jobs", cascade="all, delete-orphan" )
+    jobs = relationship( "Jobs", cascade="all, delete-orphan", backref="people" )
+    subaffiliations = relationship( "PersonSubAffiliations", cascade="all, delete-orphan", backref="people" )
+
+class PersonExternalLinks( BioPublic ):
+    __tablename__ = 'person_externallinks'
+    
+    person_id = Column( Integer, ForeignKey( 'people.id' ) )
+    # below are the data fields out of peopleSoft
+    emplid = Column( Integer, nullable=False )
+    facebook = Column(  String(255), nullable=True )
+    twitter = Column(  String(255), nullable=True )
+    google_plus = Column(  String(255), nullable=True )
+    linkedin = Column(  String(1024), nullable=True )
+
+class PersonWebProfile( BioPublic ):
+    __tablename__ = 'person_webprofile'
+
+    person_id = Column( Integer, ForeignKey( 'people.id' ) )
+    # below are the data fields out of peopleSoft
+    emplid = Column( Integer, nullable=False )
+    bio = Column(  Text(), nullable=True  )
+    research_interests = Column(  Text(), nullable=True  )
+    cv = Column(  String(1024), nullable=True  )
+    website = Column(  String(1024), nullable=True  )
+    teaching_website = Column(  String(1024), nullable=True  )
+    grad_faculties = Column(  Text(), nullable=True  )
+    professional_associations = Column(  Text(), nullable=True  )
+    work_history = Column(  Text(), nullable=True  )
+    education = Column(  Text(), nullable=True  )
+    research_group = Column(  Text(), nullable=True  )
+    research_website = Column(  String(1024), nullable=True  )
+    honors_awards = Column(  Text(), nullable=True  )
+    editorships = Column(  Text(), nullable=True  )
+    presentations = Column(  Text(), nullable=True  )
+
 
 
 class Addresses( BioPublic ):
@@ -116,6 +151,8 @@ class Jobs( BioPublic ):
     __tablename__ = 'person_jobs'
 
     person_id = Column( Integer, ForeignKey( 'people.id' ) )
+    department_id = Column( Integer, ForeignKey( 'departments.id' ) )
+    updated_flag = Column( Boolean(), default=False, nullable=False )
     # below are the data fields out of peopleSoft
     emplid = Column( Integer, nullable=False )
     empl_rcd = Column( Numeric( asdecimal=False ), nullable=False )
@@ -129,8 +166,54 @@ class Jobs( BioPublic ):
     deptid = Column( String(15), nullable=False )
     empl_status = Column( String(7), nullable=False )
     fte = Column( Numeric(7,6), nullable=False )
-    ### last_update = Column( DateTime(), nullable=False )
     department_directory = Column( String(255) )
+
+class SubAffiliations( BioPublic ):
+    """
+        Origin: Biodesign Directorate
+        This data defines how the BOMS are to associate the subaffiliations with in
+        peopleSoft for the internal and external affiliates that are associate to 
+        Biodesign departments.
+    """
+    __tablename__ = 'subaffiliations'
+
+    subaffiliation_code = Column( String(7), unique = True, nullable=False )
+    title = Column( String(63), nullable=False )
+    descr = Column( String(287), nullable=False )
+    scope = Column( String(15), nullable=False )
+    service_access = Column( String(127), nullable=False )
+    distributions = Column( String(127), nullable=False )
+
+    subaffiliations = relationship( "PersonSubAffiliations", cascade="all, delete-orphan", backref="subaffiliations" )
+
+
+class PersonSubAffiliations( BioPublic ):
+    """
+        Origin: ASU Data wharehouse, directory.subaffiliation
+        The data is managed through the peopleSoft ui, by the BOMS, the coded values
+        were decided on by the Biodesign Directorate and should not be changed much.
+        The references will be to a table part of the Biodesign BI aspect of this
+        application call subaffiliations.
+    """
+    __tablename__ = 'person_department_subaffiliations'
+
+    person_id = Column( Integer, ForeignKey( 'people.id' ) )
+    department_id = Column( Integer, ForeignKey( 'departments.id' ) )
+    subaffiliation_id = Column ( Integer, ForeignKey( 'subaffiliations.id' ) )
+
+    # below are the data fields out of peopleSoft
+    emplid = Column( Integer, nullable=False )
+    deptid = Column( String(15), nullable=False )
+    subaffiliation_code = Column( String(7), nullable=False )
+    campus = Column( String(7), nullable=False )
+    title = Column( String(39), nullable=False )
+    short_description = Column( String(23), nullable=False )
+    description = Column( String(47), nullable=False )
+    directory_publish = Column( String(7), nullable=False )
+    department = Column( String(31), nullable=False )
+    last_update = Column( DateTime(), nullable=False )
+    department_directory = Column( String(255), nullable=True )
+
 
 class Departments( BioPublic ):
     """
@@ -151,3 +234,5 @@ class Departments( BioPublic ):
     location = Column( String(15), nullable = False )
     budget_deptid = Column( String(15), nullable = False )
 
+    jobs = relationship( "Jobs", cascade="all, delete-orphan", backref="departments" )
+    
