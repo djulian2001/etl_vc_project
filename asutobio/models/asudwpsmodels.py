@@ -264,5 +264,58 @@ class AsuDwPsDepartments( AsuDwPs ):
     location = Column( String(15), nullable = False )
     budget_deptid = Column( String(15), nullable = False )
 
-    __mapper_args__ = { "primary_key":[deptid,descr,effdt] }
-    __table_args__ = { "schema": schema }
+    __mapper_args__ = { "primary_key" :[deptid,descr,effdt] }
+    __table_args__ = { "schema" : schema }
+
+
+class AsuDwPsFarEvaluations( AsuDwPs ):
+    __tablename__ = 'FAR_EVALUATIONS'
+    schema = 'ASUDW'
+    # below are the data fields out of peopleSoft
+    evaluationid = Column( Integer, nullable=False )
+    src_sys_id = Column( String(5), nullable=False )
+    calendaryear = Column( Integer, nullable=False )
+    emplid = Column( 'affiliateid', Integer, nullable=False )
+    asuriteid = Column( String(23), nullable=True )
+    asuid = Column( String(7), nullable=True )
+    faculty_rank_title = Column( String(7), nullable=True )
+    job_title = Column( String(50), nullable=True )
+    tenure_status_code = Column( String(7), nullable=True )
+    tenurehomedeptcode = Column( String(7), nullable=True )
+    extensiondate = Column( DateTime(15), nullable=True )
+    completed = Column( String(7), nullable=True )
+    dtcreated = Column( DateTime(15), nullable=True )
+    dtupdated = Column( DateTime(15), nullable=True )
+    userlastmodified = Column( String(7), nullable=True )
+    load_error = Column( String(7), nullable=True )
+    data_origin = Column( String(7), nullable=True )
+    created_ew_dttm = Column( DateTime(), nullable=True )
+    lastupd_dw_dttm = Column( DateTime(), nullable=True )
+    batch_sid = Column( Integer, nullable=False )
+
+    __mapper_args__ = { "primary_key" : [ evaluationid, emplid ] }
+    __table_args__ = { "schema" : schema }
+
+
+
+# far_conferenceproceedings
+# toad_plan_table
+# far_authoredbooks
+# far_editedbooks
+# far_bookchapters
+# far_faculty
+# far_facultydepartment
+# far_communityservices
+# far_honors
+# far_bookreviews
+# far_monetaryawardpurposes
+# far_monetaryawards
+# far_professionalservices
+# far_shortstories
+# far_universityservices
+# ---- far_evaluations
+# far_encyclopediaarticles
+# far_mentoring
+# far_nonrefereedarticles
+# far_refereedarticles
+

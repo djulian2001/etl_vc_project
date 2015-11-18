@@ -1,12 +1,5 @@
 from app.connectdb import EtlConnections
 
-# from sqlalchemy import *
-# import cx_Oracle
-
-# from models.asudwpsmodels import *
-# from models.biopsmodels import *
-
-
 ###############################################################################
 # application connection manager:
 # 	imports connections to source and target, pass in the application scope
@@ -15,11 +8,34 @@ asuDwPsAppRun = EtlConnections("asutobio")
 
 
 try:
-
 	sesSource = asuDwPsAppRun.getSourceSession()
 	sesTarget = asuDwPsAppRun.getTargetSession()
 
 
+###############################################################################
+# There will be reference lists that will be biodesign controlled.  They will be
+# 	required to be seeded into the database to capture changes.  If the data
+# 	changes more frequently than never, then we will have to build a 'ui' for
+# 	the data source to be manipulated and referenced eventually.
+#	mysql.bio_ps:
+#		subaffiliations 
+# 	
+
+
+	import biodesignSubAffiliationsToBioPs
+
+	biodesignSubAffiliations = biodesignSubAffiliationsToBioPs.getSourceBiodesignSubAffiliationsData()
+
+	for biodesignSubAffiliation in biodesignSubAffiliations:
+		addBiodesignSubAffiliation = biodesignSubAffiliationsToBioPs.processBiodesignSubAffiliationData( biodesignSubAffiliation )
+
+		sesTarget.add ( addBiodesignSubAffiliation )
+
+	try:
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
 
 ###############################################################################
 # Extract the oracle person table and cut up into:
@@ -252,6 +268,46 @@ try:
 		raise e
 #
 # end of for srcDepartments
+###############################################################################
+
+
+
+###############################################################################
+# Extract the oracle table and load it into a mysql table:
+# 	oracle:
+#		ASUDW.FAR_EVALUATIONS
+#	mysql:
+#		far_evaluations
+#
+
+	import asudwFarEvaluationToBioPs
+	
+	srcFarEvaluation = asudwFarEvaluationToBioPs.getSourceFarEvaluationsData( sesSource )
+
+	iFarEvaluation = 1
+	for farEvaluation in srcFarEvaluation:
+		
+		addFarEvaluation = asudwFarEvaluationToBioPs.processFarEvaluationData( farEvaluation )
+		
+		sesTarget.add( addFarEvaluation )
+
+		if iFarEvaluation % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+
+		iFarEvaluation += 1
+
+	try:
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
+
+#
+# end of for srcFarEvaluation
 ###############################################################################
 
 

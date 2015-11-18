@@ -127,6 +127,105 @@ class BioPsSubAffiliations( BioPs ):
     last_update = Column( DateTime(), nullable=False )
     department_directory = Column( String(255), nullable=True )
 
+class BiodesignSubAffiliations( BioPs ):
+    __tablename__ = 'subaffiliations'
+    code = Column( String(7), unique = True, nullable=False )
+    title = Column( String(63), nullable=False )
+    description = Column( String(287), nullable=False )
+    proximity_scope = Column( String(15), nullable=False )
+    service_access = Column( String(127), nullable=False )
+    distribution_lists = Column( String(127), nullable=False )
+
+    @staticmethod
+    def seedMe():   
+        seeds = [
+            {
+                "code":"BDAF",
+                "title": "BDI Affiliated Faculty",
+                "description":"ASU Faculty that are considered part of our core workforce and/or have joint appointments but are not on a Biodesign department code (employee list).  Includes faculty who supervise Biodesign employees and/or projects (usually P.I.'s)  Must have a Ph.D.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Faculty, DL.ORG.BIOD.XYZ.Faculty" },
+            {
+                "code":"BDRP",
+                "title": "BDI Research Professional",
+                "description":"ASU Research Staff doing or collaborating on research at Biodesign (ex: Academic Professionals, University Staff, DACT)",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Staff, DL.ORG.BIOD.XYZ.Staff" },
+            {
+                "code":"BDAS",
+                "title": "BDI Affiliated Staff",
+                "description":"ASU non-research Staff that are considered part of our workforce.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Staff, DL.ORG.BIOD.XYZ.Staff" },
+            {
+                "code":"BDFC",
+                "title": "ASU Faculty Collaborator",
+                "description":"ASU faculty member coducting collaborative research with BDI faculty;  includes tenured faculty, tenure-track faculty, research faculty, adjunct faculty,  part-time temp faculty, clinical faculty (teaching or research).  Not paid on a Biodesign's department code.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Faculty, DL.ORG.BIOD.XYZ.Faculty" },
+            {
+                "code":"BDAG",
+                "title": "BDI Affiliated Graduate",
+                "description":"ASU graduate student intern conducting research at Biodesign but not paid on a Biodesign department code.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.GradStudents, DL.ORG.BIOD.XYZ.GradStudents" },
+            {
+                "code":"BAPD",
+                "title": "BDI Affiliated Post Doctorate",
+                "description":"ASU Postdoctorate conducting research at Biodesign but not paid on a Biodesign department code.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.PostDocs, DL.ORG.BIOD.XYZ.PostDocs" },
+            {
+                "code":"BVIP",
+                "title": "Biodesign VIP",
+                "description":"ASU Adminstrative contacts such as President, Provost, Deans, Foundation, OKED, Guidance Council, and EHS.,NOT included in",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.Biodesign.VIP" },
+            {
+                "code":"BDAU",
+                "title": "BDI Affiliated Undergraduate",
+                "description":"ASU undergraduate student working within Biodesign but not paid on a Biodesign department code.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.StudentWorkers, DL.ORG.BIOD.XYZ.StudentWorkers" },
+            {
+                "code":"BDHV",
+                "title": "Biodesign HS Volunteer",
+                "description":"High School Interns not paid on a Biodesign department code.",
+                "proximity_scope":"External",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.HSVol, DL.ORG.BIOD.XYZ.HSVol" },
+            {
+                "code":"NCON",
+                "title": "Consultant",
+                "description":"Outside Consultant hired on contract.  Must be approved by Director of Operations -- Consultants must meet ASU criteria to have this affiliation and are paid through purchasing (will be issued 1099 Form).",
+                "proximity_scope":"External",
+                "service_access":"Additional services must be requested by the department",
+                "distribution_lists": "No DL - email manually" },
+            {
+                "code":"BDEC",
+                "title": "Biodesign External Collaborator",
+                "description":"Research collaborator from outside ASU.  International or domestic. Ex: Corporate affiliations, individuals, private businesses, public entities, etc. doing research for Biodesign",
+                "proximity_scope":"External",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Collaborators, DL.ORG.BIOD.XYZ.Collaborators" },
+            {
+                "code":"NVOL",
+                "title": "Volunteers",
+                "description":"Professional development and retired individuals.  Note: H4 visa holders are dependents of H1B visa holders and are not allowed to work or volunteer.",
+                "proximity_scope":"External",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Volunteers, DL.ORG.BIOD.XYZ.Volunteers" }, ]
+
+        return seeds
+
 class BioPsDepartments( BioPs ):
     __tablename__ = 'departments'
     # below are the data fields out of peopleSoft
@@ -173,40 +272,31 @@ class BioPsDepartments( BioPs ):
 # #  BELOW are the FAR Evaluation our source of citation and research street cred
 # ###############################################################################
 
-# class BioPsFarEvaluations( BioPs ):
-#     __tablename__ = "asudw_far_evaluations"
-#     # below are the data fields out of peopleSoft
-#     evaluationid = Column( Integer, nullable=False )
-#     src_sys_id = Column( String(5), nullable=False )
-#     calendaryear = Column( Integer, nullable=False )
-#     affiliateid = Column( Integer, nullable=False )
-#     asuriteid = Column( String(23), nullable=True )
-#     asuid = Column( String(7), nullable=True )
-#     faculty_rank_title = Column( String(7), nullable=True )
-#     job_title = Column( String(50), nullable=True )
-#     tenure_status_code = Column( String(7), nullable=True )
-#     tenurehomedeptcode = Column( String(7), nullable=True )
-#     extensiondate = Column( String(15), nullable=True )
-#     completed = Column( String(7), nullable=True )
-#     dtcreated = Column( String(15), nullable=True )
-#     dtupdated = Column( String(15), nullable=True )
-#     userlastmodified = Column( String(7), nullable=True )
-#     load_error = Column( String(7), nullable=True )
-#     data_origin = Column( String(7), nullable=True )
-#     created_ew_dttm = Column( String(31), nullable=True )
-#     lastupd_dw_dttm = Column( String(31), nullable=True )
-#     batch_sid = Column( Integer, nullable=False )
+class BioPsFarEvaluations( BioPs ):
+    __tablename__ = 'far_evaluations'
+    
+    # below are the data fields out of peopleSoft
+    evaluationid = Column( Integer, nullable=False )
+    src_sys_id = Column( String(5), nullable=False )
+    calendaryear = Column( Integer, nullable=False )
+    emplid = Column( Integer, nullable=False )
+    asuriteid = Column( String(23), nullable=True )
+    asuid = Column( String(7), nullable=True )
+    faculty_rank_title = Column( String(7), nullable=True )
+    job_title = Column( String(50), nullable=True )
+    tenure_status_code = Column( String(7), nullable=True )
+    tenurehomedeptcode = Column( String(7), nullable=True )
+    extensiondate = Column( DateTime(15), nullable=True )
+    completed = Column( String(7), nullable=True )
+    dtcreated = Column( DateTime(15), nullable=True )
+    dtupdated = Column( DateTime(15), nullable=True )
+    userlastmodified = Column( String(7), nullable=True )
+    load_error = Column( String(7), nullable=True )
+    data_origin = Column( String(7), nullable=True )
+    created_ew_dttm = Column( DateTime(), nullable=True )
+    lastupd_dw_dttm = Column( DateTime(), nullable=True )
+    batch_sid = Column( Integer, nullable=False )
 
-#     def sourceCondition(self):
-#         condition = "\
-#             {!s}.affiliateid IN\
-#             (\
-#                 SELECT JPS.EMPLID FROM SYSADM{!s}PS_JOB JPS WHERE JPS.DEPTID IN \
-#                 (\
-#                     SELECT J.DEPTID FROM DIRECTORY{!s}JOB J WHERE J.DEPARTMENT LIKE '%Biodesign%' GROUP BY J.DEPARTMENT, J.DEPTID\
-#                 )\
-#             )".format(self.__tablename__,'_','_')
-#         return condition
 
 # # # CLASS List To go:
 # # # ASUDW_FAR_AUTHOREDBOOKS
@@ -417,37 +507,3 @@ class BioPsDepartments( BioPs ):
 #                 )\
 #             )".format(self.__tablename__,self.__tablename__,'_','_','_')
 #         return condition
-
-
-
-
-# # Model Methods
-# def getClassByTablename(tablename):
-#     """Return class reference mapped to table.
-
-#     :param tablename: String with name of table.
-#     :return: Class reference or None.
-#     """
-#     for c in BioPs._decl_class_registry.values():
-#         if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
-#             return c
-
-# def BioPsPublicBioPu(theEngine):
-#     for tableName in BioPs.metadata.tables.keys():
-#         if bool(tableExists(theEngine, tableName)):
-#             queryDelete = "DELETE FROM {!s}".format(tableName)
-#             theEngine.execute(queryDelete)
-
-# def BioPsPublicesBioPu(theEngine):
-#     for tableName in BioPs.metadata.tables.keys():
-#         BioPs.metadata.tables[tableName].drop(self.theEngine)
-#         # if bool(tableExists(theEngine, tableName)):
-#         #     queryDrop = "DROP TABLE {!s}".format(tableName)
-#         #     theEngine.execute(queryDrop)
-
-# def tableExists(theEngine,tableName):
-#     schema = "bio_public_ps"
-#     stm_exists = "SELECT IF(EXISTS(SELECT 1 FROM information_schema.tables WHERE TABLE_SCHEMA = '{!s}' AND TABLE_NAME = '{!s}'), TRUE, FALSE)".format(schema, tableName)
-#     if bool(theEngine.execute(stm_exists).first()):
-#         # print stm_exists
-#         return True

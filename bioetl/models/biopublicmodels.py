@@ -65,6 +65,7 @@ class People( BioPublic ):
     phone_numbers = relationship( "Phones", cascade="all, delete-orphan" )
     jobs = relationship( "Jobs", cascade="all, delete-orphan", backref="people" )
     subaffiliations = relationship( "PersonSubAffiliations", cascade="all, delete-orphan", backref="people" )
+    far_evaluations = relationship( "FarEvaluations", cascade="all, delete-orphan", backref="people" )
 
 class PersonExternalLinks( BioPublic ):
     __tablename__ = 'person_externallinks'
@@ -98,8 +99,6 @@ class PersonWebProfile( BioPublic ):
     editorships = Column(  Text(), nullable=True  )
     presentations = Column(  Text(), nullable=True  )
 
-
-
 class Addresses( BioPublic ):
     """
         The filtered down people data we want out of peopleSoft
@@ -111,7 +110,6 @@ class Addresses( BioPublic ):
     # Define A relationship...    
     person_id = Column( Integer, ForeignKey( 'people.id' ) )
     # below are the data fields out of peopleSoft
-    # 
     updated_flag = Column( Boolean(), default=False, nullable=False )
     emplid = Column( Integer, nullable=False )
     address_type = Column( String(7), nullable=False )
@@ -124,7 +122,6 @@ class Addresses( BioPublic ):
     postal = Column( String(15), nullable=False )
     country_code = Column( String(7), nullable=False )
     country_descr = Column( String(31), nullable=False )
-    ### last_update = Column( String(31), nullable=False )
 
 class Phones( BioPublic ):
     """
@@ -177,14 +174,14 @@ class SubAffiliations( BioPublic ):
     """
     __tablename__ = 'subaffiliations'
 
-    subaffiliation_code = Column( String(7), unique = True, nullable=False )
+    code = Column( String(7), unique = True, nullable=False )
     title = Column( String(63), nullable=False )
-    descr = Column( String(287), nullable=False )
-    scope = Column( String(15), nullable=False )
+    description = Column( String(287), nullable=False )
+    proximity_scope = Column( String(15), nullable=False )
     service_access = Column( String(127), nullable=False )
-    distributions = Column( String(127), nullable=False )
+    distribution_lists = Column( String(127), nullable=False )
 
-    subaffiliations = relationship( "PersonSubAffiliations", cascade="all, delete-orphan", backref="subaffiliations" )
+    subaffiliations = relationship( "PersonSubAffiliations" )
 
 
 class PersonSubAffiliations( BioPublic ):
@@ -197,21 +194,21 @@ class PersonSubAffiliations( BioPublic ):
     """
     __tablename__ = 'person_department_subaffiliations'
 
-    person_id = Column( Integer, ForeignKey( 'people.id' ) )
-    department_id = Column( Integer, ForeignKey( 'departments.id' ) )
-    subaffiliation_id = Column ( Integer, ForeignKey( 'subaffiliations.id' ) )
-
+    person_id = Column( Integer, ForeignKey( 'people.id' ), nullable=False )
+    department_id = Column( Integer, ForeignKey( 'departments.id' ), nullable=False )
+    subaffiliation_id = Column ( Integer, ForeignKey( 'subaffiliations.id', onupdate="CASCADE", ondelete="SET NULL" ), nullable=True )
+    
+    updated_flag = Column( Boolean(), default=False, nullable=False )
     # below are the data fields out of peopleSoft
     emplid = Column( Integer, nullable=False )
     deptid = Column( String(15), nullable=False )
     subaffiliation_code = Column( String(7), nullable=False )
-    campus = Column( String(7), nullable=False )
-    title = Column( String(39), nullable=False )
+    campus = Column( String(7), nullable=True )
+    title = Column( String(39), nullable=True )
     short_description = Column( String(23), nullable=False )
     description = Column( String(47), nullable=False )
     directory_publish = Column( String(7), nullable=False )
     department = Column( String(31), nullable=False )
-    last_update = Column( DateTime(), nullable=False )
     department_directory = Column( String(255), nullable=True )
 
 
@@ -236,3 +233,32 @@ class Departments( BioPublic ):
 
     jobs = relationship( "Jobs", cascade="all, delete-orphan", backref="departments" )
     
+
+class FarEvaluations( BioPublic ):
+    """The far data..."""
+    __tablename__ = 'far_evaluations'
+    
+    person_id = Column( Integer, ForeignKey( 'people.id' ) )
+
+    # below are the data fields out of peopleSoft
+    evaluationid = Column( Integer, nullable=False )
+    src_sys_id = Column( String(5), nullable=False )
+    calendaryear = Column( Integer, nullable=False )
+    emplid = Column( Integer, nullable=False )
+    asuriteid = Column( String(23), nullable=True )
+    asuid = Column( String(7), nullable=True )
+    faculty_rank_title = Column( String(7), nullable=True )
+    job_title = Column( String(50), nullable=True )
+    tenure_status_code = Column( String(7), nullable=True )
+    tenurehomedeptcode = Column( String(7), nullable=True )
+    extensiondate = Column( DateTime(15), nullable=True )
+    completed = Column( String(7), nullable=True )
+    dtcreated = Column( DateTime(15), nullable=True )
+    dtupdated = Column( DateTime(15), nullable=True )
+    userlastmodified = Column( String(7), nullable=True )
+    load_error = Column( String(7), nullable=True )
+    data_origin = Column( String(7), nullable=True )
+    created_ew_dttm = Column( DateTime(), nullable=True )
+    lastupd_dw_dttm = Column( DateTime(), nullable=True )
+    batch_sid = Column( Integer, nullable=False )
+

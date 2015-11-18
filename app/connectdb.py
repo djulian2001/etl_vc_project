@@ -73,7 +73,7 @@ class EtlConnections(object):
 			self.config.targetDbHost,
 			self.config.targetDbName )
 
-		BioPublic.metadata.drop_all( targetEngine )
+		# BioPublic.metadata.drop_all( targetEngine )
 		BioPublic.metadata.create_all( targetEngine )
 		
 		BioPs.metadata.bind = sourceEngine

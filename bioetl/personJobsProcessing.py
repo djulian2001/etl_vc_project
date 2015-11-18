@@ -30,7 +30,7 @@ def processPersonJob( srcJob, sesTarget ):
 #template mapping... column where(s) _yyy_ 
 	true, false = literal(True), literal(False)
 
-	def jobExists( emplid, title, deptid ):
+	def jobExists():
 		"""
 			determine the job exists in the target database.
 			@True: The job exists in the database
@@ -38,15 +38,15 @@ def processPersonJob( srcJob, sesTarget ):
 		"""
 		(ret, ), = sesTarget.query(
 			exists().where(
-				Jobs.emplid == emplid ).where(
-				Jobs.title == title ).where(
-				Jobs.deptid == deptid ) )
+				Jobs.emplid == srcJob.emplid ).where(
+				Jobs.title == srcJob.title ).where(
+				Jobs.deptid == srcJob.deptid ) )
 
 		return ret
 
-	if jobExists( srcJob.emplid, srcJob.title, srcJob.deptid ):
+	if jobExists():
 
-		def jobUpdateRequired( emplid, title, deptid, source_hash ):
+		def jobUpdateRequired():
 			"""
 				Determine if the job that exists requires and update.
 				@True: returned if source_hash is unchanged
@@ -54,21 +54,22 @@ def processPersonJob( srcJob, sesTarget ):
 			"""	
 			(ret, ), = sesTarget.query(
 				exists().where(
-					Jobs.emplid == emplid ).where(
-					Jobs.title == title ).where(
-					Jobs.deptid == deptid ).where(
-					Jobs.source_hash == source_hash ) )
+					Jobs.emplid == srcJob.emplid ).where(
+					Jobs.title == srcJob.title ).where(
+					Jobs.deptid == srcJob.deptid ).where(
+					Jobs.updated_flag == False).where(
+					Jobs.source_hash != srcJob.source_hash ) )
 
-			return not ret
+			return ret
 
-		if jobUpdateRequired( srcJob.emplid, srcJob.title, srcJob.deptid, srcJob.source_hash ):
+		if jobUpdateRequired():
 			# retrive the tables object to update.
 			updateJob = sesTarget.query(
 				Jobs ).filter(
 					Jobs.emplid == srcJob.emplid ).filter(
 					Jobs.title == srcJob.title ).filter(
 					Jobs.deptid == srcJob.deptid ).filter(
-					Jobs.updated_flag == False ).one()
+					Jobs.updated_flag == False ).first()
 
 			# repeat the following pattern for all mapped attributes:
 			updateJob.source_hash = srcJob.source_hash

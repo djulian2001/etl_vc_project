@@ -91,25 +91,25 @@ finally:
 # from asutobio.models.biopsmodels import BioPs
 
 #######################################################################################
-# from sqlalchemy import *
-# import cx_Oracle
-# from sqlalchemy.engine import reflection
-# from models.asudwpsmodels import *
+from sqlalchemy import *
+import cx_Oracle
+from sqlalchemy.engine import reflection
+from models.asudwpsmodels import *
 
 
-# sourceDbUser = "ASU_BDI_EXTRACT_APP"
-# sourceDbPw = "np55adW_G1_Um-ii"
-# sourceDbNetServiceName = "ASUPMDEV"
-# engSourceString = 'oracle+cx_oracle://%s:%s@%s' % (sourceDbUser, sourceDbPw, sourceDbNetServiceName)
-# engineSource = create_engine(engSourceString, echo=True)
+sourceDbUser = "ASU_BDI_EXTRACT_APP"
+sourceDbPw = "np55adW_G1_Um-ii"
+sourceDbNetServiceName = "ASUPMDEV"
+engSourceString = 'oracle+cx_oracle://%s:%s@%s' % (sourceDbUser, sourceDbPw, sourceDbNetServiceName)
+engineSource = create_engine(engSourceString, echo=True)
 
-# conn = engineSource.connect()
+conn = engineSource.connect()
 
-# insp = reflection.Inspector.from_engine(engineSource)
+insp = reflection.Inspector.from_engine(engineSource)
 # #  In python terminal... going to test the "raw sql statements"...
 
-# for tbl in insp.get_table_names('asudw'):
-#     print tbl
+for tbl in insp.get_table_names('asudw'):
+    print tbl
 
 # ## asudw
 # # far_conferenceproceedings
@@ -148,8 +148,8 @@ finally:
 # # principal
 
 # #list of person columns:
-# for col in insp.get_columns('PERSON', schema='DIRECTORY'):
-# 	print col
+for col in insp.get_columns('far_evaluations', schema='asudw'):
+	print col
 
 
 # sql = "SELECT * FROM DIRECTORY.PERSON WHERE asurite_id = 'primusdj' AND ROWNUM <=10"

@@ -1,4 +1,4 @@
-import datetime
+import datetime, re
 from sqlalchemy import exists, literal
 
 from models.biopublicmodels import People, Phones
@@ -26,7 +26,7 @@ def processPhone( srcPersonPhone, sesTarget ):
 	"""
 	true, false = literal(True), literal(False)
 	
-	def personPhoneExists( emplid, phone_type ):
+	def personPhoneExists():
 		"""
 			determine the person exists in the target database.
 			@True: There is a phone record for emplid and type already in the target database
@@ -34,14 +34,18 @@ def processPhone( srcPersonPhone, sesTarget ):
 		"""
 		(ret, ), = sesTarget.query(
 			exists().where( 
-				Phones.emplid == emplid ).where(
-				Phones.phone_type == phone_type ) )
+				Phones.emplid == srcPersonPhone.emplid ).where(
+				Phones.phone_type == srcPersonPhone.phone_type ) )
 		
 		return ret
 
-	if personPhoneExists( srcPersonPhone.emplid, srcPersonPhone.phone_type ):
+	if personPhoneExists():
 		
-		def phoneRequiresUpdate( emplid, phone_type, source_hash ):
+		def cleanPhoneNumber():
+			""""this will clean up the phone numbers."""
+			return re.sub( "[^0-9\+]", "", srcPersonPhone.phone )
+
+		def phoneRequiresUpdate():
 			"""
 				determine if the person that exists requires an update.
 				@True:  The source record object requires update.
@@ -49,13 +53,13 @@ def processPhone( srcPersonPhone, sesTarget ):
 			"""
 			(ret, ), = sesTarget.query(
 				exists().where(
-					Phones.emplid == emplid ).where(
-					Phones.phone_type == phone_type ).where(
-					Phones.source_hash == source_hash )	)
+					Phones.emplid == srcPersonPhone.emplid ).where(
+					Phones.phone_type == srcPersonPhone.phone_type ).where(
+					Phones.source_hash == srcPersonPhone.source_hash )	)
 
 			return not ret
 
-		if phoneRequiresUpdate( srcPersonPhone.emplid, srcPersonPhone.phone_type, srcPersonPhone.source_hash):
+		if phoneRequiresUpdate():
 
 			updatePersonPhone = sesTarget.query(
 				Phones ).filter( 
@@ -66,7 +70,7 @@ def processPhone( srcPersonPhone, sesTarget ):
 
 			updatePersonPhone.source_hash = srcPersonPhone.source_hash
 			updatePersonPhone.updated_flag = True
-			updatePersonPhone.phone = srcPersonPhone.phone
+			updatePersonPhone.phone = cleanPhoneNumber()
 			updatePersonPhone.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			updatePersonPhone.deleted_at = None
 
@@ -87,7 +91,7 @@ def processPhone( srcPersonPhone, sesTarget ):
 			source_hash = srcPersonPhone.source_hash,
 			emplid = srcPersonPhone.emplid,
 			phone_type = srcPersonPhone.phone_type,
-			phone = srcPersonPhone.phone,
+			phone = cleanPhoneNumber(),
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
 
 		return insertPhone

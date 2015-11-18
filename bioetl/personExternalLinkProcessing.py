@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy import exists, literal
 
-from models.biopublicmodels import PersonExternalLinks
+from models.biopublicmodels import PersonExternalLinks, People
 from asutobio.models.biopsmodels import BioPsPersonExternalLinks
 
 #template mapping... plural PersonExternalLinks    singularCaped PersonExternalLink   singularLower personExternalLink 
@@ -78,8 +78,14 @@ def processPersonExternalLink( srcPersonExternalLink, sesTarget ):
 			raise TypeError('source personExternalLink already exists and requires no updates!')
 
 	else:
+
+		srcGetPersonId = sesTarget.query(
+			People.id ).filter(
+				People.emplid == srcPersonExternalLink.emplid ).one()
+
 		insertPersonExternalLink = PersonExternalLinks(
 			source_hash = srcPersonExternalLink.source_hash,
+			person_id = srcGetPersonId.id,
 			emplid = srcPersonExternalLink.emplid,
 			facebook = srcPersonExternalLink.facebook,
 			twitter = srcPersonExternalLink.twitter,

@@ -10,6 +10,71 @@ sesSource = bioetlAppRun.getSourceSession()
 sesTarget = bioetlAppRun.getTargetSession()
 
 ###############################################################################
+### biopublicLoad.py cut and paste into proper stop in the file all below:
+###############################################################################
+
+
+###############################################################################
+# 	The Biodesign Defined subaffiliations.  There is BI aspects of this data
+#		that warrents that it be scoped.  Reference table so ok to load prior
+#		to the people data, and must be loaded prior to the 
+#   File Import:  subAffiliationProcessing
+
+import subAffiliationProcessing
+
+srcSubAffiliations = subAffiliationProcessing.getSourceSubAffiliations( sesSource )
+
+iSubAffiliation = 1
+for srcSubAffiliation in srcSubAffiliations:
+	try:
+		processedsubAffiliation = subAffiliationProcessing.processSubAffiliation( srcSubAffiliation, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedsubAffiliation )
+		if iSubAffiliation % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iSubAffiliation += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingSubAffiliations = subAffiliationProcessing.getTargetSubAffiliations( sesTarget )
+
+iRemoveSubAffiliation = 1
+for tgtMissingSubAffiliation in tgtMissingSubAffiliations:
+	try:
+		removeSubAffiliation = subAffiliationProcessing.softDeleteSubAffiliation( tgtMissingSubAffiliation, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeSubAffiliation )
+		if iRemoveSubAffiliation % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveSubAffiliation += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of subAffiliationProcessing
+###############################################################################
+
+
+###############################################################################
 # Load the mysql.bio_ps people table in into the final destination:
 #	mysql:
 #		bio_ps.people to bio_public.people
@@ -33,7 +98,7 @@ for srcPerson in srcPeople:
 				sesTarget.rollback()
 				raise e
 			except RuntimeError as e:
-				pass
+				raise e
 		iPerson += 1
 try:
 	sesTarget.commit()
@@ -440,6 +505,141 @@ except Exception as e:
 
 # end of for tgtMissingPersonJobs
 ###############################################################################
+
+###############################################################################
+### biopublicLoad.py cut and paste into proper stop in the file all below:
+###############################################################################
+
+
+###############################################################################
+# 
+#   File Import:  personSubAffiliationProcessing
+
+import personSubAffiliationProcessing
+
+srcPersonSubAffiliations = personSubAffiliationProcessing.getSourcePersonSubAffiliations( sesSource )
+
+iPersonSubAffiliation = 1
+for srcPersonSubAffiliation in srcPersonSubAffiliations:
+	try:
+		processedpersonSubAffiliation = personSubAffiliationProcessing.processPersonSubAffiliation( srcPersonSubAffiliation, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedpersonSubAffiliation )
+		if iPersonSubAffiliation % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iPersonSubAffiliation += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingPersonSubAffiliations = personSubAffiliationProcessing.getTargetPersonSubAffiliations( sesTarget )
+
+iRemovePersonSubAffiliation = 1
+for tgtMissingPersonSubAffiliation in tgtMissingPersonSubAffiliations:
+	try:
+		removePersonSubAffiliation = personSubAffiliationProcessing.softDeletePersonSubAffiliation( tgtMissingPersonSubAffiliation, sesSource )
+	except TypeError as e:
+		pass
+	except RuntimeError as e:
+		raise e
+	else:
+		sesTarget.add( removePersonSubAffiliation )
+		if iRemovePersonSubAffiliation % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemovePersonSubAffiliation += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+# reset the updated_flag for all records for the next round of changes.
+# engineTarget.execute("UPDATE person_phones SET updated_flag = 0;")
+try:
+	sharedProcesses.resetUpdatedFlag( sesTarget, "person_department_subaffiliations" )
+except Exception as e:
+	print e
+
+
+#	End of personSubAffiliationProcessing
+###############################################################################
+
+
+
+###############################################################################
+# 
+#   File Import:  farEvaluationProcessing
+
+import farEvaluationProcessing
+
+srcFarEvaluations = farEvaluationProcessing.getSourceFarEvaluations( sesSource )
+
+iFarEvaluation = 1
+for srcFarEvaluation in srcFarEvaluations:
+	try:
+		processedfarEvaluation = farEvaluationProcessing.processFarEvaluation( srcFarEvaluation, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedfarEvaluation )
+		if iFarEvaluation % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iFarEvaluation += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingFarEvaluations = farEvaluationProcessing.getTargetFarEvaluations( sesTarget )
+
+iRemoveFarEvaluation = 1
+for tgtMissingFarEvaluation in tgtMissingFarEvaluations:
+	try:
+		removeFarEvaluation = farEvaluationProcessing.softDeleteFarEvaluation( tgtMissingFarEvaluation, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeFarEvaluation )
+		if iRemoveFarEvaluation % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveFarEvaluation += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of farEvaluationProcessing
+###############################################################################
+
+
+
+
 
 try:
 	sesTarget.commit()
