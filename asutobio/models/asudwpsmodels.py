@@ -297,25 +297,250 @@ class AsuDwPsFarEvaluations( AsuDwPs ):
     __table_args__ = { "schema" : schema }
 
 
+class AsuDwPsFarConferenceProceedings( AsuDwPs ):
+    __tablename__ = 'FAR_CONFERENCEPROCEEDINGS'
+    schema = 'ASUDW'
+    conferenceproceedingid = Column( Integer, nullable = False )
+    src_sys_id = Column( String(5), nullable = False )
+    evaluationid = Column( Integer, nullable = False )
+    authors = Column( String(4000), nullable = False )
+    title = Column( String(1000), nullable = True )
+    journalname = Column( String(1000), nullable = True )
+    refereed = Column( String(1), nullable = True )
+    publicationstatuscode = Column( Integer, nullable = True )
+    publicationyear = Column( Integer, nullable = True )
+    volumenumber = Column( String(100), nullable = True )
+    pages = Column( String(200), nullable = True )
+    webaddress = Column( String(500), nullable = True )
+    abstract = Column( Text(), nullable = True )
+    additionalinfo = Column( String(1000), nullable = True )
+    dtcreated = Column( Date(), nullable = False )
+    dtupdated = Column( Date(), nullable = True )
+    userlastmodified = Column( String(16), nullable = False )
+    ispublic = Column( String(1), nullable = False )
+    activityid = Column( Integer, nullable = True )
+    load_error = Column( String(1), nullable = False )
+    data_origin = Column( String(1), nullable = False )
+    created_ew_dttm = Column( Date(), nullable = True )
+    lastupd_dw_dttm = Column( Date(), nullable = True )
+    batch_sid = Column( Integer, nullable = False )
 
-# far_conferenceproceedings
-# toad_plan_table
-# far_authoredbooks
-# far_editedbooks
-# far_bookchapters
-# far_faculty
-# far_facultydepartment
-# far_communityservices
-# far_honors
+    __mapper_args__ = { "primary_key" : [ conferenceproceedingid, evaluationid ] }
+    __table_args__ = { "schema" : schema }
+
+
+class AsuDwPsFarAuthoredBooks( AsuDwPs ):
+    __tablename__ = 'FAR_AUTHOREDBOOKS'
+    schema = 'ASUDW'
+
+    authoredbookid = Column( Integer, nullable = False )
+    src_sys_id = Column( String(5), nullable = False )
+    evaluationid = Column( Integer, nullable = False )
+    authors = Column( String(4000), nullable = False )
+    title = Column( String(1000), nullable = False )
+    publisher = Column( String(250), nullable = True )
+    publicationstatuscode = Column( Integer, nullable = True )
+    pages = Column( String(100), nullable = True )
+    isbn = Column( String(100), nullable = True )
+    publicationyear = Column( Integer, nullable = True )
+    volumenumber = Column( String(100), nullable = True )
+    edition = Column( String(100), nullable = True )
+    publicationcity = Column( String(100), nullable = True )
+    webaddress = Column( String(500), nullable = True )
+    translated = Column( String(1), nullable = True )
+    additionalinfo = Column( String(2500), nullable = True )
+    dtcreated = Column( Date() , nullable = False )
+    dtupdated = Column( Date() , nullable = True )
+    userlastmodified = Column( String(16), nullable = False )
+    ispublic = Column( String(1), nullable = False )
+    activityid = Column( Integer, nullable = True )
+    load_error = Column( String(1), nullable = False )
+    data_origin = Column( String(1), nullable = False )
+    created_ew_dttm = Column( Date() , nullable = True )
+    lastupd_dw_dttm = Column( Date() , nullable = True )
+    batch_sid = Column( Integer, nullable = False )
+
+    __mapper_args__ = { "primary_key" : [ authoredbookid, evaluationid ] }
+    __table_args__ = { "schema" : schema }
+
+
+class AsuDwPsFarRefereedarticles( AsuDwPs ):
+    __tablename__ = 'FAR_REFEREEDARTICLES'
+    schema = 'ASUDW'
+
+    refereedarticleid = Column( Integer, nullable = False)
+    src_sys_id = Column( String( 5 ), nullable = False)
+    evaluationid = Column( Integer, nullable = False)
+    authors = Column( String( 3999 ), nullable = False)
+    title = Column( String( 1007 ), nullable = True)
+    journalname = Column( String( 1007 ), nullable = True)
+    publicationstatuscode = Column( Integer, nullable = True)
+    publicationyear = Column( Integer, nullable = True)
+    volumenumber = Column( String( 103 ), nullable = True)
+    pages = Column( String( 103 ), nullable = True)
+    webaddress = Column( String( 503 ), nullable = True)
+    translated = Column( String(1), nullable = True)
+    abstract = Column( CLOB(), nullable = True)
+    additionalinfo = Column( String( 1007 ), nullable = True)
+    dtcreated = Column( DATE(), nullable = False)
+    dtupdated = Column( DATE(), nullable = True)
+    userlastmodified = Column( String( 23 ), nullable = False)
+    ispublic = Column( String( 1 ), nullable = False)
+    activityid = Column( Integer, nullable = True)
+    load_error = Column( String( 1 ), nullable = False)
+    data_origin = Column( String( 1 ), nullable = False)
+    created_ew_dttm = Column( DATE(), nullable = True)
+    lastupd_dw_dttm = Column( DATE(), nullable = True)
+    batch_sid = Column( Integer, nullable = False)
+
+    __mapper_args__ = { "primary_key" : [ refereedarticleid, evaluationid ] }
+    __table_args__ = { "schema" : schema }
+
+
+class AsuDwPsFarNonrefereedarticles( AsuDwPs ):
+    __tablename__ = 'FAR_NONREFEREEDARTICLES'
+    schema = 'ASUDW'
+
+    nonrefereedarticleid = Column( Integer, nullable = False )
+    src_sys_id = Column( String( 5 ), nullable = False )
+    evaluationid = Column( Integer, nullable = False )
+    authors = Column( String( 4007 ), nullable = False )
+    title = Column( String( 1007 ), nullable = False )
+    journalname = Column( String( 1007 ), nullable = True )
+    publicationstatuscode = Column( Integer, nullable = True )
+    publicationyear = Column( Integer, nullable = True )
+    volumenumber = Column( String( 103 ), nullable = True )
+    pages = Column( String( 103 ), nullable = True )
+    webaddress = Column( String( 503 ), nullable = True )
+    translated = Column( String(1), nullable = True )
+    abstract = Column( CLOB(), nullable = True )
+    additionalinfo = Column( String( 1007 ), nullable = True )
+    dtcreated = Column( DATE(), nullable = False )
+    dtupdated = Column( DATE(), nullable = True )
+    userlastmodified = Column( String( 23 ), nullable = False )
+    ispublic = Column( String(length=1), nullable = False )
+    activityid = Column( Integer, nullable = True )
+    load_error = Column( String( 1 ), nullable = False )
+    data_origin = Column( String( 1 ), nullable = False )
+    created_ew_dttm = Column( DATE(), nullable = True )
+    lastupd_dw_dttm = Column( DATE(), nullable = True )
+    batch_sid = Column( Integer, nullable = False )
+
+    __mapper_args__ = { "primary_key" : [ nonrefereedarticleid, evaluationid ] }
+    __table_args__ = { "schema" : schema }
+
+
+class AsuDwPsFarEditedbooks( AsuDwPs ):
+    __tablename__ = 'FAR_EDITEDBOOKS'
+    schema = 'ASUDW'
+
+    editedbookid = Column( Integer, nullable=False)
+    src_sys_id = Column( String( 5 ), nullable=False)
+    evaluationid = Column( Integer, nullable=False)
+    authors = Column( String( 4007 ), nullable=True)
+    title = Column( String( 1007 ), nullable=False)
+    publisher = Column( String( 255 ), nullable=True)
+    publicationstatuscode = Column( Integer, nullable=True)
+    pages = Column( String( 103 ), nullable=True)
+    isbn = Column( String( 103 ), nullable=True)
+    publicationyear = Column( Integer, nullable=True)
+    volumenumber = Column( String( 103 ), nullable=True)
+    edition = Column( String( 103 ), nullable=True)
+    publicationcity = Column( String( 103 ), nullable=True)
+    webaddress = Column( String( 503 ), nullable=True)
+    translated = Column( String( 1 ), nullable=True)
+    additionalinfo = Column( String( 2503 ), nullable=True)
+    dtcreated = Column( DATE(), nullable=False)
+    dtupdated = Column( DATE(), nullable=True)
+    userlastmodified = Column( String( 23 ), nullable=True)
+    ispublic = Column( String( 1 ), nullable=False)
+    activityid = Column( Integer, nullable=True)
+    load_error = Column( String( 1 ), nullable=False)
+    data_origin = Column( String( 1 ), nullable=False)
+    created_ew_dttm = Column( DATE(), nullable=True)
+    lastupd_dw_dttm = Column( DATE(), nullable=True)
+    batch_sid = Column( Integer, nullable=False)
+
+    __mapper_args__ = { "primary_key" : [ editedbookid, evaluationid ] }
+    __table_args__ = { "schema" : schema }
+
+
+class AsuDwPsFarBookChapters( AsuDwPs ):
+    __tablename__ = 'FAR_BOOKCHAPTERS'
+    schema = 'ASUDW'
+
+    bookchapterid = Column( Integer, nullable=False )
+    src_sys_id = Column( String( 5 ), nullable=False )
+    evaluationid = Column( Integer, nullable=False )
+    bookauthors = Column( String( 1007 ), nullable=True )
+    booktitle = Column( String( 1007 ), nullable=True )
+    chapterauthors = Column( String( 1007 ), nullable=True )
+    chaptertitle = Column( String( 1007 ), nullable=True )
+    publisher = Column( String( 255 ), nullable=True )
+    publicationstatuscode = Column( Integer, nullable=True )
+    pages = Column( String( 103 ), nullable=True )
+    isbn = Column( String( 103 ), nullable=True )
+    publicationyear = Column( Integer, nullable=True )
+    volumenumber = Column( String( 55 ), nullable=True )
+    edition = Column( String( 55 ), nullable=True )
+    publicationcity = Column( String( 503 ), nullable=True )
+    webaddress = Column( String( 503 ), nullable=True )
+    translated = Column( String( 1 ), nullable=True )
+    additionalinfo = Column( String( 2503 ), nullable=True )
+    dtcreated = Column( DATE(), nullable=False )
+    dtupdated = Column( DATE(), nullable=True )
+    userlastmodified = Column( String( 23 ), nullable=False )
+    ispublic = Column( String( 1 ), nullable=False )
+    activityid = Column( Integer, nullable=True )
+    load_error = Column( String( 1 ), nullable=False )
+    data_origin = Column( String( 1 ), nullable=False )
+    created_ew_dttm = Column( DATE(), nullable=True )
+    lastupd_dw_dttm = Column( DATE(), nullable=True )
+    batch_sid = Column( Integer, nullable=False )
+
+    __mapper_args__ = { "primary_key" : [ bookchapterid, evaluationid ] }
+    __table_args__ = { "schema" : schema }
+
+
+class AsuDwPsFarBookReviews( AsuDwPs ):
+    __tablename__ = 'FAR_BOOKREVIEWS'
+    schema = 'ASUDW'
+
+    bookreviewid = Column( Integer , nullable=False )
+    src_sys_id = Column( String( 5 ), nullable=False )
+    evaluationid = Column( Integer , nullable=False )
+    bookauthors = Column( String( 4007 ), nullable=True )
+    booktitle = Column( String( 1007 ), nullable=True )
+    journalname = Column( String( 1007 ), nullable=True )
+    publicationstatuscode = Column( Integer , nullable=True )
+    journalpages = Column( String( 103 ), nullable=True )
+    journalpublicationyear = Column( Integer , nullable=True )
+    journalvolumenumber = Column( String( 103 ), nullable=True )
+    webaddress = Column( String( 503 ), nullable=True )
+    additionalinfo = Column( String( 2503 ), nullable=True )
+    dtcreated = Column( DATE(), nullable=False )
+    dtupdated = Column( DATE(), nullable=True )
+    userlastmodified = Column( String( 23 ), nullable=False )
+    ispublic = Column( CHAR( 1 ), nullable=False )
+    activityid = Column( Integer , nullable=True )
+    load_error = Column( String( 1 ), nullable=False )
+    data_origin = Column( String( 1 ), nullable=False )
+    created_ew_dttm = Column( DATE(), nullable=True )
+    lastupd_dw_dttm = Column( DATE(), nullable=True )
+    batch_sid = Column( Integer , nullable=False )
+
+    __mapper_args__ = { "primary_key" : [ bookreviewid, evaluationid ] }
+    __table_args__ = { "schema" : schema }
+
+
+# ---- far_conferenceproceedings  (no data in the dev instances)
+# ---- far_authoredbooks  (no data in the dev instances)
+# ---- far_editedbooks
+# ---- far_bookchapters
 # far_bookreviews
-# far_monetaryawardpurposes
-# far_monetaryawards
-# far_professionalservices
 # far_shortstories
-# far_universityservices
 # ---- far_evaluations
 # far_encyclopediaarticles
-# far_mentoring
-# far_nonrefereedarticles
-# far_refereedarticles
+# ---- far_nonrefereedarticles
+# ---- far_refereedarticles  ()
 

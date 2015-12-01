@@ -132,9 +132,6 @@ class EtlConnections(object):
 				self.config.targetDbHost,
 				self.config.targetDbName )
 
-			# This should get factored out later
-			BioPs.metadata.drop_all( targetEngine )
-			BioPs.metadata.create_all( targetEngine )
 
 			AsuDwPs.metadata.bind = sourceEngine
 			BioPs.metadata.bind = targetEngine
@@ -142,7 +139,14 @@ class EtlConnections(object):
 			self.SrcSession = scoped_session( sessionmaker( bind=sourceEngine ) )
 			self.TgtSession = scoped_session( sessionmaker( bind=targetEngine ) )
 
+			try:
+				# This should get factored out later
+				BioPs.metadata.drop_all( targetEngine )
+				BioPs.metadata.create_all( targetEngine )
 
+			except Exception as e:
+				self.cleanUp()
+				raise e
 
 	def getTargetSession( self ):
 		"""This method returns a configured session scoped as a target database"""

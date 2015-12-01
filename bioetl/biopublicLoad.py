@@ -639,6 +639,417 @@ except Exception as e:
 
 
 
+###############################################################################
+# 
+#   File Import:  farConferenceProceedingProcessing
+
+import farConferenceProceedingProcessing
+
+srcFarConferenceProceedings = farConferenceProceedingProcessing.getSourceFarConferenceProceedings( sesSource )
+
+iFarConferenceProceeding = 1
+for srcFarConferenceProceeding in srcFarConferenceProceedings:
+	try:
+		processedfarConferenceProceeding = farConferenceProceedingProcessing.processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedfarConferenceProceeding )
+		if iFarConferenceProceeding % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iFarConferenceProceeding += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingFarConferenceProceedings = farConferenceProceedingProcessing.getTargetFarConferenceProceedings( sesTarget )
+
+iRemoveFarConferenceProceeding = 1
+for tgtMissingFarConferenceProceeding in tgtMissingFarConferenceProceedings:
+	try:
+		removeFarConferenceProceeding = farConferenceProceedingProcessing.softDeleteFarConferenceProceeding( tgtMissingFarConferenceProceeding, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeFarConferenceProceeding )
+		if iRemoveFarConferenceProceeding % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveFarConferenceProceeding += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of farConferenceProceedingProcessing
+###############################################################################
+
+###############################################################################
+# 
+#   File Import:  farAuthoredBookProcessing
+
+import farAuthoredBookProcessing
+
+srcFarAuthoredBooks = farAuthoredBookProcessing.getSourceFarAuthoredBooks( sesSource )
+
+iFarAuthoredBook = 1
+for srcFarAuthoredBook in srcFarAuthoredBooks:
+	try:
+		processedfarAuthoredBook = farAuthoredBookProcessing.processFarAuthoredBook( srcFarAuthoredBook, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedfarAuthoredBook )
+		if iFarAuthoredBook % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iFarAuthoredBook += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingFarAuthoredBooks = farAuthoredBookProcessing.getTargetFarAuthoredBooks( sesTarget )
+
+iRemoveFarAuthoredBook = 1
+for tgtMissingFarAuthoredBook in tgtMissingFarAuthoredBooks:
+	try:
+		removeFarAuthoredBook = farAuthoredBookProcessing.softDeleteFarAuthoredBook( tgtMissingFarAuthoredBook, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeFarAuthoredBook )
+		if iRemoveFarAuthoredBook % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveFarAuthoredBook += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of farAuthoredBookProcessing
+###############################################################################
+
+
+###############################################################################
+# 
+#   File Import:  farRefereedarticleProcessing
+
+import farRefereedarticleProcessing
+
+srcFarRefereedarticles = farRefereedarticleProcessing.getSourceFarRefereedarticles( sesSource )
+
+iFarRefereedarticle = 1
+for srcFarRefereedarticle in srcFarRefereedarticles:
+	try:
+		processedfarRefereedarticle = farRefereedarticleProcessing.processFarRefereedarticle( srcFarRefereedarticle, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedfarRefereedarticle )
+		if iFarRefereedarticle % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iFarRefereedarticle += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingFarRefereedarticles = farRefereedarticleProcessing.getTargetFarRefereedarticles( sesTarget )
+
+iRemoveFarRefereedarticle = 1
+for tgtMissingFarRefereedarticle in tgtMissingFarRefereedarticles:
+	try:
+		removeFarRefereedarticle = farRefereedarticleProcessing.softDeleteFarRefereedarticle( tgtMissingFarRefereedarticle, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeFarRefereedarticle )
+		if iRemoveFarRefereedarticle % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveFarRefereedarticle += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of farRefereedarticleProcessing
+###############################################################################
+
+
+
+###############################################################################
+# 
+#   File Import:  farNonrefereedarticleProcessing
+
+import farNonrefereedarticleProcessing
+
+srcFarNonrefereedarticles = farNonrefereedarticleProcessing.getSourceFarNonrefereedarticles( sesSource )
+
+iFarNonrefereedarticle = 1
+for srcFarNonrefereedarticle in srcFarNonrefereedarticles:
+	try:
+		processedfarNonrefereedarticle = farNonrefereedarticleProcessing.processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedfarNonrefereedarticle )
+		if iFarNonrefereedarticle % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iFarNonrefereedarticle += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingFarNonrefereedarticles = farNonrefereedarticleProcessing.getTargetFarNonrefereedarticles( sesTarget )
+
+iRemoveFarNonrefereedarticle = 1
+for tgtMissingFarNonrefereedarticle in tgtMissingFarNonrefereedarticles:
+	try:
+		removeFarNonrefereedarticle = farNonrefereedarticleProcessing.softDeleteFarNonrefereedarticle( tgtMissingFarNonrefereedarticle, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeFarNonrefereedarticle )
+		if iRemoveFarNonrefereedarticle % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveFarNonrefereedarticle += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of farNonrefereedarticleProcessing
+###############################################################################
+
+
+###############################################################################
+# 
+#   File Import:  farEditedbookProcessing
+
+import farEditedbookProcessing
+
+srcFarEditedbooks = farEditedbookProcessing.getSourceFarEditedbooks( sesSource )
+
+iFarEditedbook = 1
+for srcFarEditedbook in srcFarEditedbooks:
+	try:
+		processedfarEditedbook = farEditedbookProcessing.processFarEditedbook( srcFarEditedbook, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedfarEditedbook )
+		if iFarEditedbook % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iFarEditedbook += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingFarEditedbooks = farEditedbookProcessing.getTargetFarEditedbooks( sesTarget )
+
+iRemoveFarEditedbook = 1
+for tgtMissingFarEditedbook in tgtMissingFarEditedbooks:
+	try:
+		removeFarEditedbook = farEditedbookProcessing.softDeleteFarEditedbook( tgtMissingFarEditedbook, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeFarEditedbook )
+		if iRemoveFarEditedbook % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveFarEditedbook += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of farEditedbookProcessing
+###############################################################################
+
+
+###############################################################################
+# 
+#   File Import:  farBookChapterProcessing
+
+import farBookChapterProcessing
+
+srcFarBookChapters = farBookChapterProcessing.getSourceFarBookChapters( sesSource )
+
+iFarBookChapter = 1
+for srcFarBookChapter in srcFarBookChapters:
+	try:
+		processedfarBookChapter = farBookChapterProcessing.processFarBookChapter( srcFarBookChapter, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedfarBookChapter )
+		if iFarBookChapter % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iFarBookChapter += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingFarBookChapters = farBookChapterProcessing.getTargetFarBookChapters( sesTarget )
+
+iRemoveFarBookChapter = 1
+for tgtMissingFarBookChapter in tgtMissingFarBookChapters:
+	try:
+		removeFarBookChapter = farBookChapterProcessing.softDeleteFarBookChapter( tgtMissingFarBookChapter, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeFarBookChapter )
+		if iRemoveFarBookChapter % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveFarBookChapter += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of farBookChapterProcessing
+###############################################################################
+
+
+###############################################################################
+# 
+#   File Import:  farBookReviewProcessing
+
+import farBookReviewProcessing
+
+srcFarBookReviews = farBookReviewProcessing.getSourceFarBookReviews( sesSource )
+
+iFarBookReview = 1
+for srcFarBookReview in srcFarBookReviews:
+	try:
+		frocessedFarBookReview = farBookReviewProcessing.processFarBookReview( srcFarBookReview, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( frocessedFarBookReview )
+		if iFarBookReview % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iFarBookReview += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+
+tgtMissingFarBookReviews = farBookReviewProcessing.getTargetFarBookReviews( sesTarget )
+
+iRemoveFarBookReview = 1
+for tgtMissingFarBookReview in tgtMissingFarBookReviews:
+	try:
+		removeFarBookReview = farBookReviewProcessing.softDeleteFarBookReview( tgtMissingFarBookReview, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeFarBookReview )
+		if iRemoveFarBookReview % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveFarBookReview += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of farBookReviewProcessing
+###############################################################################
+
+
+
+
+
+
+
 
 
 try:

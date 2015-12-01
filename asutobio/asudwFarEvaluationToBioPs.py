@@ -15,8 +15,8 @@ def getSourceFarEvaluationsData( sesSource ):
 
 	return sesSource.query(
 		AsuDwPsFarEvaluations ).join(
-			srcEmplidsSubQry, AsuDwPsFarEvaluations.emplid==srcEmplidsSubQry.c.emplid).order_by(
-				AsuDwPsFarEvaluations.emplid).all()
+			srcEmplidsSubQry, AsuDwPsFarEvaluations.emplid == srcEmplidsSubQry.c.emplid ).order_by(
+				AsuDwPsFarEvaluations.emplid ).all()
 
 # the data load
 def processFarEvaluationData( farEvaluation ):

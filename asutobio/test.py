@@ -89,27 +89,55 @@ finally:
 
 #######################################################################################
 # from asutobio.models.biopsmodels import BioPs
+# sourceDbNetServiceName = "ASUPMTST"
+# sourceDbNetServiceName = "ASUPMDEV"
 
 #######################################################################################
 from sqlalchemy import *
 import cx_Oracle
 from sqlalchemy.engine import reflection
-from models.asudwpsmodels import *
-
 
 sourceDbUser = "ASU_BDI_EXTRACT_APP"
 sourceDbPw = "np55adW_G1_Um-ii"
-sourceDbNetServiceName = "ASUPMDEV"
+sourceDbNetServiceName = "ASUPMSUP"
 engSourceString = 'oracle+cx_oracle://%s:%s@%s' % (sourceDbUser, sourceDbPw, sourceDbNetServiceName)
 engineSource = create_engine(engSourceString, echo=True)
 
 conn = engineSource.connect()
 
+
+sql = "SELECT F.* FROM ASUDW.FAR_REFEREEDARTICLES F WHERE F.ABSTRACT IS NOT NULL"
+r = conn.execute(sql)
+
+for row in r:
+	print row
+
+
+
+"""The following will give insight into the data schema objects."""
+from sqlalchemy import *
+import cx_Oracle
+from sqlalchemy.engine import reflection
+
+sourceDbUser = "ASU_BDI_EXTRACT_APP"
+sourceDbPw = "np55adW_G1_Um-ii"
+sourceDbNetServiceName = "ASUPMSUP"
+engSourceString = 'oracle+cx_oracle://%s:%s@%s' % (sourceDbUser, sourceDbPw, sourceDbNetServiceName)
+engineSource = create_engine(engSourceString, echo=True)
+
 insp = reflection.Inspector.from_engine(engineSource)
+
 # #  In python terminal... going to test the "raw sql statements"...
 
+
+for shema in insp.get_schema_names():
+	print shema
+
+
 for tbl in insp.get_table_names('asudw'):
-    print tbl
+	print tbl
+	for col in insp.get_columns(tbl, schema='asudw'):
+		print col
 
 # ## asudw
 # # far_conferenceproceedings
@@ -148,7 +176,7 @@ for tbl in insp.get_table_names('asudw'):
 # # principal
 
 # #list of person columns:
-for col in insp.get_columns('far_evaluations', schema='asudw'):
+for col in insp.get_columns('far_authoredbooks', schema='asudw'):
 	print col
 
 

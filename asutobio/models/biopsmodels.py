@@ -15,7 +15,7 @@ class CommonBase(object):
     """The source_hash: A hash of the source record which will indicate if a record needs to be updated"""
 
     
-BioPs = declarative_base(cls=CommonBase)
+BioPs = declarative_base( cls=CommonBase )
 
 # DONE
 class BioPsPeople( BioPs ):
@@ -286,10 +286,10 @@ class BioPsFarEvaluations( BioPs ):
     job_title = Column( String(50), nullable=True )
     tenure_status_code = Column( String(7), nullable=True )
     tenurehomedeptcode = Column( String(7), nullable=True )
-    extensiondate = Column( DateTime(15), nullable=True )
+    extensiondate = Column( DateTime(), nullable=True )
     completed = Column( String(7), nullable=True )
-    dtcreated = Column( DateTime(15), nullable=True )
-    dtupdated = Column( DateTime(15), nullable=True )
+    dtcreated = Column( DateTime(), nullable=True )
+    dtupdated = Column( DateTime(), nullable=True )
     userlastmodified = Column( String(7), nullable=True )
     load_error = Column( String(7), nullable=True )
     data_origin = Column( String(7), nullable=True )
@@ -298,212 +298,211 @@ class BioPsFarEvaluations( BioPs ):
     batch_sid = Column( Integer, nullable=False )
 
 
-# # # CLASS List To go:
-# # # ASUDW_FAR_AUTHOREDBOOKS
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_authoredbooks"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_BOOKCHAPTERS
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_bookchapters"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_BOOKREVIEWS
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_bookreviews"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_CONFERENCEPROCEEDINGS
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_conferenceproceedings"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_EDITEDBOOKS
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_editedbooks"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_ENCYCLOPEDIAARTICLES
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_encyclopediaarticles"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_NONREFEREEDARTICLES
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_nonrefereedarticles"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_REFEREEDARTICLES
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_refereedarticles"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_SHORTSTORIES
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_shortstories"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_UNIVERSITYSERVICES
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_universityservices"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_PROFESSIONALSERVICES
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_professionalservices"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_MONETARYAWARDPURPOSES
-# # Psclass  ( BioPs ):
-# #     __tablename__ = "asudw_far_monetaryawardpurposes"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_MONETARYAWARDS
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_monetaryawards"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_EVALUATIONS
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_evaluations"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_FACULTY
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_faculty"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_FACULTYDEPARTMENT
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_facultydepartment"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # # ASUDW_FAR_HONORS
-# # Psclass ( BioPs ):
-# #     __tablename__ = "asudw_far_honors"
-# #     # below are the data fields out of peopleSoft
-# #     def sourceCondition(self):
-# #         condition = "\
-# #PS         ".format(self.__tablename__,'_','_')
-# #         return condition
-# # ASUDW_FAR_MENTORING
-# class BioPsFarMentoring( BioPs ):
-#     __tablename__ = "asudw_far_mentoring"
-#     # below are the data fields out of peopleSoft
-#     mentoringid = Column( Integer, nullable=False )
-#     src_sys_id = Column( String(7), nullable=False )
-#     evaluationid = Column( Integer, nullable=False )
-#     mentoringrolecode = Column( Integer, nullable=True )
-#     studentname = Column( String(255), nullable=True )
-#     studentgraduationdate = Column( String(7), nullable=True )
-#     additionalinfo = Column( Text, nullable=True )
-#     dtcreated = Column( String(31), nullable=False )
-#     dtupdated = Column( String(31), nullable=False )
-#     userlastmodified = Column( String(15), nullable=True )
-#     ispublic = Column( String(7), nullable=False )
-#     activityid = Column( Integer, nullable=True )
-#     load_error = Column( String(7), nullable=False )
-#     data_origin = Column( String(7), nullable=False )
-#     created_ew_dttm = Column( String(31), nullable=True )
-#     lastupd_dw_dttm = Column( String(31), nullable=True )
-#     batch_sid = Column( Integer, nullable=False )
+class BioPsFarConferenceProceedings( BioPs ):
+    __tablename__ = 'far_conferenceproceedings'
+    
+    conferenceproceedingid = Column( Integer, nullable = False )
+    src_sys_id = Column( String(5), nullable = False )
+    evaluationid = Column( Integer, nullable = False )
+    authors = Column( Text(), nullable = False )
+    title = Column( Text(), nullable = True )
+    journalname = Column( Text(), nullable = True )
+    refereed = Column( String(1), nullable = True )
+    publicationstatuscode = Column( Integer, nullable = True )
+    publicationyear = Column( Integer, nullable = True )
+    volumenumber = Column( String(103), nullable = True )
+    pages = Column( String(207), nullable = True )
+    webaddress = Column( String(503), nullable = True )
+    abstract = Column( Text(), nullable = True )
+    additionalinfo = Column( Text(), nullable = True )
+    dtcreated = Column( Date(), nullable = False )
+    dtupdated = Column( Date(), nullable = True )
+    userlastmodified = Column( String(23), nullable = False )
+    ispublic = Column( String(1), nullable = False )
+    activityid = Column( Integer, nullable = True )
+    load_error = Column( String(1), nullable = False )
+    data_origin = Column( String(1), nullable = False )
+    created_ew_dttm = Column( Date(), nullable = True )
+    lastupd_dw_dttm = Column( Date(), nullable = True )
+    batch_sid = Column( Integer, nullable = False )
 
-#     def sourceCondition(self):
-#         condition = "\
-#          {!s}.ISPUBLIC = 'Y' AND {!s}.EVALUATIONID IN\
-#             (\
-#                 SELECT E.EVALUATIONID FROM ASUDW{!s}FAR_EVALUATIONS E WHERE E.AFFILIATEID IN\
-#                 (\
-#                     SELECT JPS.EMPLID FROM SYSADM{!s}PS_JOB JPS WHERE JPS.DEPTID IN\
-#                     (\
-#                         SELECT J.DEPTID FROM DIRECTORY{!s}JOB J WHERE J.DEPARTMENT LIKE ''%Biodesign%'' GROUP BY J.DEPARTMENT, J.DEPTID\
-#                     )\
-#                 )\
-#             )".format(self.__tablename__,self.__tablename__,'_','_','_')
-#         return condition
 
-# # ASUDW_FAR_COMMUNITYSERVICES
-# class BioPsFarCommunityServices( BioPs ):
-#     __tablename__ = "asudw_far_communityservices"
-#     # below are the data fields out of peopleSoft
-#     communityserviceid = Column( Integer, nullable=False )
-#     src_sys_id = Column( String(7), nullable=False )
-#     evaluationid = Column( Integer, nullable=False )
-#     organization = Column( Text, nullable=True )
-#     role = Column( Text, nullable=True )
-#     termstart = Column( String(7), nullable=True )
-#     termend = Column( String(7), nullable=True )
-#     additionalinfo = Column( Text, nullable=True )
-#     dtcreated = Column( String(31), nullable=False )
-#     dtupdated = Column( String(31), nullable=True )
-#     userlastmodified = Column( String(15), nullable=False )
-#     ispublic = Column( String(7), nullable=False )
-#     activityid = Column( Integer, nullable=True )
-#     load_error = Column( String(7), nullable=False )
-#     data_origin = Column( String(7), nullable=False )
-#     created_ew_dttm = Column( String(31), nullable=True )
-#     lastupd_dw_dttm = Column( String(31), nullable=True )
-#     batch_sid = Column( Integer, nullable=False )
+class BioPsFarAuthoredBooks( BioPs ):
+    __tablename__ = 'far_authoredbooks'
+    
+    authoredbookid = Column( Integer, nullable = False )
+    src_sys_id = Column( String(5), nullable = False )
+    evaluationid = Column( Integer, nullable = False )
+    authors = Column( Text(), nullable = False )
+    title = Column( Text(), nullable = False )
+    publisher = Column( String(250), nullable = True )
+    publicationstatuscode = Column( Integer, nullable = True )
+    pages = Column( String(103), nullable = True )
+    isbn = Column( String(103), nullable = True )
+    publicationyear = Column( Integer, nullable = True )
+    volumenumber = Column( String(103), nullable = True )
+    edition = Column( String(103), nullable = True )
+    publicationcity = Column( String(103), nullable = True )
+    webaddress = Column( String(503), nullable = True )
+    translated = Column( String(1), nullable = True )
+    additionalinfo = Column( Text(), nullable = True )
+    dtcreated = Column( Date() , nullable = False )
+    dtupdated = Column( Date() , nullable = True )
+    userlastmodified = Column( String(16), nullable = False )
+    ispublic = Column( String(1), nullable = False )
+    activityid = Column( Integer, nullable = True )
+    load_error = Column( String(1), nullable = False )
+    data_origin = Column( String(1), nullable = False )
+    created_ew_dttm = Column( Date() , nullable = True )
+    lastupd_dw_dttm = Column( Date() , nullable = True )
+    batch_sid = Column( Integer, nullable = False )
 
-#     def sourceCondition(self):
-#         condition = "\
-#             {!s}.ISPUBLIC = 'Y' AND {!s}.EVALUATIONID IN\
-#             (\
-#                 SELECT E.EVALUATIONID FROM ASUDW{!s}FAR_EVALUATIONS E WHERE E.AFFILIATEID IN\
-#                 (\
-#                     SELECT JPS.EMPLID FROM SYSADM{!s}PS_JOB JPS WHERE JPS.DEPTID IN\
-#                     (\
-#                         SELECT J.DEPTID FROM DIRECTORY{!s}JOB J WHERE J.DEPARTMENT LIKE ''%Biodesign%'' GROUP BY J.DEPARTMENT, J.DEPTID\
-#                     )\
-#                 )\
-#             )".format(self.__tablename__,self.__tablename__,'_','_','_')
-#         return condition
+
+class BioPsFarRefereedarticles( BioPs ):
+    __tablename__ = 'far_refereedarticles'
+    
+    refereedarticleid = Column( Integer, nullable = False)
+    src_sys_id = Column( String( 5 ), nullable = False)
+    evaluationid = Column( Integer, nullable = False)
+    authors = Column( Text(), nullable = False)
+    title = Column( Text(), nullable = True)
+    journalname = Column( Text(), nullable = True)
+    publicationstatuscode = Column( Integer, nullable = True)
+    publicationyear = Column( Integer, nullable = True)
+    volumenumber = Column( String( 103 ), nullable = True)
+    pages = Column( String( 103 ), nullable = True)
+    webaddress = Column( String( 503 ), nullable = True)
+    translated = Column( String(1), nullable = True)
+    abstract = Column( Text(), nullable = True)
+    additionalinfo = Column( String( 1007 ), nullable = True)
+    dtcreated = Column( DATE(), nullable = False)
+    dtupdated = Column( DATE(), nullable = True)
+    userlastmodified = Column( String( 23 ), nullable = False)
+    ispublic = Column( String( 1 ), nullable = False)
+    activityid = Column( Integer, nullable = True)
+    load_error = Column( String( 1 ), nullable = False)
+    data_origin = Column( String( 1 ), nullable = False)
+    created_ew_dttm = Column( DATE(), nullable = True)
+    lastupd_dw_dttm = Column( DATE(), nullable = True)
+    batch_sid = Column( Integer, nullable = False)
+
+
+class BioPsFarNonrefereedarticles( BioPs ):
+    __tablename__ = 'far_nonrefereedarticles'
+    
+    nonrefereedarticleid = Column( Integer, nullable = False )
+    src_sys_id = Column( String( 5 ), nullable = False )
+    evaluationid = Column( Integer, nullable = False )
+    authors = Column( Text(), nullable = False )
+    title = Column( Text(), nullable = False )
+    journalname = Column( Text(), nullable = True )
+    publicationstatuscode = Column( Integer, nullable = True )
+    publicationyear = Column( Integer, nullable = True )
+    volumenumber = Column( String( 103 ), nullable = True )
+    pages = Column( String( 103 ), nullable = True )
+    webaddress = Column( Text(), nullable = True )
+    translated = Column( String(1), nullable = True )
+    abstract = Column( Text(), nullable = True )
+    additionalinfo = Column( Text(), nullable = True )
+    dtcreated = Column( DATE(), nullable = False )
+    dtupdated = Column( DATE(), nullable = True )
+    userlastmodified = Column( String( 23 ), nullable = False )
+    ispublic = Column( String(length=1), nullable = False )
+    activityid = Column( Integer, nullable = True )
+    load_error = Column( String( 1 ), nullable = False )
+    data_origin = Column( String( 1 ), nullable = False )
+    created_ew_dttm = Column( DATE(), nullable = True )
+    lastupd_dw_dttm = Column( DATE(), nullable = True )
+    batch_sid = Column( Integer, nullable = False )
+
+
+class BioPsFarEditedbooks( BioPs ):
+    __tablename__ = 'far_editedbooks'
+    
+    editedbookid = Column( Integer, nullable=False)
+    src_sys_id = Column( String( 5 ), nullable=False)
+    evaluationid = Column( Integer, nullable=False)
+    authors = Column( Text(), nullable=True)
+    title = Column( Text(), nullable=False)
+    publisher = Column( String( 255 ), nullable=True)
+    publicationstatuscode = Column( Integer, nullable=True)
+    pages = Column( String( 103 ), nullable=True)
+    isbn = Column( String( 103 ), nullable=True)
+    publicationyear = Column( Integer, nullable=True)
+    volumenumber = Column( String( 103 ), nullable=True)
+    edition = Column( String( 103 ), nullable=True)
+    publicationcity = Column( String( 103 ), nullable=True)
+    webaddress = Column( Text(), nullable=True)
+    translated = Column( String( 1 ), nullable=True)
+    additionalinfo = Column( Text(), nullable=True)
+    dtcreated = Column( DATE(), nullable=False)
+    dtupdated = Column( DATE(), nullable=True)
+    userlastmodified = Column( String( 23 ), nullable=True)
+    ispublic = Column( String( 1 ), nullable=False)
+    activityid = Column( Integer, nullable=True)
+    load_error = Column( String( 1 ), nullable=False)
+    data_origin = Column( String( 1 ), nullable=False)
+    created_ew_dttm = Column( DATE(), nullable=True)
+    lastupd_dw_dttm = Column( DATE(), nullable=True)
+    batch_sid = Column( Integer, nullable=False)
+
+
+class BioPsFarBookChapters( BioPs ):
+    __tablename__ = 'far_bookchapters'
+    
+    bookchapterid = Column( Integer, nullable=False )
+    src_sys_id = Column( String( 5 ), nullable=False )
+    evaluationid = Column( Integer, nullable=False )
+    bookauthors = Column( Text(), nullable=True )
+    booktitle = Column( Text(), nullable=True )
+    chapterauthors = Column( Text(), nullable=True )
+    chaptertitle = Column( Text(), nullable=True )
+    publisher = Column( String( 255 ), nullable=True )
+    publicationstatuscode = Column( Integer, nullable=True )
+    pages = Column( String( 103 ), nullable=True )
+    isbn = Column( String( 103 ), nullable=True )
+    publicationyear = Column( Integer, nullable=True )
+    volumenumber = Column( String( 55 ), nullable=True )
+    edition = Column( String( 55 ), nullable=True )
+    publicationcity = Column( Text(), nullable=True )
+    webaddress = Column( Text(), nullable=True )
+    translated = Column( String( 1 ), nullable=True )
+    additionalinfo = Column( Text(), nullable=True )
+    dtcreated = Column( DATE(), nullable=False )
+    dtupdated = Column( DATE(), nullable=True )
+    userlastmodified = Column( String( 23 ), nullable=False )
+    ispublic = Column( String( 1 ), nullable=False )
+    activityid = Column( Integer, nullable=True )
+    load_error = Column( String( 1 ), nullable=False )
+    data_origin = Column( String( 1 ), nullable=False )
+    created_ew_dttm = Column( DATE(), nullable=True )
+    lastupd_dw_dttm = Column( DATE(), nullable=True )
+    batch_sid = Column( Integer, nullable=False )
+
+
+class BioPsFarBookReviews( BioPs ):
+    __tablename__ = 'far_bookreviews'
+    
+    bookreviewid = Column( Integer , nullable=False )
+    src_sys_id = Column( String( 5 ), nullable=False )
+    evaluationid = Column( Integer , nullable=False )
+    bookauthors = Column( Text(), nullable=True )
+    booktitle = Column( Text(), nullable=True )
+    journalname = Column( Text(), nullable=True )
+    publicationstatuscode = Column( Integer , nullable=True )
+    journalpages = Column( String( 103 ), nullable=True )
+    journalpublicationyear = Column( Integer , nullable=True )
+    journalvolumenumber = Column( String( 103 ), nullable=True )
+    webaddress = Column( Text(), nullable=True )
+    additionalinfo = Column( Text(), nullable=True )
+    dtcreated = Column( DATE(), nullable=False )
+    dtupdated = Column( DATE(), nullable=True )
+    userlastmodified = Column( String( 23 ), nullable=False )
+    ispublic = Column( CHAR( 1 ), nullable=False )
+    activityid = Column( Integer , nullable=True )
+    load_error = Column( String( 1 ), nullable=False )
+    data_origin = Column( String( 1 ), nullable=False )
+    created_ew_dttm = Column( DATE(), nullable=True )
+    lastupd_dw_dttm = Column( DATE(), nullable=True )
+    batch_sid = Column( Integer , nullable=False )
+

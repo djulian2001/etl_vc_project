@@ -10,6 +10,8 @@ from sharedProcesses import hashThisList
 # _ZZ_ all caps w/ underscore, -oracle schema name
 # _z_ lower case w/ undersores - mysql table name
 
+# asutobio\ filename	asudw_Y_ToBioPs.py
+# bioetl\ filename		_y_Processing.py
 
 # the data pull
 def getSource_X_Data( sesSource ):
@@ -23,7 +25,8 @@ def getSource_X_Data( sesSource ):
 
 	return sesSource.query(
 		AsuDwPs_X_ ).join(
-		)
+			).order_by(
+				AsuDwPs___ ).all()
 
 # the data load
 def process_Y_Data( _y_ ):
