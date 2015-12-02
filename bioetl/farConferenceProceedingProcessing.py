@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy import exists, literal
 
-from models.biopublicmodels import FarConferenceProceedings
+from models.biopublicmodels import FarConferenceProceedings, FarEvaluations
 from asutobio.models.biopsmodels import BioPsFarConferenceProceedings
 
 
@@ -96,8 +96,14 @@ def processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget ):
 			raise TypeError('source farConferenceProceeding already exists and requires no updates!')
 
 	else:
+
+		srcGetFarEvaluationId = sesTarget.query(
+			FarEvaluations.id ).filter(
+				FarEvaluations.evaluationid == srcFarConferenceProceeding.evaluationid ).one()
+
 		insertFarConferenceProceeding = FarConferenceProceedings(
 			source_hash = srcFarConferenceProceeding.source_hash,
+			far_evaluation_id = srcGetFarEvaluationId.id,
 			conferenceproceedingid = srcFarConferenceProceeding.conferenceproceedingid,
 			src_sys_id = srcFarConferenceProceeding.src_sys_id,
 			evaluationid = srcFarConferenceProceeding.evaluationid,

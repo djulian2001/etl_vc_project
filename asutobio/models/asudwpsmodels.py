@@ -533,14 +533,76 @@ class AsuDwPsFarBookReviews( AsuDwPs ):
     __table_args__ = { "schema" : schema }
 
 
+class AsuDwPsFarEncyclopediaarticles( AsuDwPs ):
+    __tablename__ = 'FAR_ENCYCLOPEDIAARTICLES'
+    schema = 'ASUDW'
+
+    encyclopediaarticleid = Column( Integer , nullable=False )
+    src_sys_id = Column( String( 5 ), nullable=False )
+    evaluationid = Column( Integer , nullable=False )
+    authors = Column( String( 4007 ), nullable=False )
+    title = Column( String( 1007 ), nullable=True )
+    publicationname = Column( String( 1007 ), nullable=True )
+    publicationstatuscode = Column( Integer , nullable=True )
+    pages = Column( String( 103 ), nullable=True )
+    publicationyear = Column( Integer , nullable=True )
+    publisher = Column( String( 103 ), nullable=True )
+    webaddress = Column( String( 503 ), nullable=True )
+    additionalinfo = Column( String( 1007 ), nullable=True )
+    dtcreated = Column( DATE(),  nullable=False )
+    dtupdated = Column( DATE(),  nullable=True )
+    userlastmodified = Column( String( 23 ), nullable=False )
+    ispublic = Column( String( 1 ), nullable=False )
+    activityid = Column( Integer , nullable=True )
+    load_error = Column( String( 1 ), nullable=False )
+    data_origin = Column( String( 1 ), nullable=False )
+    created_ew_dttm = Column( DATE(),  nullable=True )
+    lastupd_dw_dttm = Column( DATE(),  nullable=True )
+    batch_sid = Column( Integer , nullable=False )
+
+    __mapper_args__ = { "primary_key" : [ encyclopediaarticleid, evaluationid ] }
+    __table_args__ = { "schema" : schema }
+
+
+class AsuDwPsFarShortstories( AsuDwPs ):
+    __tablename__ = 'FAR_SHORTSTORIES'
+    schema = 'ASUDW'
+
+    shortstoryid = Column( Integer , nullable=False )
+    src_sys_id = Column( String( 5 ), nullable=False )
+    evaluationid = Column( Integer , nullable=False )
+    authors = Column( String( 4007 ), nullable=False )
+    title = Column( String( 1007 ), nullable=True )
+    publicationname = Column( String( 1007 ), nullable=True )
+    publicationstatuscode = Column( Integer , nullable=True )
+    pages = Column( String( 103 ), nullable=True )
+    publicationyear = Column( Integer , nullable=True )
+    publisher = Column( String( 103 ), nullable=True )
+    webaddress = Column( String( 503 ), nullable=True )
+    translated = Column( String( 1 ), nullable=True )
+    additionalinfo = Column( String( 1007 ), nullable=True )
+    dtcreated = Column( DATE(), nullable=False )
+    dtupdated = Column( DATE(), nullable=True )
+    userlastmodified = Column( String( 23 ), nullable=False )
+    ispublic = Column( String( 1 ), nullable=False )
+    activityid = Column( Integer , nullable=True )
+    load_error = Column( String( 1 ), nullable=False )
+    data_origin = Column( String( 1 ), nullable=False )
+    created_ew_dttm = Column( DATE(), nullable=True )
+    lastupd_dw_dttm = Column( DATE(), nullable=True )
+    batch_sid = Column( Integer , nullable=False )
+
+    __mapper_args__ = { "primary_key" : [ shortstoryid, evaluationid ] }
+    __table_args__ = { "schema" : schema }
+
 # ---- far_conferenceproceedings  (no data in the dev instances)
 # ---- far_authoredbooks  (no data in the dev instances)
 # ---- far_editedbooks
 # ---- far_bookchapters
-# far_bookreviews
-# far_shortstories
+# ---- far_bookreviews
+# ---- far_shortstories ( no data )
 # ---- far_evaluations
-# far_encyclopediaarticles
+# ---- far_encyclopediaarticles ( no data )
 # ---- far_nonrefereedarticles
 # ---- far_refereedarticles  ()
 

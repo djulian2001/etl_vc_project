@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy import exists, literal
 
-from models.biopublicmodels import FarAuthoredBooks
+from models.biopublicmodels import FarAuthoredBooks, FarEvaluations
 from asutobio.models.biopsmodels import BioPsFarAuthoredBooks
 
 
@@ -98,8 +98,14 @@ def processFarAuthoredBook( srcFarAuthoredBook, sesTarget ):
 			raise TypeError('source farAuthoredBook already exists and requires no updates!')
 
 	else:
+		
+		srcGetFarEvaluationId = sesTarget.query(
+			FarEvaluations.id ).filter(
+				FarEvaluations.evaluationid == srcFarAuthoredBook.evaluationid ).one()
+
 		insertFarAuthoredBook = FarAuthoredBooks(
 			source_hash = srcFarAuthoredBook.source_hash,
+			far_evaluation_id = srcGetFarEvaluationId.id,
 			authoredbookid = srcFarAuthoredBook.authoredbookid,
 			src_sys_id = srcFarAuthoredBook.src_sys_id,
 			evaluationid = srcFarAuthoredBook.evaluationid,

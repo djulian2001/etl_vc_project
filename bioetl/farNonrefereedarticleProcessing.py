@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy import exists, literal
 
-from models.biopublicmodels import FarNonrefereedarticles
+from models.biopublicmodels import FarNonrefereedarticles, FarEvaluations
 from asutobio.models.biopsmodels import BioPsFarNonrefereedarticles
 
 
@@ -26,7 +26,6 @@ def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
-#template mapping... column where(s) _yyy_ 
 	true, false = literal(True), literal(False)
 
 	def farNonrefereedarticleExists():
@@ -37,7 +36,7 @@ def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
 		"""
 		(ret, ), = sesTarget.query(
 			exists().where(
-				FarNonrefereedarticles._yyy_ == srcFarNonrefereedarticle._yyy_ ) )
+				FarNonrefereedarticles.nonrefereedarticleid == srcFarNonrefereedarticle.nonrefereedarticleid ) )
 
 		return ret
 
@@ -51,7 +50,7 @@ def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
 			"""	
 			(ret, ), = sesTarget.query(
 				exists().where(
-					FarNonrefereedarticles._yyy_ == srcFarNonrefereedarticle._yyy_ ).where(
+					FarNonrefereedarticles.nonrefereedarticleid == srcFarNonrefereedarticle.nonrefereedarticleid ).where(
 					FarNonrefereedarticles.source_hash == srcFarNonrefereedarticle.source_hash ) )
 
 			return not ret
@@ -60,12 +59,34 @@ def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
 			# retrive the tables object to update.
 			updateFarNonrefereedarticle = sesTarget.query(
 				FarNonrefereedarticles ).filter(
-					FarNonrefereedarticles._yyy_ == srcFarNonrefereedarticle._yyy_ ).one()
+					FarNonrefereedarticles.nonrefereedarticleid == srcFarNonrefereedarticle.nonrefereedarticleid ).one()
 
 			# repeat the following pattern for all mapped attributes:
 			updateFarNonrefereedarticle.source_hash = srcFarNonrefereedarticle.source_hash
-			updateFarNonrefereedarticle._yyy_ = srcFarNonrefereedarticle._yyy_
-
+			updateFarNonrefereedarticle.nonrefereedarticleid = srcFarNonrefereedarticle.nonrefereedarticleid
+			updateFarNonrefereedarticle.src_sys_id = srcFarNonrefereedarticle.src_sys_id
+			updateFarNonrefereedarticle.evaluationid = srcFarNonrefereedarticle.evaluationid
+			updateFarNonrefereedarticle.authors = srcFarNonrefereedarticle.authors
+			updateFarNonrefereedarticle.title = srcFarNonrefereedarticle.title
+			updateFarNonrefereedarticle.journalname = srcFarNonrefereedarticle.journalname
+			updateFarNonrefereedarticle.publicationstatuscode = srcFarNonrefereedarticle.publicationstatuscode
+			updateFarNonrefereedarticle.publicationyear = srcFarNonrefereedarticle.publicationyear
+			updateFarNonrefereedarticle.volumenumber = srcFarNonrefereedarticle.volumenumber
+			updateFarNonrefereedarticle.pages = srcFarNonrefereedarticle.pages
+			updateFarNonrefereedarticle.webaddress = srcFarNonrefereedarticle.webaddress
+			updateFarNonrefereedarticle.translated = srcFarNonrefereedarticle.translated
+			updateFarNonrefereedarticle.abstract = srcFarNonrefereedarticle.abstract
+			updateFarNonrefereedarticle.additionalinfo = srcFarNonrefereedarticle.additionalinfo
+			updateFarNonrefereedarticle.dtcreated = srcFarNonrefereedarticle.dtcreated
+			updateFarNonrefereedarticle.dtupdated = srcFarNonrefereedarticle.dtupdated
+			updateFarNonrefereedarticle.userlastmodified = srcFarNonrefereedarticle.userlastmodified
+			updateFarNonrefereedarticle.ispublic = srcFarNonrefereedarticle.ispublic
+			updateFarNonrefereedarticle.activityid = srcFarNonrefereedarticle.activityid
+			updateFarNonrefereedarticle.load_error = srcFarNonrefereedarticle.load_error
+			updateFarNonrefereedarticle.data_origin = srcFarNonrefereedarticle.data_origin
+			updateFarNonrefereedarticle.created_ew_dttm = srcFarNonrefereedarticle.created_ew_dttm
+			updateFarNonrefereedarticle.lastupd_dw_dttm = srcFarNonrefereedarticle.lastupd_dw_dttm
+			updateFarNonrefereedarticle.batch_sid = srcFarNonrefereedarticle.batch_sid
 			updateFarNonrefereedarticle.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			updateFarNonrefereedarticle.deleted_at = None
 
@@ -74,10 +95,38 @@ def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
 			raise TypeError('source farNonrefereedarticle already exists and requires no updates!')
 
 	else:
+
+		srcGetFarEvaluationId = sesTarget.query(
+			FarEvaluations.id ).filter(
+				FarEvaluations.evaluationid == srcFarNonrefereedarticle.evaluationid ).one()
+
 		insertFarNonrefereedarticle = FarNonrefereedarticles(
 			source_hash = srcFarNonrefereedarticle.source_hash,
-			_yyy_ = srcFarNonrefereedarticle._yyy_,
-			...
+			nonrefereedarticleid = srcFarNonrefereedarticle.nonrefereedarticleid,
+			far_evaluation_id = srcGetFarEvaluationId.id,
+			src_sys_id = srcFarNonrefereedarticle.src_sys_id,
+			evaluationid = srcFarNonrefereedarticle.evaluationid,
+			authors = srcFarNonrefereedarticle.authors,
+			title = srcFarNonrefereedarticle.title,
+			journalname = srcFarNonrefereedarticle.journalname,
+			publicationstatuscode = srcFarNonrefereedarticle.publicationstatuscode,
+			publicationyear = srcFarNonrefereedarticle.publicationyear,
+			volumenumber = srcFarNonrefereedarticle.volumenumber,
+			pages = srcFarNonrefereedarticle.pages,
+			webaddress = srcFarNonrefereedarticle.webaddress,
+			translated = srcFarNonrefereedarticle.translated,
+			abstract = srcFarNonrefereedarticle.abstract,
+			additionalinfo = srcFarNonrefereedarticle.additionalinfo,
+			dtcreated = srcFarNonrefereedarticle.dtcreated,
+			dtupdated = srcFarNonrefereedarticle.dtupdated,
+			userlastmodified = srcFarNonrefereedarticle.userlastmodified,
+			ispublic = srcFarNonrefereedarticle.ispublic,
+			activityid = srcFarNonrefereedarticle.activityid,
+			load_error = srcFarNonrefereedarticle.load_error,
+			data_origin = srcFarNonrefereedarticle.data_origin,
+			created_ew_dttm = srcFarNonrefereedarticle.created_ew_dttm,
+			lastupd_dw_dttm = srcFarNonrefereedarticle.lastupd_dw_dttm,
+			batch_sid = srcFarNonrefereedarticle.batch_sid,
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
 
 		return insertFarNonrefereedarticle
@@ -108,7 +157,7 @@ def softDeleteFarNonrefereedarticle( tgtMissingFarNonrefereedarticle, sesSource 
 		"""
 		(ret, ), = sesSource.query(
 			exists().where(
-				BioPsFarNonrefereedarticles._yyy_ == tgtMissingFarNonrefereedarticle._yyy_ ) )
+				BioPsFarNonrefereedarticles.nonrefereedarticleid == tgtMissingFarNonrefereedarticle.nonrefereedarticleid ) )
 
 		return not ret
 

@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy import exists, literal
 
-from models.biopublicmodels import FarBookChapters
+from models.biopublicmodels import FarBookChapters, FarEvaluations
 from asutobio.models.biopsmodels import BioPsFarBookChapters
 
 
@@ -26,7 +26,6 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
-#template mapping... column where(s) _yyy_ 
 	true, false = literal(True), literal(False)
 
 	def farBookChapterExists():
@@ -37,7 +36,7 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 		"""
 		(ret, ), = sesTarget.query(
 			exists().where(
-				FarBookChapters._yyy_ == srcFarBookChapter._yyy_ ) )
+				FarBookChapters.bookchapterid == srcFarBookChapter.bookchapterid ) )
 
 		return ret
 
@@ -51,7 +50,7 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 			"""	
 			(ret, ), = sesTarget.query(
 				exists().where(
-					FarBookChapters._yyy_ == srcFarBookChapter._yyy_ ).where(
+					FarBookChapters.bookchapterid == srcFarBookChapter.bookchapterid ).where(
 					FarBookChapters.source_hash == srcFarBookChapter.source_hash ) )
 
 			return not ret
@@ -60,12 +59,38 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 			# retrive the tables object to update.
 			updateFarBookChapter = sesTarget.query(
 				FarBookChapters ).filter(
-					FarBookChapters._yyy_ == srcFarBookChapter._yyy_ ).one()
+					FarBookChapters.bookchapterid == srcFarBookChapter.bookchapterid ).one()
 
 			# repeat the following pattern for all mapped attributes:
 			updateFarBookChapter.source_hash = srcFarBookChapter.source_hash
-			updateFarBookChapter._yyy_ = srcFarBookChapter._yyy_
-
+			updateFarBookChapter.bookchapterid = srcFarBookChapter.bookchapterid
+			updateFarBookChapter.src_sys_id = srcFarBookChapter.src_sys_id
+			updateFarBookChapter.evaluationid = srcFarBookChapter.evaluationid
+			updateFarBookChapter.bookauthors = srcFarBookChapter.bookauthors
+			updateFarBookChapter.booktitle = srcFarBookChapter.booktitle
+			updateFarBookChapter.chapterauthors = srcFarBookChapter.chapterauthors
+			updateFarBookChapter.chaptertitle = srcFarBookChapter.chaptertitle
+			updateFarBookChapter.publisher = srcFarBookChapter.publisher
+			updateFarBookChapter.publicationstatuscode = srcFarBookChapter.publicationstatuscode
+			updateFarBookChapter.pages = srcFarBookChapter.pages
+			updateFarBookChapter.isbn = srcFarBookChapter.isbn
+			updateFarBookChapter.publicationyear = srcFarBookChapter.publicationyear
+			updateFarBookChapter.volumenumber = srcFarBookChapter.volumenumber
+			updateFarBookChapter.edition = srcFarBookChapter.edition
+			updateFarBookChapter.publicationcity = srcFarBookChapter.publicationcity
+			updateFarBookChapter.webaddress = srcFarBookChapter.webaddress
+			updateFarBookChapter.translated = srcFarBookChapter.translated
+			updateFarBookChapter.additionalinfo = srcFarBookChapter.additionalinfo
+			updateFarBookChapter.dtcreated = srcFarBookChapter.dtcreated
+			updateFarBookChapter.dtupdated = srcFarBookChapter.dtupdated
+			updateFarBookChapter.userlastmodified = srcFarBookChapter.userlastmodified
+			updateFarBookChapter.ispublic = srcFarBookChapter.ispublic
+			updateFarBookChapter.activityid = srcFarBookChapter.activityid
+			updateFarBookChapter.load_error = srcFarBookChapter.load_error
+			updateFarBookChapter.data_origin = srcFarBookChapter.data_origin
+			updateFarBookChapter.created_ew_dttm = srcFarBookChapter.created_ew_dttm
+			updateFarBookChapter.lastupd_dw_dttm = srcFarBookChapter.lastupd_dw_dttm
+			updateFarBookChapter.batch_sid = srcFarBookChapter.batch_sid
 			updateFarBookChapter.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			updateFarBookChapter.deleted_at = None
 
@@ -74,10 +99,41 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 			raise TypeError('source farBookChapter already exists and requires no updates!')
 
 	else:
+		srcGetFarEvaluationId = sesTarget.query(
+			FarEvaluations.id ).filter(
+				FarEvaluations.evaluationid == srcFarBookChapter.evaluationid ).one()
+
 		insertFarBookChapter = FarBookChapters(
 			source_hash = srcFarBookChapter.source_hash,
-			_yyy_ = srcFarBookChapter._yyy_,
-			...
+			far_evaluation_id = srcGetFarEvaluationId.id,
+			bookchapterid = srcFarBookChapter.bookchapterid,
+			src_sys_id = srcFarBookChapter.src_sys_id,
+			evaluationid = srcFarBookChapter.evaluationid,
+			bookauthors = srcFarBookChapter.bookauthors,
+			booktitle = srcFarBookChapter.booktitle,
+			chapterauthors = srcFarBookChapter.chapterauthors,
+			chaptertitle = srcFarBookChapter.chaptertitle,
+			publisher = srcFarBookChapter.publisher,
+			publicationstatuscode = srcFarBookChapter.publicationstatuscode,
+			pages = srcFarBookChapter.pages,
+			isbn = srcFarBookChapter.isbn,
+			publicationyear = srcFarBookChapter.publicationyear,
+			volumenumber = srcFarBookChapter.volumenumber,
+			edition = srcFarBookChapter.edition,
+			publicationcity = srcFarBookChapter.publicationcity,
+			webaddress = srcFarBookChapter.webaddress,
+			translated = srcFarBookChapter.translated,
+			additionalinfo = srcFarBookChapter.additionalinfo,
+			dtcreated = srcFarBookChapter.dtcreated,
+			dtupdated = srcFarBookChapter.dtupdated,
+			userlastmodified = srcFarBookChapter.userlastmodified,
+			ispublic = srcFarBookChapter.ispublic,
+			activityid = srcFarBookChapter.activityid,
+			load_error = srcFarBookChapter.load_error,
+			data_origin = srcFarBookChapter.data_origin,
+			created_ew_dttm = srcFarBookChapter.created_ew_dttm,
+			lastupd_dw_dttm = srcFarBookChapter.lastupd_dw_dttm,
+			batch_sid = srcFarBookChapter.batch_sid,
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
 
 		return insertFarBookChapter
@@ -108,7 +164,7 @@ def softDeleteFarBookChapter( tgtMissingFarBookChapter, sesSource ):
 		"""
 		(ret, ), = sesSource.query(
 			exists().where(
-				BioPsFarBookChapters._yyy_ == tgtMissingFarBookChapter._yyy_ ) )
+				BioPsFarBookChapters.bookchapterid == tgtMissingFarBookChapter.bookchapterid ) )
 
 		return not ret
 

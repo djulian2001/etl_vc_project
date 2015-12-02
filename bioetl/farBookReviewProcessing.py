@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy import exists, literal
 
-from models.biopublicmodels import FarBookReviews
+from models.biopublicmodels import FarBookReviews, FarEvaluations
 from asutobio.models.biopsmodels import BioPsFarBookReviews
 
 
@@ -26,7 +26,6 @@ def processFarBookReview( srcFarBookReview, sesTarget ):
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
-#template mapping... column where(s) _yyy_ 
 	true, false = literal(True), literal(False)
 
 	def farBookReviewExists():
@@ -37,7 +36,7 @@ def processFarBookReview( srcFarBookReview, sesTarget ):
 		"""
 		(ret, ), = sesTarget.query(
 			exists().where(
-				FarBookReviews._yyy_ == srcFarBookReview._yyy_ ) )
+				FarBookReviews.bookreviewid == srcFarBookReview.bookreviewid ) )
 
 		return ret
 
@@ -51,7 +50,7 @@ def processFarBookReview( srcFarBookReview, sesTarget ):
 			"""	
 			(ret, ), = sesTarget.query(
 				exists().where(
-					FarBookReviews._yyy_ == srcFarBookReview._yyy_ ).where(
+					FarBookReviews.bookreviewid == srcFarBookReview.bookreviewid ).where(
 					FarBookReviews.source_hash == srcFarBookReview.source_hash ) )
 
 			return not ret
@@ -60,12 +59,32 @@ def processFarBookReview( srcFarBookReview, sesTarget ):
 			# retrive the tables object to update.
 			updateFarBookReview = sesTarget.query(
 				FarBookReviews ).filter(
-					FarBookReviews._yyy_ == srcFarBookReview._yyy_ ).one()
+					FarBookReviews.bookreviewid == srcFarBookReview.bookreviewid ).one()
 
 			# repeat the following pattern for all mapped attributes:
 			updateFarBookReview.source_hash = srcFarBookReview.source_hash
-			updateFarBookReview._yyy_ = srcFarBookReview._yyy_
-
+			updateFarBookReview.bookreviewid = srcFarBookReview.bookreviewid
+			updateFarBookReview.src_sys_id = srcFarBookReview.src_sys_id
+			updateFarBookReview.evaluationid = srcFarBookReview.evaluationid
+			updateFarBookReview.bookauthors = srcFarBookReview.bookauthors
+			updateFarBookReview.booktitle = srcFarBookReview.booktitle
+			updateFarBookReview.journalname = srcFarBookReview.journalname
+			updateFarBookReview.publicationstatuscode = srcFarBookReview.publicationstatuscode
+			updateFarBookReview.journalpages = srcFarBookReview.journalpages
+			updateFarBookReview.journalpublicationyear = srcFarBookReview.journalpublicationyear
+			updateFarBookReview.journalvolumenumber = srcFarBookReview.journalvolumenumber
+			updateFarBookReview.webaddress = srcFarBookReview.webaddress
+			updateFarBookReview.additionalinfo = srcFarBookReview.additionalinfo
+			updateFarBookReview.dtcreated = srcFarBookReview.dtcreated
+			updateFarBookReview.dtupdated = srcFarBookReview.dtupdated
+			updateFarBookReview.userlastmodified = srcFarBookReview.userlastmodified
+			updateFarBookReview.ispublic = srcFarBookReview.ispublic
+			updateFarBookReview.activityid = srcFarBookReview.activityid
+			updateFarBookReview.load_error = srcFarBookReview.load_error
+			updateFarBookReview.data_origin = srcFarBookReview.data_origin
+			updateFarBookReview.created_ew_dttm = srcFarBookReview.created_ew_dttm
+			updateFarBookReview.lastupd_dw_dttm = srcFarBookReview.lastupd_dw_dttm
+			updateFarBookReview.batch_sid = srcFarBookReview.batch_sid
 			updateFarBookReview.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			updateFarBookReview.deleted_at = None
 
@@ -74,10 +93,36 @@ def processFarBookReview( srcFarBookReview, sesTarget ):
 			raise TypeError('source farBookReview already exists and requires no updates!')
 
 	else:
+
+		srcGetFarEvaluationId = sesTarget.query(
+			FarEvaluations.id ).filter(
+				FarEvaluations.evaluationid == srcFarBookReview.evaluationid ).one()
+
 		insertFarBookReview = FarBookReviews(
 			source_hash = srcFarBookReview.source_hash,
-			_yyy_ = srcFarBookReview._yyy_,
-			...
+			far_evaluation_id = srcGetFarEvaluationId.id,
+			bookreviewid = srcFarBookReview.bookreviewid,
+			src_sys_id = srcFarBookReview.src_sys_id,
+			evaluationid = srcFarBookReview.evaluationid,
+			bookauthors = srcFarBookReview.bookauthors,
+			booktitle = srcFarBookReview.booktitle,
+			journalname = srcFarBookReview.journalname,
+			publicationstatuscode = srcFarBookReview.publicationstatuscode,
+			journalpages = srcFarBookReview.journalpages,
+			journalpublicationyear = srcFarBookReview.journalpublicationyear,
+			journalvolumenumber = srcFarBookReview.journalvolumenumber,
+			webaddress = srcFarBookReview.webaddress,
+			additionalinfo = srcFarBookReview.additionalinfo,
+			dtcreated = srcFarBookReview.dtcreated,
+			dtupdated = srcFarBookReview.dtupdated,
+			userlastmodified = srcFarBookReview.userlastmodified,
+			ispublic = srcFarBookReview.ispublic,
+			activityid = srcFarBookReview.activityid,
+			load_error = srcFarBookReview.load_error,
+			data_origin = srcFarBookReview.data_origin,
+			created_ew_dttm = srcFarBookReview.created_ew_dttm,
+			lastupd_dw_dttm = srcFarBookReview.lastupd_dw_dttm,
+			batch_sid = srcFarBookReview.batch_sid,
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
 
 		return insertFarBookReview
@@ -108,7 +153,7 @@ def softDeleteFarBookReview( tgtMissingFarBookReview, sesSource ):
 		"""
 		(ret, ), = sesSource.query(
 			exists().where(
-				BioPsFarBookReviews._yyy_ == tgtMissingFarBookReview._yyy_ ) )
+				BioPsFarBookReviews.bookreviewid == tgtMissingFarBookReview.bookreviewid ) )
 
 		return not ret
 

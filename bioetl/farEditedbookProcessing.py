@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy import exists, literal
 
-from models.biopublicmodels import FarEditedbooks
+from models.biopublicmodels import FarEditedbooks, FarEvaluations
 from asutobio.models.biopsmodels import BioPsFarEditedbooks
 
 
@@ -26,7 +26,6 @@ def processFarEditedbook( srcFarEditedbook, sesTarget ):
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
-#template mapping... column where(s) _yyy_ 
 	true, false = literal(True), literal(False)
 
 	def farEditedbookExists():
@@ -37,7 +36,7 @@ def processFarEditedbook( srcFarEditedbook, sesTarget ):
 		"""
 		(ret, ), = sesTarget.query(
 			exists().where(
-				FarEditedbooks._yyy_ == srcFarEditedbook._yyy_ ) )
+				FarEditedbooks.editedbookid == srcFarEditedbook.editedbookid ) )
 
 		return ret
 
@@ -51,7 +50,7 @@ def processFarEditedbook( srcFarEditedbook, sesTarget ):
 			"""	
 			(ret, ), = sesTarget.query(
 				exists().where(
-					FarEditedbooks._yyy_ == srcFarEditedbook._yyy_ ).where(
+					FarEditedbooks.editedbookid == srcFarEditedbook.editedbookid ).where(
 					FarEditedbooks.source_hash == srcFarEditedbook.source_hash ) )
 
 			return not ret
@@ -60,12 +59,36 @@ def processFarEditedbook( srcFarEditedbook, sesTarget ):
 			# retrive the tables object to update.
 			updateFarEditedbook = sesTarget.query(
 				FarEditedbooks ).filter(
-					FarEditedbooks._yyy_ == srcFarEditedbook._yyy_ ).one()
+					FarEditedbooks.editedbookid == srcFarEditedbook.editedbookid ).one()
 
 			# repeat the following pattern for all mapped attributes:
 			updateFarEditedbook.source_hash = srcFarEditedbook.source_hash
-			updateFarEditedbook._yyy_ = srcFarEditedbook._yyy_
-
+			updateFarEditedbook.editedbookid = srcFarEditedbook.editedbookid
+			updateFarEditedbook.src_sys_id = srcFarEditedbook.src_sys_id
+			updateFarEditedbook.evaluationid = srcFarEditedbook.evaluationid
+			updateFarEditedbook.authors = srcFarEditedbook.authors
+			updateFarEditedbook.title = srcFarEditedbook.title
+			updateFarEditedbook.publisher = srcFarEditedbook.publisher
+			updateFarEditedbook.publicationstatuscode = srcFarEditedbook.publicationstatuscode
+			updateFarEditedbook.pages = srcFarEditedbook.pages
+			updateFarEditedbook.isbn = srcFarEditedbook.isbn
+			updateFarEditedbook.publicationyear = srcFarEditedbook.publicationyear
+			updateFarEditedbook.volumenumber = srcFarEditedbook.volumenumber
+			updateFarEditedbook.edition = srcFarEditedbook.edition
+			updateFarEditedbook.publicationcity = srcFarEditedbook.publicationcity
+			updateFarEditedbook.webaddress = srcFarEditedbook.webaddress
+			updateFarEditedbook.translated = srcFarEditedbook.translated
+			updateFarEditedbook.additionalinfo = srcFarEditedbook.additionalinfo
+			updateFarEditedbook.dtcreated = srcFarEditedbook.dtcreated
+			updateFarEditedbook.dtupdated = srcFarEditedbook.dtupdated
+			updateFarEditedbook.userlastmodified = srcFarEditedbook.userlastmodified
+			updateFarEditedbook.ispublic = srcFarEditedbook.ispublic
+			updateFarEditedbook.activityid = srcFarEditedbook.activityid
+			updateFarEditedbook.load_error = srcFarEditedbook.load_error
+			updateFarEditedbook.data_origin = srcFarEditedbook.data_origin
+			updateFarEditedbook.created_ew_dttm = srcFarEditedbook.created_ew_dttm
+			updateFarEditedbook.lastupd_dw_dttm = srcFarEditedbook.lastupd_dw_dttm
+			updateFarEditedbook.batch_sid = srcFarEditedbook.batch_sid
 			updateFarEditedbook.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			updateFarEditedbook.deleted_at = None
 
@@ -74,10 +97,40 @@ def processFarEditedbook( srcFarEditedbook, sesTarget ):
 			raise TypeError('source farEditedbook already exists and requires no updates!')
 
 	else:
+
+		srcGetFarEvaluationId = sesTarget.query(
+			FarEvaluations.id ).filter(
+				FarEvaluations.evaluationid == srcFarEditedbook.evaluationid ).one()
+	
 		insertFarEditedbook = FarEditedbooks(
 			source_hash = srcFarEditedbook.source_hash,
-			_yyy_ = srcFarEditedbook._yyy_,
-			...
+			far_evaluation_id = srcGetFarEvaluationId.id,
+			editedbookid = srcFarEditedbook.editedbookid,
+			src_sys_id = srcFarEditedbook.src_sys_id,
+			evaluationid = srcFarEditedbook.evaluationid,
+			authors = srcFarEditedbook.authors,
+			title = srcFarEditedbook.title,
+			publisher = srcFarEditedbook.publisher,
+			publicationstatuscode = srcFarEditedbook.publicationstatuscode,
+			pages = srcFarEditedbook.pages,
+			isbn = srcFarEditedbook.isbn,
+			publicationyear = srcFarEditedbook.publicationyear,
+			volumenumber = srcFarEditedbook.volumenumber,
+			edition = srcFarEditedbook.edition,
+			publicationcity = srcFarEditedbook.publicationcity,
+			webaddress = srcFarEditedbook.webaddress,
+			translated = srcFarEditedbook.translated,
+			additionalinfo = srcFarEditedbook.additionalinfo,
+			dtcreated = srcFarEditedbook.dtcreated,
+			dtupdated = srcFarEditedbook.dtupdated,
+			userlastmodified = srcFarEditedbook.userlastmodified,
+			ispublic = srcFarEditedbook.ispublic,
+			activityid = srcFarEditedbook.activityid,
+			load_error = srcFarEditedbook.load_error,
+			data_origin = srcFarEditedbook.data_origin,
+			created_ew_dttm = srcFarEditedbook.created_ew_dttm,
+			lastupd_dw_dttm = srcFarEditedbook.lastupd_dw_dttm,
+			batch_sid = srcFarEditedbook.batch_sid,
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
 
 		return insertFarEditedbook
@@ -108,7 +161,7 @@ def softDeleteFarEditedbook( tgtMissingFarEditedbook, sesSource ):
 		"""
 		(ret, ), = sesSource.query(
 			exists().where(
-				BioPsFarEditedbooks._yyy_ == tgtMissingFarEditedbook._yyy_ ) )
+				BioPsFarEditedbooks.editedbookid == tgtMissingFarEditedbook.editedbookid ) )
 
 		return not ret
 

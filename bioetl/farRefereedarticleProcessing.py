@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy import exists, literal
 
-from models.biopublicmodels import FarRefereedarticles
+from models.biopublicmodels import FarRefereedarticles, FarEvaluations
 from asutobio.models.biopsmodels import BioPsFarRefereedarticles
 
 
@@ -96,8 +96,14 @@ def processFarRefereedarticle( srcFarRefereedarticle, sesTarget ):
 			raise TypeError('source farRefereedarticle already exists and requires no updates!')
 
 	else:
+
+		srcGetFarEvaluationId = sesTarget.query(
+			FarEvaluations.id ).filter(
+				FarEvaluations.evaluationid == srcFarRefereedarticle.evaluationid ).one()
+
 		insertFarRefereedarticle = FarRefereedarticles(
 			source_hash = srcFarRefereedarticle.source_hash,
+			far_evaluation_id = srcGetFarEvaluationId.id,
 			refereedarticleid = srcFarRefereedarticle.refereedarticleid,
 			src_sys_id = srcFarRefereedarticle.src_sys_id,
 			evaluationid = srcFarRefereedarticle.evaluationid,

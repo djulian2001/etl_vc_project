@@ -1044,12 +1044,120 @@ except Exception as e:
 #	End of farBookReviewProcessing
 ###############################################################################
 
+###############################################################################
+# 
+#   File Import:  farEncyclopediaarticleProcessing
+
+import farEncyclopediaarticleProcessing
+
+srcFarEncyclopediaarticles = farEncyclopediaarticleProcessing.getSourceFarEncyclopediaarticles( sesSource )
+
+iFarEncyclopediaarticle = 1
+for srcFarEncyclopediaarticle in srcFarEncyclopediaarticles:
+	try:
+		frocessedFarEncyclopediaarticle = farEncyclopediaarticleProcessing.processFarEncyclopediaarticle( srcFarEncyclopediaarticle, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( frocessedFarEncyclopediaarticle )
+		if iFarEncyclopediaarticle % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iFarEncyclopediaarticle += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
 
 
+tgtMissingFarEncyclopediaarticles = farEncyclopediaarticleProcessing.getTargetFarEncyclopediaarticles( sesTarget )
+
+iRemoveFarEncyclopediaarticle = 1
+for tgtMissingFarEncyclopediaarticle in tgtMissingFarEncyclopediaarticles:
+	try:
+		removeFarEncyclopediaarticle = farEncyclopediaarticleProcessing.softDeleteFarEncyclopediaarticle( tgtMissingFarEncyclopediaarticle, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeFarEncyclopediaarticle )
+		if iRemoveFarEncyclopediaarticle % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveFarEncyclopediaarticle += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of farEncyclopediaarticleProcessing
+###############################################################################
 
 
+###############################################################################
+# 
+#   File Import:  farShortstoriesProcessing
+
+import farShortstoriesProcessing
+
+srcFarShortstories = farShortstoriesProcessing.getSourceFarShortstories( sesSource )
+
+iFarShortstorie = 1
+for srcFarShortstorie in srcFarShortstories:
+	try:
+		frocessedFarShortstories = farShortstoriesProcessing.processFarShortstorie( srcFarShortstorie, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( frocessedFarShortstories )
+		if iFarShortstorie % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iFarShortstorie += 1
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
 
 
+tgtMissingFarShortstories = farShortstoriesProcessing.getTargetFarShortstories( sesTarget )
+
+iRemoveFarShortstorie = 1
+for tgtMissingFarShortstorie in tgtMissingFarShortstories:
+	try:
+		removeFarShortstorie = farShortstoriesProcessing.softDeleteFarShortstorie( tgtMissingFarShortstorie, sesSource )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeFarShortstorie )
+		if iRemoveFarShortstorie % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveFarShortstorie += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of farShortstoriesProcessing
+###############################################################################
 
 
 try:

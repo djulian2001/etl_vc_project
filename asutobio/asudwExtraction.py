@@ -582,6 +582,81 @@ try:
 	# end of for srcFarBookReview
 	###############################################################################
 
+	###############################################################################
+	# Extract the oracle table and load it into a mysql table:
+	# 	oracle:
+	#		ASUDW.FAR_ENCYCLOPEDIAARTICLES
+	#	mysq
+		import asudwFarEncyclopediaarticleToBioPs
+		
+		srcFarEncyclopediaarticle = asudwFarEncyclopediaarticleToBioPs.getSourceFarEncyclopediaarticlesData( sesSource )
+
+		iFarEncyclopediaarticle = 1
+		for farEncyclopediaarticle in srcFarEncyclopediaarticle:
+			
+			addFarEncyclopediaarticle = asudwFarEncyclopediaarticleToBioPs.processFarEncyclopediaarticleData( farEncyclopediaarticle )
+			
+			sesTarget.add( addFarEncyclopediaarticle )
+
+			if iFarEncyclopediaarticle % 1000 == 0:
+				try:
+					sesTarget.flush()
+				except Exception as e:
+					sesTarget.rollback()
+					raise e
+
+			iFarEncyclopediaarticle += 1
+
+		try:
+			sesTarget.commit()
+		except Exception as e:
+			sesTarget.rollback()
+			raise e
+
+	#
+	# end of for srcFarEncyclopediaarticle
+	###############################################################################
+
+
+	###############################################################################
+	# Extract the oracle table and load it into a mysql table:
+	# 	oracle:
+	#		ASUDW.FAR_SHORTSTORIES
+	#	mysql:
+	#		far_shortstories
+	#
+
+		import asudwFarShortstorieToBioPs
+		
+		srcFarShortstorie = asudwFarShortstorieToBioPs.getSourceFarShortstoriesData( sesSource )
+
+		iFarShortstorie = 1
+		for farShortstories in srcFarShortstorie:
+			
+			addFarShortstorie = asudwFarShortstorieToBioPs.processFarShortstorieData( farShortstories )
+			
+			sesTarget.add( addFarShortstorie )
+
+			if iFarShortstorie % 1000 == 0:
+				try:
+					sesTarget.flush()
+				except Exception as e:
+					sesTarget.rollback()
+					raise e
+
+			iFarShortstorie += 1
+
+		try:
+			sesTarget.commit()
+		except Exception as e:
+			sesTarget.rollback()
+			raise e
+
+	#
+	# end of for srcFarShortstorie
+	###############################################################################
+
+
 #
 # end of for srcFarEvaluation
 ###############################################################################

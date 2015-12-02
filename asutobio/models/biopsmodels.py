@@ -506,3 +506,58 @@ class BioPsFarBookReviews( BioPs ):
     lastupd_dw_dttm = Column( DATE(), nullable=True )
     batch_sid = Column( Integer , nullable=False )
 
+
+class BioPsFarEncyclopediaarticles( BioPs ):
+    __tablename__ = 'far_encyclopediaarticles'
+    
+    encyclopediaarticleid = Column( Integer , nullable=False )
+    src_sys_id = Column( String( 5 ), nullable=False )
+    evaluationid = Column( Integer , nullable=False )
+    authors = Column( Text(), nullable=False )
+    title = Column( Text(), nullable=True )
+    publicationname = Column( Text(), nullable=True )
+    publicationstatuscode = Column( Integer , nullable=True )
+    pages = Column( String( 103 ), nullable=True )
+    publicationyear = Column( Integer , nullable=True )
+    publisher = Column( String( 103 ), nullable=True )
+    webaddress = Column( Text(), nullable=True )
+    additionalinfo = Column( Text(), nullable=True )
+    dtcreated = Column( DATE(),  nullable=False )
+    dtupdated = Column( DATE(),  nullable=True )
+    userlastmodified = Column( String( 23 ), nullable=False )
+    ispublic = Column( String( 1 ), nullable=False )
+    activityid = Column( Integer , nullable=True )
+    load_error = Column( String( 1 ), nullable=False )
+    data_origin = Column( String( 1 ), nullable=False )
+    created_ew_dttm = Column( DATE(),  nullable=True )
+    lastupd_dw_dttm = Column( DATE(),  nullable=True )
+    batch_sid = Column( Integer , nullable=False )
+
+
+class BioPsFarShortstories( BioPs ):
+    __tablename__ = 'far_shortstories'
+    
+    shortstoryid = Column( Integer , nullable=False )
+    src_sys_id = Column( String( 5 ), nullable=False )
+    evaluationid = Column( Integer , nullable=False )
+    authors = Column( Text(), nullable=False )
+    title = Column( Text(), nullable=True )
+    publicationname = Column( Text(), nullable=True )
+    publicationstatuscode = Column( Integer , nullable=True )
+    pages = Column( String( 103 ), nullable=True )
+    publicationyear = Column( Integer , nullable=True )
+    publisher = Column( String( 103 ), nullable=True )
+    webaddress = Column( Text(), nullable=True )
+    translated = Column( String( 1 ), nullable=True )
+    additionalinfo = Column( Text(), nullable=True )
+    dtcreated = Column( DATE(), nullable=False )
+    dtupdated = Column( DATE(), nullable=True )
+    userlastmodified = Column( String( 23 ), nullable=False )
+    ispublic = Column( String( 1 ), nullable=False )
+    activityid = Column( Integer , nullable=True )
+    load_error = Column( String( 1 ), nullable=False )
+    data_origin = Column( String( 1 ), nullable=False )
+    created_ew_dttm = Column( DATE(), nullable=True )
+    lastupd_dw_dttm = Column( DATE(), nullable=True )
+    batch_sid = Column( Integer , nullable=False )
+
