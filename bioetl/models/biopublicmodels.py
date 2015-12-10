@@ -269,7 +269,7 @@ class FarEvaluations( BioPublic ):
     nonrefereedarticles = relationship( "FarBookChapters", cascade="all, delete-orphan", backref="far_evaluations" )
     nonrefereedarticles = relationship( "FarBookReviews", cascade="all, delete-orphan", backref="far_evaluations" )
     nonrefereedarticles = relationship( "FarEncyclopediaarticles", cascade="all, delete-orphan", backref="far_evaluations" )
-    # nonrefereedarticles = relationship( "Far", cascade="all, delete-orphan", backref="far_evaluations" )
+    nonrefereedarticles = relationship( "FarShortstories", cascade="all, delete-orphan", backref="far_evaluations" )
 
 
 class FarConferenceProceedings( BioPublic ):

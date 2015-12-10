@@ -41,9 +41,11 @@ for srcSubAffiliation in srcSubAffiliations:
 		iSubAffiliation += 1
 try:
 	sesTarget.commit()
-except Exception as e:
+# except Exception as e:
+#possible replacement to the very generic Exception...
+except sqlalchemy.exc.IntegrityError:
 	sesTarget.rollback()
-	raise e
+	# raise e
 
 
 tgtMissingSubAffiliations = subAffiliationProcessing.getTargetSubAffiliations( sesTarget )

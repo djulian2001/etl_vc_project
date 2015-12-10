@@ -594,15 +594,3 @@ class AsuDwPsFarShortstories( AsuDwPs ):
 
     __mapper_args__ = { "primary_key" : [ shortstoryid, evaluationid ] }
     __table_args__ = { "schema" : schema }
-
-# ---- far_conferenceproceedings  (no data in the dev instances)
-# ---- far_authoredbooks  (no data in the dev instances)
-# ---- far_editedbooks
-# ---- far_bookchapters
-# ---- far_bookreviews
-# ---- far_shortstories ( no data )
-# ---- far_evaluations
-# ---- far_encyclopediaarticles ( no data )
-# ---- far_nonrefereedarticles
-# ---- far_refereedarticles  ()
-

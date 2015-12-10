@@ -561,3 +561,11 @@ class BioPsFarShortstories( BioPs ):
     lastupd_dw_dttm = Column( DATE(), nullable=True )
     batch_sid = Column( Integer , nullable=False )
 
+# ---- far_editedbooks
+# ---- far_bookchapters
+# ---- far_bookreviews
+# ---- far_shortstories ( no data )
+# ---- far_evaluations
+# ---- far_encyclopediaarticles ( no data )
+# ---- far_nonrefereedarticles
+# ---- far_refereedarticles  ()
