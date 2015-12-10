@@ -13,12 +13,6 @@ class EtlConnections(object):
 			self.config = ConfigAsuToBio()
 			self.setupAsuToBio()
 			
-		elif self.appScope == 'bioetl':
-			from configs import ConfigBioetl
-
-			self.config = ConfigBioetl()
-			self.setupBioetl()
-			
 		else:
 			raise TypeError('Applications scope not correctly defined, no connections setup!')
 	
@@ -46,43 +40,6 @@ class EtlConnections(object):
 			raise
 
 		return engine
-
-	def setupBioetl( self ):
-		"""
-			When the application scope is set appropriately we then setup the object accordingly
-			Sets the target and source session factories, to be referenced when a session is 
-			required.  The sessions are scoped so they should all be equivelent.
-		"""
-		from asutobio.models.biopsmodels import BioPs
-		from bioetl.models.biopublicmodels import BioPublic
-
-		# Initialize the config settings required for the source db connection.
-		self.config.setDbSource()
-
-		sourceEngine = self.getMysqlEngine(
-			self.config.sourceUser, 
-			self.config.sourceUserPw, 
-			self.config.sourceDbHost, 
-			self.config.sourceDbName )
-		
-		self.config.setDbTarget()
-
-		targetEngine = self.getMysqlEngine(
-			self.config.targetUser,
-			self.config.targetUserPw,
-			self.config.targetDbHost,
-			self.config.targetDbName )
-
-		# BioPublic.metadata.drop_all( targetEngine )
-		BioPublic.metadata.create_all( targetEngine )
-		
-		BioPs.metadata.bind = sourceEngine
-		BioPublic.metadata.bind = targetEngine
-
-		self.SrcSession = scoped_session( sessionmaker( bind=sourceEngine ) )
-		self.TgtSession = scoped_session( sessionmaker( bind=targetEngine ) )
-
-
 
 	def setupAsuToBio( self ):
 		"""
@@ -141,7 +98,7 @@ class EtlConnections(object):
 
 			try:
 				# This should get factored out later
-				BioPs.metadata.drop_all( targetEngine )
+				# BioPs.metadata.drop_all( targetEngine )
 				BioPs.metadata.create_all( targetEngine )
 
 			except Exception as e:
