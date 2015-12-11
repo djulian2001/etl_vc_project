@@ -1,7 +1,6 @@
 import datetime
 
-import sharedProcesses
-
+from sharedProcesses import resetUpdatedFlag
 from app.connectdb import EtlConnections
 
 bioetlAppRun = EtlConnections("asutobio")
@@ -20,60 +19,60 @@ sesTarget = bioetlAppRun.getTargetSession()
 #		to the people data, and must be loaded prior to the 
 #   File Import:  subAffiliationProcessing
 
-# import subAffiliationProcessing
+import subAffiliationProcessing
 
-# srcSubAffiliations = subAffiliationProcessing.getSourceSubAffiliations( sesSource )
+srcSubAffiliations = subAffiliationProcessing.getSourceSubAffiliations( )
 
-# iSubAffiliation = 1
-# for srcSubAffiliation in srcSubAffiliations:
-# 	try:
-# 		processedsubAffiliation = subAffiliationProcessing.processSubAffiliation( srcSubAffiliation, sesTarget )
-# 	except TypeError as e:
-# 		pass
-# 	else:
-# 		sesTarget.add( processedsubAffiliation )
-# 		if iSubAffiliation % 1000 == 0:
-# 			try:
-# 				sesTarget.flush()
-# 			except Exception as e:
-# 				sesTarget.rollback()
-# 				raise e
-# 		iSubAffiliation += 1
-# try:
-# 	sesTarget.commit()
-# # except Exception as e:
-# #possible replacement to the very generic Exception...
-# except sqlalchemy.exc.IntegrityError:
-# 	sesTarget.rollback()
-# 	# raise e
-
-
-# tgtMissingSubAffiliations = subAffiliationProcessing.getTargetSubAffiliations( sesTarget )
-
-# iRemoveSubAffiliation = 1
-# for tgtMissingSubAffiliation in tgtMissingSubAffiliations:
-# 	try:
-# 		removeSubAffiliation = subAffiliationProcessing.softDeleteSubAffiliation( tgtMissingSubAffiliation, sesSource )
-# 	except TypeError as e:
-# 		pass
-# 	else:
-# 		sesTarget.add( removeSubAffiliation )
-# 		if iRemoveSubAffiliation % 1000 == 0:
-# 			try:
-# 				sesTarget.flush()
-# 			except Exception as e:
-# 				sesTarget.rollback()
-# 				raise e
-# 		iRemoveSubAffiliation += 1
-
-# try:
-# 	sesTarget.commit()
+iSubAffiliation = 1
+for srcSubAffiliation in srcSubAffiliations:
+	try:
+		processedsubAffiliation = subAffiliationProcessing.processSubAffiliation( srcSubAffiliation, sesTarget )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( processedsubAffiliation )
+		if iSubAffiliation % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iSubAffiliation += 1
+try:
+	sesTarget.commit()
 # except Exception as e:
-# 	sesTarget.rollback()
-# 	raise e
+#possible replacement to the very generic Exception...
+except sqlalchemy.exc.IntegrityError:
+	sesTarget.rollback()
+	# raise e
 
-# #	End of subAffiliationProcessing
-# ###############################################################################
+
+tgtMissingSubAffiliations = subAffiliationProcessing.getTargetSubAffiliations( sesTarget )
+
+iRemoveSubAffiliation = 1
+for tgtMissingSubAffiliation in tgtMissingSubAffiliations:
+	try:
+		removeSubAffiliation = subAffiliationProcessing.softDeleteSubAffiliation( tgtMissingSubAffiliation, srcSubAffiliations )
+	except TypeError as e:
+		pass
+	else:
+		sesTarget.add( removeSubAffiliation )
+		if iRemoveSubAffiliation % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except Exception as e:
+				sesTarget.rollback()
+				raise e
+		iRemoveSubAffiliation += 1
+
+try:
+	sesTarget.commit()
+except Exception as e:
+	sesTarget.rollback()
+	raise e
+
+#	End of subAffiliationProcessing
+###############################################################################
 
 
 # ###############################################################################

@@ -1,18 +1,20 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
+
 from models.biopublicmodels import SubAffiliations
-from asutobio.models.biopsmodels import BiodesignSubAffiliations
+from models.asudwpsmodels import BiodesignSubAffiliations
 
 #template mapping... plural SubAffiliations    singularCaped SubAffiliation   singularLower subAffiliation 
 
-def getSourceSubAffiliations( sesSource ):
+def getSourceSubAffiliations( ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the SubAffiliations table of the source database.
 	"""
 
-	return sesSource.query( BiodesignSubAffiliations ).all()
+	return BiodesignSubAffiliations.seedMe()
 
 # change value to the singular
 def processSubAffiliation( srcSubAffiliation, sesTarget ):
@@ -27,8 +29,12 @@ def processSubAffiliation( srcSubAffiliation, sesTarget ):
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
-#template mapping... column where(s) _yyy_ 
 	true, false = literal(True), literal(False)
+	# This change here drops a whole database... lets hope..
+
+	srcHash = hashThisList( srcSubAffiliation )
+
+	# print srcHash
 
 	def subAffiliationExists():
 		"""
@@ -38,7 +44,7 @@ def processSubAffiliation( srcSubAffiliation, sesTarget ):
 		"""
 		(ret, ), = sesTarget.query(
 			exists().where(
-				SubAffiliations.code == srcSubAffiliation.code ) )
+				SubAffiliations.code == srcSubAffiliation["code"] ) )
 
 		return ret
 
@@ -52,8 +58,9 @@ def processSubAffiliation( srcSubAffiliation, sesTarget ):
 			"""	
 			(ret, ), = sesTarget.query(
 				exists().where(
-					SubAffiliations.code == srcSubAffiliation.code ).where(
-					SubAffiliations.source_hash == srcSubAffiliation.source_hash ) )
+					SubAffiliations.code == srcSubAffiliation["code"] ).where(
+					SubAffiliations.source_hash == srcHash ).where(
+					SubAffiliations.deleted_at.is_( None ) ) )
 
 			return not ret
 
@@ -61,16 +68,16 @@ def processSubAffiliation( srcSubAffiliation, sesTarget ):
 			# retrive the tables object to update.
 			updateSubAffiliation = sesTarget.query(
 				SubAffiliations ).filter(
-					SubAffiliations.code == srcSubAffiliation.code ).one()
+					SubAffiliations.code == srcSubAffiliation["code"] ).one()
 
 			# repeat the following pattern for all mapped attributes:
-			updateSubAffiliation.source_hash = srcSubAffiliation.source_hash
-			updateSubAffiliation.code = srcSubAffiliation.code
-			updateSubAffiliation.title = srcSubAffiliation.title
-			updateSubAffiliation.description = srcSubAffiliation.description
-			updateSubAffiliation.proximity_scope = srcSubAffiliation.proximity_scope
-			updateSubAffiliation.service_access = srcSubAffiliation.service_access
-			updateSubAffiliation.distribution_lists = srcSubAffiliation.distribution_lists
+			updateSubAffiliation.source_hash = srcHash
+			updateSubAffiliation.code = srcSubAffiliation["code"]
+			updateSubAffiliation.title = srcSubAffiliation["title"]
+			updateSubAffiliation.description = srcSubAffiliation["description"]
+			updateSubAffiliation.proximity_scope = srcSubAffiliation["proximity_scope"]
+			updateSubAffiliation.service_access = srcSubAffiliation["service_access"]
+			updateSubAffiliation.distribution_lists = srcSubAffiliation["distribution_lists"]
 			updateSubAffiliation.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			updateSubAffiliation.deleted_at = None
 
@@ -80,13 +87,13 @@ def processSubAffiliation( srcSubAffiliation, sesTarget ):
 
 	else:
 		insertSubAffiliation = SubAffiliations(
-			source_hash = srcSubAffiliation.source_hash,
-			code = srcSubAffiliation.code,
-			title = srcSubAffiliation.title,
-			description = srcSubAffiliation.description,
-			proximity_scope = srcSubAffiliation.proximity_scope,
-			service_access = srcSubAffiliation.service_access,
-			distribution_lists = srcSubAffiliation.distribution_lists,
+			source_hash = srcHash,
+			code = srcSubAffiliation["code"],
+			title = srcSubAffiliation["title"],
+			description = srcSubAffiliation["description"],
+			proximity_scope = srcSubAffiliation["proximity_scope"],
+			service_access = srcSubAffiliation["service_access"],
+			distribution_lists = srcSubAffiliation["distribution_lists"],
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
 
 		return insertSubAffiliation
@@ -101,7 +108,7 @@ def getTargetSubAffiliations( sesTarget ):
 		SubAffiliations ).filter(
 			SubAffiliations.deleted_at.is_( None ) ).all()
 
-def softDeleteSubAffiliation( tgtMissingSubAffiliation, sesSource ):
+def softDeleteSubAffiliation( tgtMissingSubAffiliation, srcList ):
 	"""
 		The list of SubAffiliations changes as time moves on, the SubAffiliations removed from the list are not
 		deleted, but flaged removed by the deleted_at field.
@@ -109,24 +116,18 @@ def softDeleteSubAffiliation( tgtMissingSubAffiliation, sesSource ):
 		The return of this function returns a sqlalchemy object to update a subAffiliation object.
 	"""
 
-	def flagSubAffiliationMissing():
+	def dataMissing():
 		"""
-			Determine that the subAffiliation object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BiodesignSubAffiliations.code == tgtMissingSubAffiliation.code ) )
+		return not any( srcDict["code"] == tgtMissingSubAffiliation.code for srcDict in srcList )
 
-		return not ret
 
-	if flagSubAffiliationMissing():
-
+	if dataMissing():
 		tgtMissingSubAffiliation.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
 		return tgtMissingSubAffiliation
-
 	else:
 		raise TypeError('source subAffiliation still exists and requires no soft delete!')
 

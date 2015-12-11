@@ -211,6 +211,7 @@ class AsuDwPsJobs( AsuDwPs ):
     __mapper_args__ = {"primary_key":[emplid,title,deptid]}
     __table_args__ = { "schema": schema }
 
+
 class AsuDwPsSubAffiliations( AsuDwPs ):
     __tablename__ = 'SUBAFFILIATION'
     schema = 'DIRECTORY'
@@ -594,3 +595,104 @@ class AsuDwPsFarShortstories( AsuDwPs ):
 
     __mapper_args__ = { "primary_key" : [ shortstoryid, evaluationid ] }
     __table_args__ = { "schema" : schema }
+
+
+class BiodesignSubAffiliations():
+    __tablename__ = 'subaffiliations'
+    code = Column( String(7), unique = True, nullable=False )
+    title = Column( String(63), nullable=False )
+    description = Column( String(287), nullable=False )
+    proximity_scope = Column( String(15), nullable=False )
+    service_access = Column( String(127), nullable=False )
+    distribution_lists = Column( String(127), nullable=False )
+
+    @staticmethod
+    def seedMe():   
+        seeds = [
+            {
+                "code":"BDAF",
+                "title": "BDI Affiliated Faculty",
+                "description":"ASU Faculty that are considered part of our core workforce and/or have joint appointments but are not on a Biodesign department code (employee list).  Includes faculty who supervise Biodesign employees and/or projects (usually P.I.'s)  Must have a Ph.D.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Faculty, DL.ORG.BIOD.XYZ.Faculty" },
+            {
+                "code":"BDRP",
+                "title": "BDI Research Professional",
+                "description":"ASU Research Staff doing or collaborating on research at Biodesign (ex: Academic Professionals, University Staff, DACT)",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Staff, DL.ORG.BIOD.XYZ.Staff" },
+            {
+                "code":"BDAS",
+                "title": "BDI Affiliated Staff",
+                "description":"ASU non-research Staff that are considered part of our workforce.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Staff, DL.ORG.BIOD.XYZ.Staff" },
+            {
+                "code":"BDFC",
+                "title": "ASU Faculty Collaborator",
+                "description":"ASU faculty member coducting collaborative research with BDI faculty;  includes tenured faculty, tenure-track faculty, research faculty, adjunct faculty,  part-time temp faculty, clinical faculty (teaching or research).  Not paid on a Biodesign's department code.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Faculty, DL.ORG.BIOD.XYZ.Faculty" },
+            {
+                "code":"BDAG",
+                "title": "BDI Affiliated Graduate",
+                "description":"ASU graduate student intern conducting research at Biodesign but not paid on a Biodesign department code.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.GradStudents, DL.ORG.BIOD.XYZ.GradStudents" },
+            {
+                "code":"BAPD",
+                "title": "BDI Affiliated Post Doctorate",
+                "description":"ASU Postdoctorate conducting research at Biodesign but not paid on a Biodesign department code.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.PostDocs, DL.ORG.BIOD.XYZ.PostDocs" },
+            {
+                "code":"BVIP",
+                "title": "Biodesign VIP",
+                "description":"ASU Adminstrative contacts such as President, Provost, Deans, Foundation, OKED, Guidance Council, and EHS.,NOT included in",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.Biodesign.VIP" },
+            {
+                "code":"BDAU",
+                "title": "BDI Affiliated Undergraduate",
+                "description":"ASU undergraduate student working within Biodesign but not paid on a Biodesign department code.",
+                "proximity_scope":"Internal",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.StudentWorkers, DL.ORG.BIOD.XYZ.StudentWorkers" },
+            {
+                "code":"BDHV",
+                "title": "Biodesign HS Volunteer",
+                "description":"High School Interns not paid on a Biodesign department code.",
+                "proximity_scope":"External",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.HSVol, DL.ORG.BIOD.XYZ.HSVol" },
+            {
+                "code":"NCON",
+                "title": "Consultant",
+                "description":"Outside Consultant hired on contract.  Must be approved by Director of Operations -- Consultants must meet ASU criteria to have this affiliation and are paid through purchasing (will be issued 1099 Form).",
+                "proximity_scope":"External",
+                "service_access":"Additional services must be requested by the department",
+                "distribution_lists": "No DL - email manually" },
+            {
+                "code":"BDEC",
+                "title": "Biodesign External Collaborator",
+                "description":"Research collaborator from outside ASU.  International or domestic. Ex: Corporate affiliations, individuals, private businesses, public entities, etc. doing research for Biodesign",
+                "proximity_scope":"External",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Collaborators, DL.ORG.BIOD.XYZ.Collaborators" },
+            {
+                "code":"NVOL",
+                "title": "Volunteers",
+                "description":"Professional development and retired individuals.  Note: H4 visa holders are dependents of H1B visa holders and are not allowed to work or volunteer.",
+                "proximity_scope":"External",
+                "service_access":"ASURITE Domain Services, Exchange Email Account, Biodesign Server Access",
+                "distribution_lists": "DL.ORG.Biodesign.All, DL.ORG.BIOD.Volunteers, DL.ORG.BIOD.XYZ.Volunteers" }, ]
+
+        return seeds
+
