@@ -30,11 +30,9 @@ def processSubAffiliation( srcSubAffiliation, sesTarget ):
 	"""
 
 	true, false = literal(True), literal(False)
+
 	# This change here drops a whole database... lets hope..
-
-	srcHash = hashThisList( srcSubAffiliation )
-
-	# print srcHash
+	srcHash = hashThisList( srcSubAffiliation.values() )
 
 	def subAffiliationExists():
 		"""
