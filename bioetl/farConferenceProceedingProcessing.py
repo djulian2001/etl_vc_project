@@ -1,8 +1,9 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import FarConferenceProceedings, FarEvaluations
-from asutobio.models.biopsmodels import BioPsFarConferenceProceedings
+from models.asudwpsmodels import AsuDwPsFarConferenceProceedings, AsuDwPsFarEvaluations, AsuPsBioFilters
 
 
 def getSourceFarConferenceProceedings( sesSource ):
@@ -10,8 +11,19 @@ def getSourceFarConferenceProceedings( sesSource ):
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the FarConferenceProceedings table of the source database.
 	"""
+	srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query( BioPsFarConferenceProceedings ).all()
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
+
+	farEvals = sesSource.query(
+		AsuDwPsFarEvaluations.evaluationid ).join(
+			srcEmplidsSubQry, AsuDwPsFarEvaluations.emplid == srcEmplidsSubQry.c.emplid ).subquery()
+
+	return sesSource.query(
+		AsuDwPsFarConferenceProceedings ).join(
+			farEvals, AsuDwPsFarConferenceProceedings.evaluationid == farEvals.c.evaluationid ).filter(
+				AsuDwPsFarConferenceProceedings.ispublic != 'N' ).all()
+
 
 # change value to the singular
 def processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget ):
@@ -26,8 +38,35 @@ def processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget ):
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
-#template mapping... column where(s) conferenceproceedingid 
 	true, false = literal(True), literal(False)
+
+	farConferenceProceedingList = [
+		srcFarConferenceProceeding.conferenceproceedingid,
+		srcFarConferenceProceeding.src_sys_id,
+		srcFarConferenceProceeding.evaluationid,
+		srcFarConferenceProceeding.authors,
+		srcFarConferenceProceeding.title,
+		srcFarConferenceProceeding.journalname,
+		srcFarConferenceProceeding.refereed,
+		srcFarConferenceProceeding.publicationstatuscode,
+		srcFarConferenceProceeding.publicationyear,
+		srcFarConferenceProceeding.volumenumber,
+		srcFarConferenceProceeding.pages,
+		srcFarConferenceProceeding.webaddress,
+		srcFarConferenceProceeding.abstract,
+		srcFarConferenceProceeding.additionalinfo,
+		srcFarConferenceProceeding.dtcreated,
+		srcFarConferenceProceeding.dtupdated,
+		srcFarConferenceProceeding.userlastmodified,
+		srcFarConferenceProceeding.ispublic,
+		srcFarConferenceProceeding.activityid,
+		srcFarConferenceProceeding.load_error,
+		srcFarConferenceProceeding.data_origin,
+		srcFarConferenceProceeding.created_ew_dttm,
+		srcFarConferenceProceeding.lastupd_dw_dttm,
+		srcFarConferenceProceeding.batch_sid ]
+
+	srcHash = hashThisList( farConferenceProceedingList )
 
 	def farConferenceProceedingExists():
 		"""
@@ -52,7 +91,8 @@ def processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget ):
 			(ret, ), = sesTarget.query(
 				exists().where(
 					FarConferenceProceedings.conferenceproceedingid == srcFarConferenceProceeding.conferenceproceedingid ).where(
-					FarConferenceProceedings.source_hash == srcFarConferenceProceeding.source_hash ) )
+					FarConferenceProceedings.source_hash == srcHash ).where(
+					FarConferenceProceedings.deleted_at.is_( None ) ) )
 
 			return not ret
 
@@ -63,7 +103,7 @@ def processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget ):
 					FarConferenceProceedings.conferenceproceedingid == srcFarConferenceProceeding.conferenceproceedingid ).one()
 
 			# repeat the following pattern for all mapped attributes:
-			updateFarConferenceProceeding.source_hash = srcFarConferenceProceeding.source_hash
+			updateFarConferenceProceeding.source_hash = srcHash
 			updateFarConferenceProceeding.conferenceproceedingid = srcFarConferenceProceeding.conferenceproceedingid
 			updateFarConferenceProceeding.src_sys_id = srcFarConferenceProceeding.src_sys_id
 			updateFarConferenceProceeding.evaluationid = srcFarConferenceProceeding.evaluationid
@@ -102,7 +142,7 @@ def processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget ):
 				FarEvaluations.evaluationid == srcFarConferenceProceeding.evaluationid ).one()
 
 		insertFarConferenceProceeding = FarConferenceProceedings(
-			source_hash = srcFarConferenceProceeding.source_hash,
+			source_hash = srcHash,
 			far_evaluation_id = srcGetFarEvaluationId.id,
 			conferenceproceedingid = srcFarConferenceProceeding.conferenceproceedingid,
 			src_sys_id = srcFarConferenceProceeding.src_sys_id,
@@ -142,32 +182,25 @@ def getTargetFarConferenceProceedings( sesTarget ):
 		FarConferenceProceedings ).filter(
 			FarConferenceProceedings.deleted_at.is_( None ) ).all()
 
-def softDeleteFarConferenceProceeding( tgtMissingFarConferenceProceeding, sesSource ):
+def softDeleteFarConferenceProceeding( tgtRecord, srcRecords ):
 	"""
-		The list of FarConferenceProceedings changes as time moves on, the FarConferenceProceedings removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
-	def flagFarConferenceProceedingMissing():
+	def dataMissing():
 		"""
-			Determine that the farConferenceProceeding object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPsFarConferenceProceedings.conferenceproceedingid == tgtMissingFarConferenceProceeding.conferenceproceedingid ) )
+		return not any( srcRecord.conferenceproceedingid == tgtRecord.conferenceproceedingid for srcRecord in srcRecords )
 
-		return not ret
 
-	if flagFarConferenceProceedingMissing():
-
-		tgtMissingFarConferenceProceeding.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingFarConferenceProceeding
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
-
+		raise TypeError('source target record still exists and requires no soft delete!')

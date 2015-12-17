@@ -36,6 +36,7 @@ class EtlConnections(object):
 
 		try:
 			engine = create_engine( engineString, echo=True )
+			# engine = create_engine( engineString )
 		except DBAPIError:
 			raise
 
@@ -71,8 +72,8 @@ class EtlConnections(object):
 			print "Error trying to create the ssh tunnel!"
 			raise e
 		else:
-			from asutobio.models.biopsmodels import BioPs
-			from asutobio.models.asudwpsmodels import AsuDwPs
+			from bioetl.models.biopublicmodels import BioPublic
+			from bioetl.models.asudwpsmodels import AsuDwPs
 			
 			self.config.setDbSource()
 
@@ -91,15 +92,15 @@ class EtlConnections(object):
 
 
 			AsuDwPs.metadata.bind = sourceEngine
-			BioPs.metadata.bind = targetEngine
+			BioPublic.metadata.bind = targetEngine
 
 			self.SrcSession = scoped_session( sessionmaker( bind=sourceEngine ) )
 			self.TgtSession = scoped_session( sessionmaker( bind=targetEngine ) )
 
 			try:
 				# This should get factored out later
-				# BioPs.metadata.drop_all( targetEngine )
-				BioPs.metadata.create_all( targetEngine )
+				# BioPublic.metadata.drop_all( targetEngine )
+				BioPublic.metadata.create_all( targetEngine )
 
 			except Exception as e:
 				self.cleanUp()

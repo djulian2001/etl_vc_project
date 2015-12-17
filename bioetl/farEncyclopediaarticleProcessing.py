@@ -1,18 +1,28 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import FarEncyclopediaarticles, FarEvaluations
-from asutobio.models.biopsmodels import BioPsFarEncyclopediaarticles
-
+from models.asudwpsmodels import AsuDwPsFarEncyclopediaarticles, AsuDwPsFarEvaluations, AsuPsBioFilters
 
 def getSourceFarEncyclopediaarticles( sesSource ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the FarEncyclopediaarticles table of the source database.
 	"""
+	srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query( BioPsFarEncyclopediaarticles ).all()
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
 
+	farEvals = sesSource.query(
+		AsuDwPsFarEvaluations.evaluationid ).join(
+			srcEmplidsSubQry, AsuDwPsFarEvaluations.emplid == srcEmplidsSubQry.c.emplid ).subquery()
+
+	return sesSource.query(
+		AsuDwPsFarEncyclopediaarticles ).join(
+			farEvals, AsuDwPsFarEncyclopediaarticles.evaluationid == farEvals.c.evaluationid ).filter(
+				AsuDwPsFarEncyclopediaarticles.ispublic !='N' ).all()
+	
 # change value to the singular
 def processFarEncyclopediaarticle( srcFarEncyclopediaarticle, sesTarget ):
 	"""
@@ -25,9 +35,33 @@ def processFarEncyclopediaarticle( srcFarEncyclopediaarticle, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
-#template mapping... column where(s) encyclopediaarticleid 
 	true, false = literal(True), literal(False)
+
+	farEncyclopediaarticleList = [
+		srcFarEncyclopediaarticle.encyclopediaarticleid,
+		srcFarEncyclopediaarticle.src_sys_id,
+		srcFarEncyclopediaarticle.evaluationid,
+		srcFarEncyclopediaarticle.authors,
+		srcFarEncyclopediaarticle.title,
+		srcFarEncyclopediaarticle.publicationname,
+		srcFarEncyclopediaarticle.publicationstatuscode,
+		srcFarEncyclopediaarticle.pages,
+		srcFarEncyclopediaarticle.publicationyear,
+		srcFarEncyclopediaarticle.publisher,
+		srcFarEncyclopediaarticle.webaddress,
+		srcFarEncyclopediaarticle.additionalinfo,
+		srcFarEncyclopediaarticle.dtcreated,
+		srcFarEncyclopediaarticle.dtupdated,
+		srcFarEncyclopediaarticle.userlastmodified,
+		srcFarEncyclopediaarticle.ispublic,
+		srcFarEncyclopediaarticle.activityid,
+		srcFarEncyclopediaarticle.load_error,
+		srcFarEncyclopediaarticle.data_origin,
+		srcFarEncyclopediaarticle.created_ew_dttm,
+		srcFarEncyclopediaarticle.lastupd_dw_dttm,
+		srcFarEncyclopediaarticle.batch_sid ]
+
+	srcHash = hashThisList( farEncyclopediaarticleList )
 
 	def farEncyclopediaarticleExists():
 		"""
@@ -52,7 +86,8 @@ def processFarEncyclopediaarticle( srcFarEncyclopediaarticle, sesTarget ):
 			(ret, ), = sesTarget.query(
 				exists().where(
 					FarEncyclopediaarticles.encyclopediaarticleid == srcFarEncyclopediaarticle.encyclopediaarticleid ).where(
-					FarEncyclopediaarticles.source_hash == srcFarEncyclopediaarticle.source_hash ) )
+					FarEncyclopediaarticles.source_hash == srcHash ).where(	
+					FarEncyclopediaarticles.deleted_at.is_( None ) ) )
 
 			return not ret
 
@@ -133,36 +168,32 @@ def getTargetFarEncyclopediaarticles( sesTarget ):
 		Returns a set of FarEncyclopediaarticles objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		FarEncyclopediaarticles ).filter(
 			FarEncyclopediaarticles.deleted_at.is_( None ) ).all()
 
-def softDeleteFarEncyclopediaarticle( tgtMissingFarEncyclopediaarticle, sesSource ):
+def softDeleteFarEncyclopediaarticle( tgtRecord, srcRecords ):
 	"""
-		The list of FarEncyclopediaarticles changes as time moves on, the FarEncyclopediaarticles removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
 
-	def flagFarEncyclopediaarticleMissing():
+	def dataMissing():
 		"""
-			Determine that the farEncyclopediaarticle object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPsFarEncyclopediaarticles.encyclopediaarticleid == tgtMissingFarEncyclopediaarticle.encyclopediaarticleid ) )
+		return not any( srcRecord.encyclopediaarticleid == tgtRecord.encyclopediaarticleid for srcRecord in srcRecords )
 
-		return not ret
 
-	if flagFarEncyclopediaarticleMissing():
-
-		tgtMissingFarEncyclopediaarticle.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingFarEncyclopediaarticle
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
+		raise TypeError('source target record still exists and requires no soft delete!')
+
+

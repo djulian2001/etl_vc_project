@@ -1,8 +1,9 @@
 import datetime
-from sqlalchemy import exists, literal
+from sqlalchemy import exists, literal, func
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import Departments
-from asutobio.models.biopsmodels import BioPsDepartments
+from models.asudwpsmodels import AsuDwPsDepartments
 
 #template mapping... plural Departments    singularCaped Department   singularLower department 
 
@@ -11,10 +12,21 @@ def getSourceDepartments( sesSource ):
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the Departments table of the source database.
 	"""
+	subDepartments = (
+        sesSource.query(
+        	AsuDwPsDepartments,
+            func.row_number().over(
+                partition_by=[AsuDwPsDepartments.deptid],
+                order_by=AsuDwPsDepartments.effdt.desc()
+                ).label( 'rn' ) ) ).subquery()
 
-	return sesSource.query( BioPsDepartments ).all()
+	return sesSource.query(
+		subDepartments ).filter(
+			subDepartments.c.rn == 1 ).filter(
+			subDepartments.c.descr != 'Inactive' ).order_by(
+				subDepartments.c.deptid ).all()
 
-# change value to the singular
+
 def processDepartment( srcDepartment, sesTarget ):
 	"""
 		Takes in a source Department object from biopsmodels (mysql.bio_ps.Departments)
@@ -26,22 +38,29 @@ def processDepartment( srcDepartment, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
 	true, false = literal(True), literal(False)
 
-#template mapping... column where(s) deptid 
+	recordToList = [
+		srcDepartment.deptid,
+		srcDepartment.effdt,
+		srcDepartment.eff_status,
+		srcDepartment.descr,
+		srcDepartment.descrshort,
+		srcDepartment.location,
+		srcDepartment.budget_deptid	]
 
-	def departmentExists( deptid ):
+	srcHash = hashThisList( recordToList )
+
+	def departmentExists():
 		"""determine the department exists in the target database."""
 		(ret, ), = sesTarget.query(
 			exists().where(
-				Departments.deptid == deptid ) )
+				Departments.deptid == srcDepartment.deptid ) )
 
 		return ret
 
-	if departmentExists( srcDepartment.deptid ):
-
-		def departmentUpdateRequired( deptid, source_hash ):
+	if departmentExists():
+		def departmentUpdateRequired():
 			"""
 				Determine if the department that exists requires and update.
 				@True: returned if source_hash is unchanged
@@ -49,17 +68,19 @@ def processDepartment( srcDepartment, sesTarget ):
 			"""	
 			(ret, ), = sesTarget.query(
 				exists().where(
-					Departments.deptid == deptid).where(
-					Departments.source_hash == source_hash ) )
+					Departments.deptid == srcDepartment.deptid).where(
+					Departments.source_hash == srcHash ).where(
+					Departments.deleted_at.is_( None ) ) )
+
 			return not ret
 
-		if departmentUpdateRequired( srcDepartment.deptid, srcDepartment.source_hash ):
+		if departmentUpdateRequired():
 
 			updateDepartment = sesTarget.query(
 				Departments ).filter(
 					Departments.deptid == srcDepartment.deptid ).one()
 
-			updateDepartment.source_hash = srcDepartment.source_hash
+			updateDepartment.source_hash = srcHash
 			updateDepartment.deptid = srcDepartment.deptid
 			updateDepartment.effdt = srcDepartment.effdt
 			updateDepartment.eff_status = srcDepartment.eff_status
@@ -73,10 +94,9 @@ def processDepartment( srcDepartment, sesTarget ):
 			return updateDepartment
 		else:
 			raise TypeError('source department already exists and requires no updates!')
-
 	else:
 		insertDepartment = Departments(
-			source_hash = srcDepartment.source_hash,
+			source_hash = srcHash,
 			deptid = srcDepartment.deptid,
 			effdt = srcDepartment.effdt,
 			eff_status = srcDepartment.eff_status,
@@ -88,41 +108,36 @@ def processDepartment( srcDepartment, sesTarget ):
 
 		return insertDepartment
 
+
 def getTargetDepartments( sesTarget ):
 	"""
 		Returns a set of Departments objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		Departments ).filter(
 			Departments.deleted_at.is_( None ) ).all()
 
-def softDeleteDepartment( tgtMissingDepartment, sesSource ):
+
+def softDeleteDepartment( tgtRecord, srcRecords ):
 	"""
-		The list of Departments changes as time moves on, the Departments removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
-	def flagDepartmentMissing( deptid ):
+	def dataMissing():
 		"""
-			Determine that the department object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPsDepartments.deptid == deptid ) )
-		
-		return not ret
+		return not any( srcRecord.deptid == tgtRecord.deptid for srcRecord in srcRecords )
 
-	if flagDepartmentMissing( tgtMissingDepartment.deptid ):
-
-		tgtMissingDepartment.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingDepartment
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
+		raise TypeError('source target record still exists and requires no soft delete!')
+

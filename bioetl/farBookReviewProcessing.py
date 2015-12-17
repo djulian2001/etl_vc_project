@@ -1,8 +1,9 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import FarBookReviews, FarEvaluations
-from asutobio.models.biopsmodels import BioPsFarBookReviews
+from models.asudwpsmodels import AsuDwPsFarBookReviews, AsuDwPsFarEvaluations, AsuPsBioFilters
 
 
 def getSourceFarBookReviews( sesSource ):
@@ -10,9 +11,19 @@ def getSourceFarBookReviews( sesSource ):
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the FarBookReviews table of the source database.
 	"""
+	srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query( BioPsFarBookReviews ).all()
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
 
+	farEvals = sesSource.query(
+		AsuDwPsFarEvaluations.evaluationid ).join(
+			srcEmplidsSubQry, AsuDwPsFarEvaluations.emplid == srcEmplidsSubQry.c.emplid ).subquery()
+
+	return sesSource.query(
+		AsuDwPsFarBookReviews ).join(
+			farEvals, AsuDwPsFarBookReviews.evaluationid == farEvals.c.evaluationid ).filter(
+				AsuDwPsFarBookReviews.ispublic !='N' ).all()
+	
 # change value to the singular
 def processFarBookReview( srcFarBookReview, sesTarget ):
 	"""
@@ -25,8 +36,33 @@ def processFarBookReview( srcFarBookReview, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
 	true, false = literal(True), literal(False)
+
+	farBookReviewList = [
+		srcFarBookReview.bookreviewid,
+		srcFarBookReview.src_sys_id,
+		srcFarBookReview.evaluationid,
+		srcFarBookReview.bookauthors,
+		srcFarBookReview.booktitle,
+		srcFarBookReview.journalname,
+		srcFarBookReview.publicationstatuscode,
+		srcFarBookReview.journalpages,
+		srcFarBookReview.journalpublicationyear,
+		srcFarBookReview.journalvolumenumber,
+		srcFarBookReview.webaddress,
+		srcFarBookReview.additionalinfo,
+		srcFarBookReview.dtcreated,
+		srcFarBookReview.dtupdated,
+		srcFarBookReview.userlastmodified,
+		srcFarBookReview.ispublic,
+		srcFarBookReview.activityid,
+		srcFarBookReview.load_error,
+		srcFarBookReview.data_origin,
+		srcFarBookReview.created_ew_dttm,
+		srcFarBookReview.lastupd_dw_dttm,
+		srcFarBookReview.batch_sid ]
+
+	srcHash = hashThisList( farBookReviewList )
 
 	def farBookReviewExists():
 		"""
@@ -51,7 +87,8 @@ def processFarBookReview( srcFarBookReview, sesTarget ):
 			(ret, ), = sesTarget.query(
 				exists().where(
 					FarBookReviews.bookreviewid == srcFarBookReview.bookreviewid ).where(
-					FarBookReviews.source_hash == srcFarBookReview.source_hash ) )
+					FarBookReviews.source_hash == srcHash ).where(	
+					FarBookReviews.deleted_at.is_( None ) ) )
 
 			return not ret
 
@@ -91,7 +128,6 @@ def processFarBookReview( srcFarBookReview, sesTarget ):
 			return updateFarBookReview
 		else:
 			raise TypeError('source farBookReview already exists and requires no updates!')
-
 	else:
 
 		srcGetFarEvaluationId = sesTarget.query(
@@ -132,37 +168,30 @@ def getTargetFarBookReviews( sesTarget ):
 		Returns a set of FarBookReviews objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		FarBookReviews ).filter(
 			FarBookReviews.deleted_at.is_( None ) ).all()
 
-def softDeleteFarBookReview( tgtMissingFarBookReview, sesSource ):
+def softDeleteFarBookReview( tgtRecord, srcRecords ):
 	"""
-		The list of FarBookReviews changes as time moves on, the FarBookReviews removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
 
-	def flagFarBookReviewMissing():
+	def dataMissing():
 		"""
-			Determine that the farBookReview object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPsFarBookReviews.bookreviewid == tgtMissingFarBookReview.bookreviewid ) )
+		return not any( srcRecord.bookreviewid == tgtRecord.bookreviewid for srcRecord in srcRecords )
 
-		return not ret
-
-	if flagFarBookReviewMissing():
-
-		tgtMissingFarBookReview.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingFarBookReview
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
+		raise TypeError('source target record still exists and requires no soft delete!')
 

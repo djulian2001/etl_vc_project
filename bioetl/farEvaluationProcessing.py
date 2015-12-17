@@ -1,8 +1,9 @@
 import datetime
 from sqlalchemy import exists, literal
 
-from models.biopublicmodels import FarEvaluations
-from asutobio.models.biopsmodels import BioPsFarEvaluations
+from sharedProcesses import hashThisList
+from models.biopublicmodels import FarEvaluations, People
+from models.asudwpsmodels import AsuDwPsFarEvaluations, AsuPsBioFilters
 
 
 def getSourceFarEvaluations( sesSource ):
@@ -10,8 +11,14 @@ def getSourceFarEvaluations( sesSource ):
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the FarEvaluations table of the source database.
 	"""
+	srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query( BioPsFarEvaluations ).all()
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
+
+	return sesSource.query(
+		AsuDwPsFarEvaluations ).join(
+			srcEmplidsSubQry, AsuDwPsFarEvaluations.emplid == srcEmplidsSubQry.c.emplid ).order_by(
+				AsuDwPsFarEvaluations.emplid ).all()
 
 # change value to the singular
 def processFarEvaluation( srcFarEvaluation, sesTarget ):
@@ -26,8 +33,32 @@ def processFarEvaluation( srcFarEvaluation, sesTarget ):
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
-#template mapping... column where(s) _yyy_ 
 	true, false = literal(True), literal(False)
+
+
+	farEvaluationList = [
+		srcFarEvaluation.evaluationid,
+		srcFarEvaluation.src_sys_id,
+		srcFarEvaluation.calendaryear,
+		srcFarEvaluation.emplid,
+		srcFarEvaluation.asuriteid,
+		srcFarEvaluation.asuid,
+		srcFarEvaluation.faculty_rank_title,
+		srcFarEvaluation.job_title,
+		srcFarEvaluation.tenure_status_code,
+		srcFarEvaluation.tenurehomedeptcode,
+		srcFarEvaluation.extensiondate,
+		srcFarEvaluation.completed,
+		srcFarEvaluation.dtcreated,
+		srcFarEvaluation.dtupdated,
+		srcFarEvaluation.userlastmodified,
+		srcFarEvaluation.load_error,
+		srcFarEvaluation.data_origin,
+		srcFarEvaluation.created_ew_dttm,
+		srcFarEvaluation.lastupd_dw_dttm,
+		srcFarEvaluation.batch_sid ]
+
+	srcHash = hashThisList( farEvaluationList )
 
 	def farEvaluationExists():
 		"""
@@ -54,7 +85,8 @@ def processFarEvaluation( srcFarEvaluation, sesTarget ):
 				exists().where(
 					FarEvaluations.evaluationid == srcFarEvaluation.evaluationid ).where(
 					FarEvaluations.emplid == srcFarEvaluation.emplid ).where(
-					FarEvaluations.source_hash == srcFarEvaluation.source_hash ) )
+					FarEvaluations.source_hash == srcHash ).where(
+					FarEvaluations.deleted_at.is_( None ) ) )
 
 			return not ret
 
@@ -66,7 +98,7 @@ def processFarEvaluation( srcFarEvaluation, sesTarget ):
 					FarEvaluations.emplid == srcFarEvaluation.emplid ).one()
 
 			# repeat the following pattern for all mapped attributes:
-			updateFarEvaluation.source_hash = srcFarEvaluation.source_hash
+			updateFarEvaluation.source_hash = srcHash
 			updateFarEvaluation.evaluationid = srcFarEvaluation.evaluationid
 			updateFarEvaluation.src_sys_id = srcFarEvaluation.src_sys_id
 			updateFarEvaluation.calendaryear = srcFarEvaluation.calendaryear
@@ -96,8 +128,14 @@ def processFarEvaluation( srcFarEvaluation, sesTarget ):
 			raise TypeError('source farEvaluation already exists and requires no updates!')
 
 	else:
+
+		srcGetPersonId = sesTarget.query(
+			People.id ).filter(
+				People.emplid == srcPersonWebProfile.emplid ).one()
+
 		insertFarEvaluation = FarEvaluations(
-			source_hash = srcFarEvaluation.source_hash,
+			person_id = srcGetPersonId.id,
+			source_hash = srcHash,
 			evaluationid = srcFarEvaluation.evaluationid,
 			src_sys_id = srcFarEvaluation.src_sys_id,
 			calendaryear = srcFarEvaluation.calendaryear,
@@ -127,38 +165,32 @@ def getTargetFarEvaluations( sesTarget ):
 		Returns a set of FarEvaluations objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		FarEvaluations ).filter(
 			FarEvaluations.deleted_at.is_( None ) ).all()
 
-def softDeleteFarEvaluation( tgtMissingFarEvaluation, sesSource ):
+def softDeleteFarEvaluation( tgtRecord, srcRecords ):
 	"""
-		The list of FarEvaluations changes as time moves on, the FarEvaluations removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
 
-	def flagFarEvaluationMissing():
+	def dataMissing():
 		"""
-			Determine that the farEvaluation object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				FarEvaluations.evaluationid == tgtMissingFarEvaluation.evaluationid ).where(
-				FarEvaluations.emplid == tgtMissingFarEvaluation.emplid ) )
+		return not any( srcRecord.emplid == tgtRecord.emplid and srcRecord.evaluationid == tgtRecord.evaluationid for srcRecord in srcRecords )
 
-		return not ret
 
-	if flagFarEvaluationMissing():
-
-		tgtMissingFarEvaluation.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingFarEvaluation
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
+		raise TypeError('source target record still exists and requires no soft delete!')
+
 

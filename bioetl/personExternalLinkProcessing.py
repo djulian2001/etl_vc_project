@@ -1,18 +1,10 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import PersonExternalLinks, People
-from asutobio.models.biopsmodels import BioPsPersonExternalLinks
 
 #template mapping... plural PersonExternalLinks    singularCaped PersonExternalLink   singularLower personExternalLink 
-
-def getSourcePersonExternalLinks( sesSource ):
-	"""
-		Isolate the imports for the ORM records into this file
-		Returns the set of records from the PersonExternalLinks table of the source database.
-	"""
-
-	return sesSource.query( BioPsPersonExternalLinks ).all()
 
 # change value to the singular
 def processPersonExternalLink( srcPersonExternalLink, sesTarget ):
@@ -27,110 +19,117 @@ def processPersonExternalLink( srcPersonExternalLink, sesTarget ):
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
-#template mapping... column where(s) emplid 
 	true, false = literal(True), literal(False)
 
-	def personExternalLinkExists():
-		"""
-			determine the personExternalLink exists in the target database.
-			@True: The personExternalLink exists in the database
-			@False: The personExternalLink does not exist in the database
-		"""
-		(ret, ), = sesTarget.query(
-			exists().where(
-				PersonExternalLinks.emplid == srcPersonExternalLink.emplid ) )
+	recordToList = [
+		srcPerson.emplid,
+		srcPerson.facebook,
+		srcPerson.twitter,
+		srcPerson.google_plus,
+		srcPerson.linkedin ]
 
-		return ret
+	if any( recordToList[1:] ):
+		srcHash = hashThisList( srcSubAffiliation.values() )
 
-	if personExternalLinkExists():
-
-		def personExternalLinkUpdateRequired():
+		def personExternalLinkExists():
 			"""
-				Determine if the personExternalLink that exists requires and update.
-				@True: returned if source_hash is unchanged
-				@False: returned if source_hash is different
-			"""	
+				determine the personExternalLink exists in the target database.
+				@True: The personExternalLink exists in the database
+				@False: The personExternalLink does not exist in the database
+			"""
 			(ret, ), = sesTarget.query(
 				exists().where(
-					PersonExternalLinks.emplid == srcPersonExternalLink.emplid ).where(
-					PersonExternalLinks.source_hash == srcPersonExternalLink.source_hash ) )
+					PersonExternalLinks.emplid == srcPersonExternalLink.emplid ) )
 
-			return not ret
+			return ret
 
-		if personExternalLinkUpdateRequired():
-			# retrive the tables object to update.
-			updatePersonExternalLink = sesTarget.query(
-				PersonExternalLinks ).filter(
-					PersonExternalLinks.emplid == srcPersonExternalLink.emplid ).one()
+		if personExternalLinkExists():
 
-			# repeat the following pattern for all mapped attributes:
-			updatePersonExternalLink.source_hash = srcPersonExternalLink.source_hash
-			updatePersonExternalLink.emplid = srcPersonExternalLink.emplid
-			updatePersonExternalLink.facebook = srcPersonExternalLink.facebook
-			updatePersonExternalLink.twitter = srcPersonExternalLink.twitter
-			updatePersonExternalLink.google_plus = srcPersonExternalLink.google_plus
-			updatePersonExternalLink.linkedin = srcPersonExternalLink.linkedin
-			updatePersonExternalLink.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-			updatePersonExternalLink.deleted_at = None
+			def personExternalLinkUpdateRequired():
+				"""
+					Determine if the personExternalLink that exists requires and update.
+					@True: returned if source_hash is unchanged
+					@False: returned if source_hash is different
+				"""	
+				(ret, ), = sesTarget.query(
+					exists().where(
+						PersonExternalLinks.emplid == srcPersonExternalLink.emplid ).where(
+						PersonExternalLinks.source_hash == srcHash ).where(	
+						PersonExternalLinks.deleted_at.is_( None ) ) )
 
-			return updatePersonExternalLink
+				return not ret
+
+
+			if personExternalLinkUpdateRequired():
+				# retrive the tables object to update.
+				updatePersonExternalLink = sesTarget.query(
+					PersonExternalLinks ).filter(
+						PersonExternalLinks.emplid == srcPersonExternalLink.emplid ).one()
+
+				# repeat the following pattern for all mapped attributes:
+				updatePersonExternalLink.source_hash = srcHash
+				updatePersonExternalLink.emplid = srcPersonExternalLink.emplid
+				updatePersonExternalLink.facebook = srcPersonExternalLink.facebook
+				updatePersonExternalLink.twitter = srcPersonExternalLink.twitter
+				updatePersonExternalLink.google_plus = srcPersonExternalLink.google_plus
+				updatePersonExternalLink.linkedin = srcPersonExternalLink.linkedin
+				updatePersonExternalLink.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+				updatePersonExternalLink.deleted_at = None
+
+				return updatePersonExternalLink
+			else:
+				raise TypeError('source personExternalLink already exists and requires no updates!')
+
 		else:
-			raise TypeError('source personExternalLink already exists and requires no updates!')
+			srcGetPersonId = sesTarget.query(
+				People.id ).filter(
+					People.emplid == srcPersonExternalLink.emplid ).one()
 
+			insertPersonExternalLink = PersonExternalLinks(
+				source_hash = srcHash,
+				person_id = srcGetPersonId.id,
+				emplid = srcPersonExternalLink.emplid,
+				facebook = srcPersonExternalLink.facebook,
+				twitter = srcPersonExternalLink.twitter,
+				google_plus = srcPersonExternalLink.google_plus,
+				linkedin = srcPersonExternalLink.linkedin,
+				created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
+
+			return insertPersonExternalLink
 	else:
+		return None
 
-		srcGetPersonId = sesTarget.query(
-			People.id ).filter(
-				People.emplid == srcPersonExternalLink.emplid ).one()
-
-		insertPersonExternalLink = PersonExternalLinks(
-			source_hash = srcPersonExternalLink.source_hash,
-			person_id = srcGetPersonId.id,
-			emplid = srcPersonExternalLink.emplid,
-			facebook = srcPersonExternalLink.facebook,
-			twitter = srcPersonExternalLink.twitter,
-			google_plus = srcPersonExternalLink.google_plus,
-			linkedin = srcPersonExternalLink.linkedin,
-			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
-
-		return insertPersonExternalLink
 
 def getTargetPersonExternalLinks( sesTarget ):
 	"""
 		Returns a set of PersonExternalLinks objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		PersonExternalLinks ).filter(
 			PersonExternalLinks.deleted_at.is_( None ) ).all()
 
-def softDeletePersonExternalLink( tgtMissingPersonExternalLink, sesSource ):
+
+def softDeletePersonExternalLink( tgtRecord, srcRecords ):
 	"""
-		The list of PersonExternalLinks changes as time moves on, the PersonExternalLinks removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
-	def flagPersonExternalLinkMissing():
+	def dataMissing():
 		"""
-			Determine that the personExternalLink object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPsPersonExternalLinks.emplid == tgtMissingPersonExternalLink.emplid ) )
+		return not any( srcRecord.emplid == tgtRecord.emplid for srcRecord in srcRecords )
 
-		return not ret
-
-	if flagPersonExternalLinkMissing():
-
-		tgtMissingPersonExternalLink.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingPersonExternalLink
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
+		raise TypeError('source target record still exists and requires no soft delete!')
+
 

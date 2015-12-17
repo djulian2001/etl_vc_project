@@ -1,20 +1,9 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import PersonWebProfile, People
-from asutobio.models.biopsmodels import BioPsPersonWebProfile
 
-#template mapping... plural PersonWebProfile    singularCaped PersonWebProfile   singularLower personWebProfile
-
-def getSourcePersonWebProfile( sesSource ):
-	"""
-		Isolate the imports for the ORM records into this file
-		Returns the set of records from the PersonWebProfile table of the source database.
-	"""
-
-	return sesSource.query( BioPsPersonWebProfile ).all()
-
-# change value to the singular
 def processPersonWebProfile( srcPersonWebProfile, sesTarget ):
 	"""
 		Takes in a source PersonWebProfile object from biopsmodels (mysql.bio_ps.PersonWebProfile)
@@ -27,130 +16,145 @@ def processPersonWebProfile( srcPersonWebProfile, sesTarget ):
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
-#template mapping... column where(s) emplid 
 	true, false = literal(True), literal(False)
 
-	def personWebProfileExists():
-		"""
-			determine the personWebProfile exists in the target database.
-			@True: The personWebProfile exists in the database
-			@False: The personWebProfile does not exist in the database
-		"""
-		(ret, ), = sesTarget.query(
-			exists().where(
-				PersonWebProfile.emplid == srcPersonWebProfile.emplid ) )
+	personWebProfileList = [
+		srcPersonWebProfile.emplid,
+		srcPersonWebProfile.bio,
+		srcPersonWebProfile.research_interests,
+		srcPersonWebProfile.cv,
+		srcPersonWebProfile.website,
+		srcPersonWebProfile.teaching_website,
+		srcPersonWebProfile.grad_faculties,
+		srcPersonWebProfile.professional_associations,
+		srcPersonWebProfile.work_history,
+		srcPersonWebProfile.education,
+		srcPersonWebProfile.research_group,
+		srcPersonWebProfile.research_website,
+		srcPersonWebProfile.honors_awards,
+		srcPersonWebProfile.editorships,
+		srcPersonWebProfile.presentations ]
 
-		return ret
+	if any( personWebProfileList[1:] ):
+		srcHash = hashThisList( personWebProfileList )
 
-	if personWebProfileExists():
-
-		def personWebProfileUpdateRequired():
+		def personWebProfileExists():
 			"""
-				Determine if the personWebProfile that exists requires and update.
-				@True: returned if source_hash is unchanged
-				@False: returned if source_hash is different
-			"""	
+				determine the personWebProfile exists in the target database.
+				@True: The personWebProfile exists in the database
+				@False: The personWebProfile does not exist in the database
+			"""
 			(ret, ), = sesTarget.query(
 				exists().where(
-					PersonWebProfile.emplid == srcPersonWebProfile.emplid ).where(
-					PersonWebProfile.source_hash == srcPersonWebProfile.source_hash ) )
+					PersonWebProfile.emplid == srcPersonWebProfile.emplid ) )
 
-			return not ret
+			return ret
 
-		if personWebProfileUpdateRequired():
-			# retrive the tables object to update.
-			updatePersonWebProfile = sesTarget.query(
-				PersonWebProfile ).filter(
-					PersonWebProfile.emplid == srcPersonWebProfile.emplid ).one()
+		if personWebProfileExists():
 
-			# repeat the following pattern for all mapped attributes:
-			updatePersonWebProfile.source_hash = srcPersonWebProfile.source_hash
-			updatePersonWebProfile.emplid = srcPersonWebProfile.emplid
-			updatePersonWebProfile.bio
-			updatePersonWebProfile.research_interests
-			updatePersonWebProfile.cv
-			updatePersonWebProfile.website
-			updatePersonWebProfile.teaching_website
-			updatePersonWebProfile.grad_faculties
-			updatePersonWebProfile.professional_associations
-			updatePersonWebProfile.work_history
-			updatePersonWebProfile.education
-			updatePersonWebProfile.research_group
-			updatePersonWebProfile.research_website
-			updatePersonWebProfile.honors_awards
-			updatePersonWebProfile.editorships
-			updatePersonWebProfile.presentations
-			updatePersonWebProfile.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-			updatePersonWebProfile.deleted_at = None
+			def personWebProfileUpdateRequired():
+				"""
+					Determine if the personWebProfile that exists requires and update.
+					@True: returned if source_hash is unchanged
+					@False: returned if source_hash is different
+				"""	
+				(ret, ), = sesTarget.query(
+					exists().where(
+						PersonWebProfile.emplid == srcPersonWebProfile.emplid ).where(
+						PersonWebProfile.source_hash == srcHash ).where(	
+						PersonWebProfile.deleted_at.is_( None ) ) )
 
-			return updatePersonWebProfile
+				return not ret
+
+
+			if personWebProfileUpdateRequired():
+				# retrive the tables object to update.
+				updatePersonWebProfile = sesTarget.query(
+					PersonWebProfile ).filter(
+						PersonWebProfile.emplid == srcPersonWebProfile.emplid ).one()
+
+				# repeat the following pattern for all mapped attributes:
+				updatePersonWebProfile.source_hash = srcHash
+				updatePersonWebProfile.emplid = srcPersonWebProfile.emplid
+				updatePersonWebProfile.bio
+				updatePersonWebProfile.research_interests
+				updatePersonWebProfile.cv
+				updatePersonWebProfile.website
+				updatePersonWebProfile.teaching_website
+				updatePersonWebProfile.grad_faculties
+				updatePersonWebProfile.professional_associations
+				updatePersonWebProfile.work_history
+				updatePersonWebProfile.education
+				updatePersonWebProfile.research_group
+				updatePersonWebProfile.research_website
+				updatePersonWebProfile.honors_awards
+				updatePersonWebProfile.editorships
+				updatePersonWebProfile.presentations
+				updatePersonWebProfile.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+				updatePersonWebProfile.deleted_at = None
+
+				return updatePersonWebProfile
+			else:
+				raise TypeError('source personWebProfile already exists and requires no updates!')
+				
 		else:
-			raise TypeError('source personWebProfile already exists and requires no updates!')
+			
+			srcGetPersonId = sesTarget.query(
+				People.id ).filter(
+					People.emplid == srcPersonWebProfile.emplid ).one()
 
+			insertPersonWebProfile = PersonWebProfile(
+				person_id = srcGetPersonId.id,
+				source_hash = srcHash,
+				emplid = srcPersonWebProfile.emplid,
+				bio = srcPersonWebProfile.bio,
+				research_interests = srcPersonWebProfile.research_interests,
+				cv = srcPersonWebProfile.cv,
+				website = srcPersonWebProfile.website,
+				teaching_website = srcPersonWebProfile.teaching_website,
+				grad_faculties = srcPersonWebProfile.grad_faculties,
+				professional_associations = srcPersonWebProfile.professional_associations,
+				work_history = srcPersonWebProfile.work_history,
+				education = srcPersonWebProfile.education,
+				research_group = srcPersonWebProfile.research_group,
+				research_website = srcPersonWebProfile.research_website,
+				honors_awards = srcPersonWebProfile.honors_awards,
+				editorships = srcPersonWebProfile.editorships,
+				presentations = srcPersonWebProfile.presentations,
+				created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
+
+			return insertPersonWebProfile
 	else:
-		
-		srcGetPersonId = sesTarget.query(
-			People.id ).filter(
-				People.emplid == srcPersonWebProfile.emplid ).one()
-
-
-		insertPersonWebProfile = PersonWebProfile(
-			person_id = srcGetPersonId.id,
-			source_hash = srcPersonWebProfile.source_hash,
-			emplid = srcPersonWebProfile.emplid,
-			bio = srcPersonWebProfile.bio,
-			research_interests = srcPersonWebProfile.research_interests,
-			cv = srcPersonWebProfile.cv,
-			website = srcPersonWebProfile.website,
-			teaching_website = srcPersonWebProfile.teaching_website,
-			grad_faculties = srcPersonWebProfile.grad_faculties,
-			professional_associations = srcPersonWebProfile.professional_associations,
-			work_history = srcPersonWebProfile.work_history,
-			education = srcPersonWebProfile.education,
-			research_group = srcPersonWebProfile.research_group,
-			research_website = srcPersonWebProfile.research_website,
-			honors_awards = srcPersonWebProfile.honors_awards,
-			editorships = srcPersonWebProfile.editorships,
-			presentations = srcPersonWebProfile.presentations,
-			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
-
-		return insertPersonWebProfile
+		return None
 
 def getTargetPersonWebProfiles( sesTarget ):
 	"""
 		Returns a set of PersonWebProfile objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		PersonWebProfile ).filter(
 			PersonWebProfile.deleted_at.is_( None ) ).all()
 
-def softDeletePersonWebProfile( tgtMissingPersonWebProfile, sesSource ):
+def softDeletePersonWebProfile( tgtRecord, srcRecords ):
 	"""
-		The list of PersonWebProfile changes as time moves on, the PersonWebProfile removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
-	def flagPersonWebProfileMissing( emplid ):
+	def dataMissing():
 		"""
-			Determine that the personWebProfile object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPsPersonWebProfile.emplid == emplid ) )
+		return not any( srcRecord.emplid == tgtRecord.emplid for srcRecord in srcRecords )
 
-		return not ret
-
-	if flagPersonWebProfileMissing( tgtMissingPersonWebProfile.emplid ):
-
-		tgtMissingPersonWebProfile.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingPersonWebProfile
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
+		raise TypeError('source target record still exists and requires no soft delete!')
+

@@ -1,18 +1,22 @@
 import datetime, re
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import People, Phones
-from asutobio.models.biopsmodels import BioPsPhones
+from models.asudwpsmodels import AsuDwPsPhones, AsuPsBioFilters
 
 
 def getSourcePhones( sesSource ):
 	"""Returns a collection of phone records from the source database"""
+	srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query(
-		BioPsPhones ).group_by(
-			BioPsPhones.emplid ).group_by(
-			BioPsPhones.phone_type ).group_by(
-			BioPsPhones.source_hash ).all()
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
+
+	return sesSource.query( 
+		AsuDwPsPhones ).join(
+			srcEmplidsSubQry, AsuDwPsPhones.emplid==srcEmplidsSubQry.c.emplid).order_by(
+				AsuDwPsPhones.emplid).all()
+
 
 def processPhone( srcPersonPhone, sesTarget ):
 	"""
@@ -26,6 +30,14 @@ def processPhone( srcPersonPhone, sesTarget ):
 	"""
 	true, false = literal(True), literal(False)
 	
+	recordToList = [
+		personPhone.emplid,
+		personPhone.phone_type,
+		personPhone.phone,
+		personPhone.last_update ]
+	
+	srcHash = hashThisList( recordToList )
+
 	def personPhoneExists():
 		"""
 			determine the person exists in the target database.
@@ -55,7 +67,8 @@ def processPhone( srcPersonPhone, sesTarget ):
 				exists().where(
 					Phones.emplid == srcPersonPhone.emplid ).where(
 					Phones.phone_type == srcPersonPhone.phone_type ).where(
-					Phones.source_hash == srcPersonPhone.source_hash )	)
+					Phones.source_hash == srcHash ).where(	
+					Phones.deleted_at.is_( None ) )	)
 
 			return not ret
 
@@ -65,10 +78,10 @@ def processPhone( srcPersonPhone, sesTarget ):
 				Phones ).filter( 
 					Phones.emplid == srcPersonPhone.emplid ).filter(
 					Phones.phone_type == srcPersonPhone.phone_type ).filter(
-					Phones.source_hash != srcPersonPhone.source_hash ).filter(
+					Phones.source_hash != srcHash ).filter(
 					Phones.updated_flag == False ).first()
 
-			updatePersonPhone.source_hash = srcPersonPhone.source_hash
+			updatePersonPhone.source_hash = srcHash
 			updatePersonPhone.updated_flag = True
 			updatePersonPhone.phone = cleanPhoneNumber()
 			updatePersonPhone.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
@@ -88,7 +101,7 @@ def processPhone( srcPersonPhone, sesTarget ):
 		insertPhone = Phones(
 			person_id = srcGetPersonId.id,
 			updated_flag = True,
-			source_hash = srcPersonPhone.source_hash,
+			source_hash = srcHash,
 			emplid = srcPersonPhone.emplid,
 			phone_type = srcPersonPhone.phone_type,
 			phone = cleanPhoneNumber(),
@@ -101,32 +114,39 @@ def getTargetPhones( sesTarget ):
 	"""pass"""
 	return sesTarget.query(
 		Phones ).filter( 
-			Phones.updated_flag == False ).join(
-		People ).filter(
-			People.deleted_at.isnot( None ) ).all()
+			Phones.updated_flag == False ).filter(
+			Phones.deleted_at.is_( None ) ).all()
 
-def cleanupSourcePhones( tgtMissingPersonPhone, sesSource ):
-	"""Determine if an existing phone for an active person is still an active phone for that person."""
-	
-	def removeExistingPhone( emplid, phone_type, phone ):
+
+		# .join(
+		# People ).filter(
+		# 	People.deleted_at.isnot( None ) ).all()
+
+def cleanupSourcePhones( tgtRecord, srcRecords ):
+	"""
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
+
+		The return of this function returns a sqlalchemy object to update a target record object.
+	"""
+
+	def dataMissing():
 		"""
-			Does the phone in the target database exist in the source database:
-			@True: The phone was not found and should be removed.
-			@False: The phone was found and should not be removed.
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where( 
-				BioPsPhones.emplid == emplid ).where(
-				BioPsPhones.phone_type == phone_type ).where(
-				BioPsPhones.phone == phone) )
+		return not any( 
+			srcRecord.emplid == tgtRecord.emplid 
+			and srcRecord.phone_type == tgtRecord.phone_type 
+			and srcRecord.phone == tgtRecord.phone for srcRecord in srcRecords )
 
-		return ret
 
-	if removeExistingPhone( tgtMissingPersonPhone.emplid, tgtMissingPersonPhone.phone_type, tgtMissingPersonPhone.phone ):
-
-		tgtMissingPersonPhone.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-		
-		return tgtMissingPersonPhone
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person phone is active and requires no removal.')
+		raise TypeError('source target record still exists and requires no soft delete!')
+
 

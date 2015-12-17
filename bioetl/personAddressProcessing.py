@@ -1,17 +1,21 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import People, Addresses
-from asutobio.models.biopsmodels import BioPsAddresses
+from models.asudwpsmodels import AsuDwPsAddresses, AsuPsBioFilters
 
 def getSourceAddresses( sesSource ):
 	"""Get and return the source database records for the persons address data."""
-	return sesSource.query(
-		BioPsAddresses ).group_by(
-			BioPsAddresses.emplid ).group_by(
-			BioPsAddresses.address_type ).group_by(
-			BioPsAddresses.source_hash ).all()
+	srcFilters = AsuPsBioFilters( sesSource )
 
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
+
+	return sesSource.query(
+		AsuDwPsAddresses ).join(
+			srcEmplidsSubQry, AsuDwPsAddresses.emplid==srcEmplidsSubQry.c.emplid ).filter(
+				AsuDwPsAddresses.address_type=='CLOC' ).order_by(
+					AsuDwPsAddresses.emplid ).all()
 
 def processAddress( srcPersonAddress, sesTarget ):
 	"""
@@ -28,7 +32,23 @@ def processAddress( srcPersonAddress, sesTarget ):
 
 	true, false = literal(True), literal(False)
 
-	def personAddressExists( emplid, address_type ):
+	recordToList = [
+		srcPersonAddress.emplid,
+		srcPersonAddress.address_type,
+		srcPersonAddress.address1,
+		srcPersonAddress.address2,
+		srcPersonAddress.address3,
+		srcPersonAddress.address4,
+		srcPersonAddress.city,
+		srcPersonAddress.state,
+		srcPersonAddress.postal,
+		srcPersonAddress.country_code,
+		srcPersonAddress.country_descr,
+		srcPersonAddress.last_update ]
+
+	srcHash = hashThisList( recordToList )
+
+	def personAddressExists():
 		"""
 			Determine the person address exists in the target database.
 			@True: The person address exists and requires update checks
@@ -36,14 +56,14 @@ def processAddress( srcPersonAddress, sesTarget ):
 		"""
 		(ret, ), = sesTarget.query(
 			exists().where(
-				Addresses.emplid == emplid ).where(
-				Addresses.address_type == address_type ) )
+				Addresses.emplid == srcPersonAddress.emplid ).where(
+				Addresses.address_type == srcPersonAddress.address_type ) )
 
 		return ret
 
-	if personAddressExists( srcPersonAddress.emplid, srcPersonAddress.address_type ):
+	if personAddressExists():
 
-		def addressRequiresUpdate( emplid, address_type, source_hash ):
+		def addressRequiresUpdate():
 			"""
 				Determine that the address record from the source database requires update
 				@True: The record was not found and in the target database and should be updated
@@ -53,21 +73,22 @@ def processAddress( srcPersonAddress, sesTarget ):
 				exists().where( 
 					Addresses.emplid == srcPersonAddress.emplid ).where( 
 					Addresses.address_type == srcPersonAddress.address_type ).where(
-					Addresses.source_hash == srcPersonAddress.source_hash ) )
+					Addresses.source_hash == srcHash ).where(
+					Addresses.deleted_at.is_( None ) ) )
 
 			return not ret
 
-		if addressRequiresUpdate( srcPersonAddress.emplid, srcPersonAddress.address_type, srcPersonAddress.source_hash ):
+		if addressRequiresUpdate():
 			
 			updatePersonAddress = sesTarget.query(
 				Addresses ).filter( 
 					Addresses.emplid == srcPersonAddress.emplid ).filter( 
 					Addresses.address_type == srcPersonAddress.address_type ).filter( 
-					Addresses.source_hash != srcPersonAddress.source_hash ).filter(
+					Addresses.source_hash != srcHash ).filter(
 					Addresses.updated_flag == False ).first()
 
 			# the record in the target database that will be updated.
-			updatePersonAddress.source_hash = srcPersonAddress.source_hash
+			updatePersonAddress.source_hash = srcHash
 			updatePersonAddress.updated_flag = True
 			updatePersonAddress.address1 = srcPersonAddress.address1
 			updatePersonAddress.address2 = srcPersonAddress.address2
@@ -93,7 +114,7 @@ def processAddress( srcPersonAddress, sesTarget ):
 
 		insertPersonAddress = Addresses(
 			person_id = getPersonId.id,
-			source_hash = srcPersonAddress.source_hash,
+			source_hash = srcHash,
 			updated_flag = True,
 			emplid = srcPersonAddress.emplid,
 			address_type = srcPersonAddress.address_type,
@@ -114,42 +135,36 @@ def getTargetAddresses( sesTarget ):
 	"""Get a set of person addresses from the target database"""
 	return sesTarget.query(
 		Addresses ).filter( 
-			Addresses.updated_flag == False ).join(
-		People ).filter(
-			People.deleted_at.isnot( None ) ).all()
+			Addresses.updated_flag == False ).filter(
+			Addresses.deleted_at.is_( None ) ).all()
 
-def cleanupSourceAddresses( tgtPersonAddress, sesSource ):
+def cleanupSourceAddresses( tgtRecord, srcRecords ):
 	"""
-		If the phone no longer is found we remove it but only if the person is active.
-		Returns a record that is no longer found in the source database and needs to be
-		removed from the target database.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
+
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
-	# def removeMissingAddress( emplid, address_type, address1, address2, address3, address4 ):
-	def removeMissingAddress():
+	def dataMissing():
 		"""
-			Determine if the person address record from the source database exists.
-			@True: If the person address record is not found
-			@False: If the person address was found in the source database
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where( 
-				BioPsPhones.emplid == tgtPersonAddress.emplid ).where(
-				BioPsPhones.address_type == tgtPersonAddress.address_type ).where(
-				BioPsPhones.address1 == tgtPersonAddress.address1 ).where(
-				BioPsPhones.address1 == tgtPersonAddress.address2 ).where(
-				BioPsPhones.address1 == tgtPersonAddress.address3 ).where(
-				BioPsPhones.address1 == tgtPersonAddress.address4 ) )
+		return not any(
+			srcRecord.emplid == tgtRecord.emplid and
+			srcRecord.address_type == tgtRecord.address_type and
+			srcRecord.address1 == tgtRecord.address1 and
+			srcRecord.address2 == tgtRecord.address2 and
+			srcRecord.address3 == tgtRecord.address3 and
+			srcRecord.address4 == tgtRecord.address4 for srcRecord in srcRecords )
 
-		return not ret
-
-	if removeMissingAddress():
-		
-		tgtPersonAddress.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-		
-		return tgtPersonAddress
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('No need to remove the target database person address record.')
+		raise TypeError('source target record still exists and requires no soft delete!')
 
 
 

@@ -1,18 +1,69 @@
+###############################################################################
+# The following is a template file that can be used to quickly add new data tables to the data warehouse data pulls.
+# Parts of the script will require changes for the specific conditions that will differ, note the attribute _yyy_,
+# as well as the data pull from the DW, the models might require other tables, particular tables that have reference
+# dependency.
+#
+# List of <control><command><g> replacements:
+# 
+# _X_  : first char caps plural,
+# _Y_ caps singular,  
+# _y_ lower case singular
+# _Z_ all caps w/ underscore, -oracle table name
+# _ZZ_ all caps w/ underscore, -oracle schema name
+# _z_ lower case w/ undersores - mysql table name
+#
+#
+# bioetl\ filename		_y_Processing.py
+
+###############################################################################
+# Cut and add to the models 
+###############################################################################
+
+class AsuDwPs_X_( AsuDwPs ):
+	__tablename__ = '_Z_'
+	schema = '_ZZ_'
+
+	_attribute_list_here_
+
+	__mapper_args__ = { "primary_key" : [ ] }
+	__table_args__ = { "schema" : schema }
+
+
+class _X_( BioPublic ):
+	__tablename__ = '_z_'
+
+	person_id = Column( Integer, ForeignKey( 'people.id' ) )
+    # below are the data fields out of peopleSoft
+    _attribute_list_here_
+
+
+
+###############################################################################
+# Cut and add to the bioetl files..... 
+###############################################################################
+
+
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import _X_
-from asutobio.models.biopsmodels import BioPs_X_
-
-#template mapping... plural _X_    singularCaped _Y_   singularLower _y_
+from models.asudwpsmodels import AsuDwPs_X_, AsuPsBioFilters
 
 def getSource_X_( sesSource ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the _X_ table of the source database.
 	"""
+	srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query( BioPs_X_ ).all()
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
+
+	return sesSource.query(
+		AsuDwPs_X_ ).join(
+			).order_by(
+				AsuDwPs___ ).all()
 
 # change value to the singular
 def process_Y_( src_Y_, sesTarget ):
@@ -26,9 +77,11 @@ def process_Y_( src_Y_, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
-#template mapping... column where(s) _yyy_ 
 	true, false = literal(True), literal(False)
+
+	_y_List = []
+
+	srcHash = hashThisList( _y_List )
 
 	def _y_Exists():
 		"""
@@ -53,7 +106,7 @@ def process_Y_( src_Y_, sesTarget ):
 			(ret, ), = sesTarget.query(
 				exists().where(
 					_X_._yyy_ == src_Y_._yyy_ ).where(
-					_X_.source_hash == src_Y_.source_hash ) )
+					_X_.source_hash == srcHash ) )
 
 			return not ret
 
@@ -64,7 +117,7 @@ def process_Y_( src_Y_, sesTarget ):
 					_X_._yyy_ == src_Y_._yyy_ ).one()
 
 			# repeat the following pattern for all mapped attributes:
-			update_Y_.source_hash = src_Y_.source_hash
+			update_Y_.source_hash = srcHash
 			update_Y_._yyy_ = src_Y_._yyy_
 
 			update_Y_.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
@@ -76,7 +129,7 @@ def process_Y_( src_Y_, sesTarget ):
 
 	else:
 		insert_Y_ = _X_(
-			source_hash = src_Y_.source_hash,
+			source_hash = srcHash,
 			_yyy_ = src_Y_._yyy_,
 			...
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
@@ -93,94 +146,90 @@ def getTarget_X_( sesTarget ):
 		_X_ ).filter(
 			_X_.deleted_at.is_( None ) ).all()
 
-def softDelete_Y_( tgtMissing_Y_, sesSource ):
+def softDelete_Y_( tgtRecord, srcRecords ):
 	"""
-		The list of _X_ changes as time moves on, the _X_ removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
 
-	def flag_Y_Missing():
+	def dataMissing():
 		"""
-			Determine that the _y_ object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPs_X_._yyy_ == tgtMissing_Y_._yyy_ ) )
+		return not any( srcRecord._yyy_ == tgtRecord._yyy_ for srcRecord in srcRecords )
 
-		return not ret
 
-	if flag_Y_Missing():
-
-		tgtMissing_Y_.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissing_Y_
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
-
+		raise TypeError('source target record still exists and requires no soft delete!')
 
 ###############################################################################
 ### biopublicLoad.py cut and paste into proper stop in the file all below:
 ###############################################################################
 
+	###############################################################################
+	# 
+	#   File Import:  _y_Processing
 
-###############################################################################
-# 
-#   File Import:  _y_Processing
+	import _y_Processing
 
-import _y_Processing
+	src_X_ = _y_Processing.getSource_X_( sesSource )
 
-src_X_ = _y_Processing.getSource_X_( sesSource )
-
-i_Y_ = 1
-for src_Y_ in src_X_:
+	i_Y_ = 1
+	for src_Y_ in src_X_:
+		try:
+			processed_y_ = _y_Processing.process_Y_( src_Y_, sesTarget )
+		except TypeError as e:
+			pass
+		else:
+			sesTarget.add( processed_y_ )
+			if i_Y_ % 1000 == 0:
+				try:
+					sesTarget.flush()
+				except Exception as e:
+					sesTarget.rollback()
+					raise e
+			i_Y_ += 1
 	try:
-		processed_y_ = _y_Processing.process_Y_( src_Y_, sesTarget )
-	except TypeError as e:
-		pass
-	else:
-		sesTarget.add( processed_y_ )
-		if i_Y_ % 1000 == 0:
-			try:
-				sesTarget.flush()
-			except Exception as e:
-				sesTarget.rollback()
-				raise e
-		i_Y_ += 1
-try:
-	sesTarget.commit()
-except Exception as e:
-	sesTarget.rollback()
-	raise e
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
 
 
-tgtMissing_X_ = _y_Processing.getTarget_X_( sesTarget )
+	tgtMissing_X_ = _y_Processing.getTarget_X_( sesTarget )
 
-iRemove_Y_ = 1
-for tgtMissing_Y_ in tgtMissing_X_:
+	iRemove_Y_ = 1
+	for tgtMissing_Y_ in tgtMissing_X_:
+		try:
+			remove_Y_ = _y_Processing.softDelete_Y_( tgtMissing_Y_, src_X_ )
+		except TypeError as e:
+			pass
+		else:
+			sesTarget.add( remove_Y_ )
+			if iRemove_Y_ % 1000 == 0:
+				try:
+					sesTarget.flush()
+				except Exception as e:
+					sesTarget.rollback()
+					raise e
+			iRemove_Y_ += 1
+
 	try:
-		remove_Y_ = _y_Processing.softDelete_Y_( tgtMissing_Y_, sesSource )
-	except TypeError as e:
-		pass
-	else:
-		sesTarget.add( remove_Y_ )
-		if iRemove_Y_ % 1000 == 0:
-			try:
-				sesTarget.flush()
-			except Exception as e:
-				sesTarget.rollback()
-				raise e
-		iRemove_Y_ += 1
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
 
-try:
-	sesTarget.commit()
-except Exception as e:
-	sesTarget.rollback()
-	raise e
+	#	End of _y_Processing
+	###############################################################################
 
-#	End of _y_Processing
-###############################################################################
+
+

@@ -1,8 +1,9 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import FarBookChapters, FarEvaluations
-from asutobio.models.biopsmodels import BioPsFarBookChapters
+from models.asudwpsmodels import AsuDwPsFarBookChapters, AsuDwPsFarEvaluations, AsuPsBioFilters
 
 
 def getSourceFarBookChapters( sesSource ):
@@ -10,10 +11,20 @@ def getSourceFarBookChapters( sesSource ):
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the FarBookChapters table of the source database.
 	"""
+	srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query( BioPsFarBookChapters ).all()
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
 
-# change value to the singular
+	farEvals = sesSource.query(
+		AsuDwPsFarEvaluations.evaluationid ).join(
+			srcEmplidsSubQry, AsuDwPsFarEvaluations.emplid == srcEmplidsSubQry.c.emplid ).subquery()
+
+	return sesSource.query(
+		AsuDwPsFarBookChapters ).join(
+			farEvals, AsuDwPsFarBookChapters.evaluationid == farEvals.c.evaluationid ).filter(
+				AsuDwPsFarBookChapters.ispublic !='N' ).all()
+	
+
 def processFarBookChapter( srcFarBookChapter, sesTarget ):
 	"""
 		Takes in a source FarBookChapter object from biopsmodels (mysql.bio_ps.FarBookChapters)
@@ -25,8 +36,39 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
 	true, false = literal(True), literal(False)
+
+	farBookChapterList = [
+		srcFarBookChapter.bookchapterid,
+		srcFarBookChapter.src_sys_id,
+		srcFarBookChapter.evaluationid,
+		srcFarBookChapter.bookauthors,
+		srcFarBookChapter.booktitle,
+		srcFarBookChapter.chapterauthors,
+		srcFarBookChapter.chaptertitle,
+		srcFarBookChapter.publisher,
+		srcFarBookChapter.publicationstatuscode,
+		srcFarBookChapter.pages,
+		srcFarBookChapter.isbn,
+		srcFarBookChapter.publicationyear,
+		srcFarBookChapter.volumenumber,
+		srcFarBookChapter.edition,
+		srcFarBookChapter.publicationcity,
+		srcFarBookChapter.webaddress,
+		srcFarBookChapter.translated,
+		srcFarBookChapter.additionalinfo,
+		srcFarBookChapter.dtcreated,
+		srcFarBookChapter.dtupdated,
+		srcFarBookChapter.userlastmodified,
+		srcFarBookChapter.ispublic,
+		srcFarBookChapter.activityid,
+		srcFarBookChapter.load_error,
+		srcFarBookChapter.data_origin,
+		srcFarBookChapter.created_ew_dttm,
+		srcFarBookChapter.lastupd_dw_dttm,
+		srcFarBookChapter.batch_sid ]
+
+	srcHash = hashThisList( farBookChapterList )
 
 	def farBookChapterExists():
 		"""
@@ -51,7 +93,8 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 			(ret, ), = sesTarget.query(
 				exists().where(
 					FarBookChapters.bookchapterid == srcFarBookChapter.bookchapterid ).where(
-					FarBookChapters.source_hash == srcFarBookChapter.source_hash ) )
+					FarBookChapters.source_hash == srcHash ).where(	
+					FarBookChapters.deleted_at.is_( None ) ) )
 
 			return not ret
 
@@ -62,7 +105,7 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 					FarBookChapters.bookchapterid == srcFarBookChapter.bookchapterid ).one()
 
 			# repeat the following pattern for all mapped attributes:
-			updateFarBookChapter.source_hash = srcFarBookChapter.source_hash
+			updateFarBookChapter.source_hash = srcHash
 			updateFarBookChapter.bookchapterid = srcFarBookChapter.bookchapterid
 			updateFarBookChapter.src_sys_id = srcFarBookChapter.src_sys_id
 			updateFarBookChapter.evaluationid = srcFarBookChapter.evaluationid
@@ -104,7 +147,7 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 				FarEvaluations.evaluationid == srcFarBookChapter.evaluationid ).one()
 
 		insertFarBookChapter = FarBookChapters(
-			source_hash = srcFarBookChapter.source_hash,
+			source_hash = srcHash,
 			far_evaluation_id = srcGetFarEvaluationId.id,
 			bookchapterid = srcFarBookChapter.bookchapterid,
 			src_sys_id = srcFarBookChapter.src_sys_id,
@@ -138,6 +181,7 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 
 		return insertFarBookChapter
 
+
 def getTargetFarBookChapters( sesTarget ):
 	"""
 		Returns a set of FarBookChapters objects from the target database where the records are not flagged
@@ -148,32 +192,26 @@ def getTargetFarBookChapters( sesTarget ):
 		FarBookChapters ).filter(
 			FarBookChapters.deleted_at.is_( None ) ).all()
 
-def softDeleteFarBookChapter( tgtMissingFarBookChapter, sesSource ):
+def softDeleteFarBookChapter( tgtRecord, srcRecords ):
 	"""
-		The list of FarBookChapters changes as time moves on, the FarBookChapters removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
 
-	def flagFarBookChapterMissing():
+	def dataMissing():
 		"""
-			Determine that the farBookChapter object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPsFarBookChapters.bookchapterid == tgtMissingFarBookChapter.bookchapterid ) )
+		return not any( srcRecord.bookchapterid == tgtRecord.bookchapterid for srcRecord in srcRecords )
 
-		return not ret
 
-	if flagFarBookChapterMissing():
-
-		tgtMissingFarBookChapter.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingFarBookChapter
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
-
+		raise TypeError('source target record still exists and requires no soft delete!')

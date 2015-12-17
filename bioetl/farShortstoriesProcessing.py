@@ -1,17 +1,27 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import FarShortstories, FarEvaluations
-from asutobio.models.biopsmodels import BioPsFarShortstories
-
+from models.asudwpsmodels import AsuDwPsFarShortstories, AsuDwPsFarEvaluations, AsuPsBioFilters
 
 def getSourceFarShortstories( sesSource ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the FarShortstories table of the source database.
 	"""
+	srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query( BioPsFarShortstories ).all()
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
+
+	farEvals = sesSource.query(
+		AsuDwPsFarEvaluations.evaluationid ).join(
+			srcEmplidsSubQry, AsuDwPsFarEvaluations.emplid == srcEmplidsSubQry.c.emplid ).subquery()
+
+	return sesSource.query(
+		AsuDwPsFarShortstories ).join(
+			farEvals, AsuDwPsFarShortstories.evaluationid == farEvals.c.evaluationid ).filter(
+				AsuDwPsFarShortstories.ispublic !='N' ).all()
 
 # change value to the singular
 def processFarShortstorie( srcFarShortstorie, sesTarget ):
@@ -25,9 +35,34 @@ def processFarShortstorie( srcFarShortstorie, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
-#template mapping... column where(s) shortstoryid 
 	true, false = literal(True), literal(False)
+
+	farShortstoriesList = [
+		farShortstories.shortstoryid,
+		farShortstories.src_sys_id,
+		farShortstories.evaluationid,
+		farShortstories.authors,
+		farShortstories.title,
+		farShortstories.publicationname,
+		farShortstories.publicationstatuscode,
+		farShortstories.pages,
+		farShortstories.publicationyear,
+		farShortstories.publisher,
+		farShortstories.webaddress,
+		farShortstories.translated,
+		farShortstories.additionalinfo,
+		farShortstories.dtcreated,
+		farShortstories.dtupdated,
+		farShortstories.userlastmodified,
+		farShortstories.ispublic,
+		farShortstories.activityid,
+		farShortstories.load_error,
+		farShortstories.data_origin,
+		farShortstories.created_ew_dttm,
+		farShortstories.lastupd_dw_dttm,
+		farShortstories.batch_sid ]
+
+	srcHash = hashThisList( farShortstoriesList )
 
 	def farShortstoriesExists():
 		"""
@@ -52,7 +87,8 @@ def processFarShortstorie( srcFarShortstorie, sesTarget ):
 			(ret, ), = sesTarget.query(
 				exists().where(
 					FarShortstories.shortstoryid == srcFarShortstorie.shortstoryid ).where(
-					FarShortstories.source_hash == srcFarShortstorie.source_hash ) )
+					FarShortstories.source_hash == srcHash ).where(	
+					FarShortstories.deleted_at.is_( None ) ) )
 
 			return not ret
 
@@ -63,7 +99,7 @@ def processFarShortstorie( srcFarShortstorie, sesTarget ):
 					FarShortstories.shortstoryid == srcFarShortstorie.shortstoryid ).one()
 
 			# repeat the following pattern for all mapped attributes:
-			updateFarShortstorie.source_hash = srcFarShortstorie.source_hash
+			updateFarShortstorie.source_hash = srcHash
 			updateFarShortstorie.shortstoryid = srcFarShortstorie.shortstoryid
 			updateFarShortstorie.src_sys_id = srcFarShortstorie.src_sys_id
 			updateFarShortstorie.evaluationid = srcFarShortstorie.evaluationid
@@ -101,7 +137,7 @@ def processFarShortstorie( srcFarShortstorie, sesTarget ):
 				FarEvaluations.evaluationid == srcFarShortstorie.evaluationid ).one()
 
 		insertFarShortstorie = FarShortstories(
-			source_hash = srcFarShortstorie.source_hash,
+			source_hash = srcHash,
 			far_evaluation_id = srcGetFarEvaluationId.id,
 			shortstoryid = srcFarShortstorie.shortstoryid,
 			src_sys_id = srcFarShortstorie.src_sys_id,
@@ -135,37 +171,31 @@ def getTargetFarShortstories( sesTarget ):
 		Returns a set of FarShortstories objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		FarShortstories ).filter(
 			FarShortstories.deleted_at.is_( None ) ).all()
 
-def softDeleteFarShortstorie( tgtMissingFarShortstorie, sesSource ):
+def softDeleteFarShortstorie( tgtRecord, srcRecords ):
 	"""
-		The list of FarShortstories changes as time moves on, the FarShortstories removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
-	def flagFarShortstorieMissing():
+	def dataMissing():
 		"""
-			Determine that the farShortstories object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPsFarShortstories.shortstoryid == tgtMissingFarShortstorie.shortstoryid ) )
+		return not any( srcRecord.shortstoryid == tgtRecord.shortstoryid for srcRecord in srcRecords )
 
-		return not ret
 
-	if flagFarShortstorieMissing():
-
-		tgtMissingFarShortstorie.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingFarShortstorie
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
+		raise TypeError('source target record still exists and requires no soft delete!')
+
 

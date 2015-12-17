@@ -1,18 +1,23 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import Jobs, People, Departments
-from asutobio.models.biopsmodels import BioPsJobs
-
-#template mapping... plural Jobs    singularCaped Job   singularLower job
+from models.asudwpsmodels import AsuDwPsJobs, AsuPsBioFilters
 
 def getSourcePersonJobs( sesSource ):
 	"""
-		Isolate the imports for the ORM records into this file
-		Returns the set of records from the Jobs table of the source database.
+		Selects the data from the data wharehouse for the Jobs model.
+		@returns: the record set
 	"""
+	srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query( BioPsJobs ).all()
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
+
+	return sesSource.query(
+		AsuDwPsJobs ).join(
+			srcEmplidsSubQry, AsuDwPsJobs.emplid==srcEmplidsSubQry.c.emplid ).order_by(
+				AsuDwPsJobs.emplid ).all()
 
 # change value to the singular
 def processPersonJob( srcJob, sesTarget ):
@@ -26,9 +31,25 @@ def processPersonJob( srcJob, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
-#template mapping... column where(s) _yyy_ 
 	true, false = literal(True), literal(False)
+
+	recordToList = [
+		srcJob.emplid,
+		srcJob.empl_rcd,
+		srcJob.title,
+		srcJob.department,
+		srcJob.mailcode,
+		srcJob.empl_class,
+		srcJob.job_indicator,
+		srcJob.location,
+		srcJob.hr_status,
+		srcJob.deptid,
+		srcJob.empl_status,
+		srcJob.fte,
+		srcJob.last_update,
+		srcJob.department_directory ]
+
+	srcHash = hashThisList( recordToList )
 
 	def jobExists():
 		"""
@@ -40,39 +61,39 @@ def processPersonJob( srcJob, sesTarget ):
 			exists().where(
 				Jobs.emplid == srcJob.emplid ).where(
 				Jobs.title == srcJob.title ).where(
-				Jobs.deptid == srcJob.deptid ) )
+				Jobs.deptid == srcJob.deptid ).where(
+				Jobs.updated_flag == False ) )
 
 		return ret
 
 	if jobExists():
-
-		def jobUpdateRequired():
+		def jobUpdates():
 			"""
 				Determine if the job that exists requires and update.
-				@True: returned if source_hash is unchanged
-				@False: returned if source_hash is different
-			"""	
-			(ret, ), = sesTarget.query(
-				exists().where(
-					Jobs.emplid == srcJob.emplid ).where(
-					Jobs.title == srcJob.title ).where(
-					Jobs.deptid == srcJob.deptid ).where(
-					Jobs.updated_flag == False).where(
-					Jobs.source_hash != srcJob.source_hash ) )
-
-			return ret
-
-		if jobUpdateRequired():
-			# retrive the tables object to update.
-			updateJob = sesTarget.query(
+				@returns: returns the first record that matches the conditions.
+			"""
+			return sesTarget.query(
 				Jobs ).filter(
 					Jobs.emplid == srcJob.emplid ).filter(
 					Jobs.title == srcJob.title ).filter(
 					Jobs.deptid == srcJob.deptid ).filter(
 					Jobs.updated_flag == False ).first()
 
+		updateJobs = jobUpdates()
+
+		for updateJob in updateJobs:
+			if updateJob.source_hash == srcHash:
+				
+				updateJob.updated_flag = True
+				updateJob.deleted_at = None
+				return updateJob
+				break
+
+		else: # no break reached
+			updateJob = updateJobs[0]
+
 			# repeat the following pattern for all mapped attributes:
-			updateJob.source_hash = srcJob.source_hash
+			updateJob.source_hash = srcHash
 			updateJob.updated_flag = True
 			updateJob.emplid = srcJob.emplid
 			updateJob.empl_rcd = srcJob.empl_rcd
@@ -91,8 +112,6 @@ def processPersonJob( srcJob, sesTarget ):
 			updateJob.deleted_at = None
 			
 			return updateJob
-		else:
-			raise TypeError('source job already exists and requires no updates!')
 
 	else:
 		# get the ids required to maintain relationships 
@@ -109,7 +128,7 @@ def processPersonJob( srcJob, sesTarget ):
 			person_id = srcGetPersonId.id,
 			department_id = srcGetDepartmentId.id,
 			updated_flag = True,
-			source_hash = srcJob.source_hash,
+			source_hash = srcHash,
 			emplid = srcJob.emplid,
 			empl_rcd = srcJob.empl_rcd,
 			title = srcJob.title,
@@ -127,43 +146,38 @@ def processPersonJob( srcJob, sesTarget ):
 
 		return insertJob
 
+
 def getTargetPersonJobs( sesTarget ):
 	"""
 		Returns a set of Jobs objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		Jobs ).filter(
 			Jobs.deleted_at.is_( None ) ).all()
 
-def softDeletePersonJob( tgtMissingJob, sesSource ):
+
+def softDeletePersonJob( tgtRecord, srcRecords ):
 	"""
-		The list of Jobs changes as time moves on, the Jobs removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
-	def flagPersonJobMissing( emplid, title, deptid ):
+	def dataMissing():
 		"""
-			Determine that the job object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPsJobs.emplid == emplid ).where(
-				BioPsJobs.title == title ).where(
-				BioPsJobs.deptid == deptid ) )
+		return not any(
+			srcRecord.emplid == tgtRecord.emplid and
+			srcRecord.title == tgtRecord.title and
+			srcRecord.deptid == tgtRecord.deptid for srcRecord in srcRecords )
 
-		return not ret
-
-	if flagPersonJobMissing( tgtMissingJob.emplid, tgtMissingJob.title, tgtMissingJob.deptid ):
-
-		tgtMissingJob.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingJob
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
+		raise TypeError('source target record still exists and requires no soft delete!')

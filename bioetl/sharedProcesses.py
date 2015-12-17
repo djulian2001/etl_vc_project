@@ -30,3 +30,13 @@ def hashThisList( theList ):
 
 	return thisSha256Hash
 
+# def hashThisObject( myObject, myArgs):
+# 	""" THIS DOES NOT Work..."""
+# 	import hashlib
+
+# 	thisString = ""
+# 	for myArg in myArgs:
+# 		thisString += str( myObject[myArg] )
+		
+# 	return hashlib.sha256(thisString).hexdigest()
+

@@ -1,17 +1,28 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import FarNonrefereedarticles, FarEvaluations
 from asutobio.models.biopsmodels import BioPsFarNonrefereedarticles
-
+from models.asudwpsmodels import AsuDwPsFarNonrefereedarticles, AsuDwPsFarEvaluations, AsuPsBioFilters
 
 def getSourceFarNonrefereedarticles( sesSource ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the FarNonrefereedarticles table of the source database.
 	"""
+	srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query( BioPsFarNonrefereedarticles ).all()
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
+
+	farEvals = sesSource.query(
+		AsuDwPsFarEvaluations.evaluationid ).join(
+			srcEmplidsSubQry, AsuDwPsFarEvaluations.emplid == srcEmplidsSubQry.c.emplid ).subquery()
+
+	return sesSource.query(
+		AsuDwPsFarNonrefereedarticles ).join(
+			farEvals, AsuDwPsFarNonrefereedarticles.evaluationid == farEvals.c.evaluationid ).filter(
+				AsuDwPsFarNonrefereedarticles.ispublic != 'N' ).all()
 
 # change value to the singular
 def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
@@ -25,8 +36,35 @@ def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
 	true, false = literal(True), literal(False)
+
+	farNonrefereedarticleList = [
+		srcFarNonrefereedarticle.nonrefereedarticleid,
+		srcFarNonrefereedarticle.src_sys_id,
+		srcFarNonrefereedarticle.evaluationid,
+		srcFarNonrefereedarticle.authors,
+		srcFarNonrefereedarticle.title,
+		srcFarNonrefereedarticle.journalname,
+		srcFarNonrefereedarticle.publicationstatuscode,
+		srcFarNonrefereedarticle.publicationyear,
+		srcFarNonrefereedarticle.volumenumber,
+		srcFarNonrefereedarticle.pages,
+		srcFarNonrefereedarticle.webaddress,
+		srcFarNonrefereedarticle.translated,
+		srcFarNonrefereedarticle.abstract,
+		srcFarNonrefereedarticle.additionalinfo,
+		srcFarNonrefereedarticle.dtcreated,
+		srcFarNonrefereedarticle.dtupdated,
+		srcFarNonrefereedarticle.userlastmodified,
+		srcFarNonrefereedarticle.ispublic,
+		srcFarNonrefereedarticle.activityid,
+		srcFarNonrefereedarticle.load_error,
+		srcFarNonrefereedarticle.data_origin,
+		srcFarNonrefereedarticle.created_ew_dttm,
+		srcFarNonrefereedarticle.lastupd_dw_dttm,
+		srcFarNonrefereedarticle.batch_sid ]
+
+	srcHash = hashThisList( farNonrefereedarticleList )
 
 	def farNonrefereedarticleExists():
 		"""
@@ -51,7 +89,8 @@ def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
 			(ret, ), = sesTarget.query(
 				exists().where(
 					FarNonrefereedarticles.nonrefereedarticleid == srcFarNonrefereedarticle.nonrefereedarticleid ).where(
-					FarNonrefereedarticles.source_hash == srcFarNonrefereedarticle.source_hash ) )
+					FarNonrefereedarticles.source_hash == srcHash ).where(	
+					FarNonrefereedarticles.deleted_at.is_( None ) ) )
 
 			return not ret
 
@@ -141,32 +180,26 @@ def getTargetFarNonrefereedarticles( sesTarget ):
 		FarNonrefereedarticles ).filter(
 			FarNonrefereedarticles.deleted_at.is_( None ) ).all()
 
-def softDeleteFarNonrefereedarticle( tgtMissingFarNonrefereedarticle, sesSource ):
+def softDeleteFarNonrefereedarticle( tgtRecord, srcRecords ):
 	"""
-		The list of FarNonrefereedarticles changes as time moves on, the FarNonrefereedarticles removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
 
-	def flagFarNonrefereedarticleMissing():
+	def dataMissing():
 		"""
-			Determine that the farNonrefereedarticle object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPsFarNonrefereedarticles.nonrefereedarticleid == tgtMissingFarNonrefereedarticle.nonrefereedarticleid ) )
+		return not any( srcRecord.nonrefereedarticleid == tgtRecord.nonrefereedarticleid for srcRecord in srcRecords )
 
-		return not ret
 
-	if flagFarNonrefereedarticleMissing():
-
-		tgtMissingFarNonrefereedarticle.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingFarNonrefereedarticle
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
-
+		raise TypeError('source target record still exists and requires no soft delete!')

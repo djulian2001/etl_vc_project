@@ -1,8 +1,9 @@
 import datetime
 from sqlalchemy import exists, literal
 
+from sharedProcesses import hashThisList
 from models.biopublicmodels import FarRefereedarticles, FarEvaluations
-from asutobio.models.biopsmodels import BioPsFarRefereedarticles
+from models.asudwpsmodels import AsuDwPsFarRefereedarticles, AsuDwPsFarEvaluations, AsuPsBioFilters
 
 
 def getSourceFarRefereedarticles( sesSource ):
@@ -10,8 +11,18 @@ def getSourceFarRefereedarticles( sesSource ):
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the FarRefereedarticles table of the source database.
 	"""
+	srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query( BioPsFarRefereedarticles ).all()
+	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
+
+	farEvals = sesSource.query(
+		AsuDwPsFarEvaluations.evaluationid ).join(
+			srcEmplidsSubQry, AsuDwPsFarEvaluations.emplid == srcEmplidsSubQry.c.emplid ).subquery()
+
+	return sesSource.query(
+		AsuDwPsFarRefereedarticles ).join(
+			farEvals, AsuDwPsFarRefereedarticles.evaluationid == farEvals.c.evaluationid ).filter(
+				AsuDwPsFarRefereedarticles.ispublic != 'N' ).all()
 
 # change value to the singular
 def processFarRefereedarticle( srcFarRefereedarticle, sesTarget ):
@@ -25,9 +36,35 @@ def processFarRefereedarticle( srcFarRefereedarticle, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
-#template mapping... column where(s) refereedarticleid 
 	true, false = literal(True), literal(False)
+
+	farRefereedarticleList = [
+		srcFarRefereedarticle.refereedarticleid,
+		srcFarRefereedarticle.src_sys_id,
+		srcFarRefereedarticle.evaluationid,
+		srcFarRefereedarticle.authors,
+		srcFarRefereedarticle.title,
+		srcFarRefereedarticle.journalname,
+		srcFarRefereedarticle.publicationstatuscode,
+		srcFarRefereedarticle.publicationyear,
+		srcFarRefereedarticle.volumenumber,
+		srcFarRefereedarticle.pages,
+		srcFarRefereedarticle.webaddress,
+		srcFarRefereedarticle.translated,
+		srcFarRefereedarticle.abstract,
+		srcFarRefereedarticle.additionalinfo,
+		srcFarRefereedarticle.dtcreated,
+		srcFarRefereedarticle.dtupdated,
+		srcFarRefereedarticle.userlastmodified,
+		srcFarRefereedarticle.ispublic,
+		srcFarRefereedarticle.activityid,
+		srcFarRefereedarticle.load_error,
+		srcFarRefereedarticle.data_origin,
+		srcFarRefereedarticle.created_ew_dttm,
+		srcFarRefereedarticle.lastupd_dw_dttm,
+		srcFarRefereedarticle.batch_sid ]
+
+	srcHash = hashThisList( farRefereedarticleList )
 
 	def farRefereedarticleExists():
 		"""
@@ -52,7 +89,8 @@ def processFarRefereedarticle( srcFarRefereedarticle, sesTarget ):
 			(ret, ), = sesTarget.query(
 				exists().where(
 					FarRefereedarticles.refereedarticleid == srcFarRefereedarticle.refereedarticleid ).where(
-					FarRefereedarticles.source_hash == srcFarRefereedarticle.source_hash ) )
+					FarRefereedarticles.source_hash == srcHash ).where(	
+					FarRefereedarticles.deleted_at.is_( None ) ) )
 
 			return not ret
 
@@ -63,7 +101,7 @@ def processFarRefereedarticle( srcFarRefereedarticle, sesTarget ):
 					FarRefereedarticles.refereedarticleid == srcFarRefereedarticle.refereedarticleid ).one()
 
 			# repeat the following pattern for all mapped attributes:
-			updateFarRefereedarticle.source_hash = srcFarRefereedarticle.source_hash
+			updateFarRefereedarticle.source_hash = srcHash
 			updateFarRefereedarticle.refereedarticleid = srcFarRefereedarticle.refereedarticleid
 			updateFarRefereedarticle.src_sys_id = srcFarRefereedarticle.src_sys_id
 			updateFarRefereedarticle.evaluationid = srcFarRefereedarticle.evaluationid
@@ -102,7 +140,7 @@ def processFarRefereedarticle( srcFarRefereedarticle, sesTarget ):
 				FarEvaluations.evaluationid == srcFarRefereedarticle.evaluationid ).one()
 
 		insertFarRefereedarticle = FarRefereedarticles(
-			source_hash = srcFarRefereedarticle.source_hash,
+			source_hash = srcHash,
 			far_evaluation_id = srcGetFarEvaluationId.id,
 			refereedarticleid = srcFarRefereedarticle.refereedarticleid,
 			src_sys_id = srcFarRefereedarticle.src_sys_id,
@@ -142,31 +180,27 @@ def getTargetFarRefereedarticles( sesTarget ):
 		FarRefereedarticles ).filter(
 			FarRefereedarticles.deleted_at.is_( None ) ).all()
 
-def softDeleteFarRefereedarticle( tgtMissingFarRefereedarticle, sesSource ):
+def softDeleteFarRefereedarticle( tgtRecord, srcRecords ):
 	"""
-		The list of FarRefereedarticles changes as time moves on, the FarRefereedarticles removed from the list are not
-		deleted, but flaged removed by the deleted_at field.
+		The list of source records changes as time moves on, the source records
+		removed from the list are not deleted, but flaged removed by the 
+		deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a person object.
+		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
 
-	def flagFarRefereedarticleMissing():
+	def dataMissing():
 		"""
-			Determine that the farRefereedarticle object is still showing up in the source database.
-			@True: If the data was not found and requires an update against the target database.
-			@False: If the data was found and no action is required. 
+			The origional list of selected data is then used to see if data requires a soft-delete
+			@True: Means update the records deleted_at column
+			@False: Do nothing
 		"""
-		(ret, ), = sesSource.query(
-			exists().where(
-				BioPsFarRefereedarticles.refereedarticleid == tgtMissingFarRefereedarticle.refereedarticleid ) )
+		return not any( srcRecord.refereedarticleid == tgtRecord.refereedarticleid for srcRecord in srcRecords )
 
-		return not ret
 
-	if flagFarRefereedarticleMissing():
-
-		tgtMissingFarRefereedarticle.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-
-		return tgtMissingFarRefereedarticle
-
+	if dataMissing():
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 	else:
-		raise TypeError('source person still exists and requires no soft delete!')
+		raise TypeError('source target record still exists and requires no soft delete!')
+
