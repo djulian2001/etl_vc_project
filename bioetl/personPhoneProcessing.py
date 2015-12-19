@@ -31,10 +31,10 @@ def processPhone( srcPersonPhone, sesTarget ):
 	true, false = literal(True), literal(False)
 	
 	recordToList = [
-		personPhone.emplid,
-		personPhone.phone_type,
-		personPhone.phone,
-		personPhone.last_update ]
+		srcPersonPhone.emplid,
+		srcPersonPhone.phone_type,
+		srcPersonPhone.phone,
+		srcPersonPhone.last_update ]
 	
 	srcHash = hashThisList( recordToList )
 
@@ -47,16 +47,17 @@ def processPhone( srcPersonPhone, sesTarget ):
 		(ret, ), = sesTarget.query(
 			exists().where( 
 				Phones.emplid == srcPersonPhone.emplid ).where(
-				Phones.phone_type == srcPersonPhone.phone_type ) )
+				Phones.phone_type == srcPersonPhone.phone_type ).where(
+				Phones.phone == srcPersonPhone.phone ) )
 		
 		return ret
 
+	def cleanPhoneNumber():
+		""""this will clean up the phone numbers."""
+		return re.sub( "[^0-9\+]", "", srcPersonPhone.phone )
+
 	if personPhoneExists():
 		
-		def cleanPhoneNumber():
-			""""this will clean up the phone numbers."""
-			return re.sub( "[^0-9\+]", "", srcPersonPhone.phone )
-
 		def phoneRequiresUpdate():
 			"""
 				determine if the person that exists requires an update.
@@ -67,7 +68,8 @@ def processPhone( srcPersonPhone, sesTarget ):
 				exists().where(
 					Phones.emplid == srcPersonPhone.emplid ).where(
 					Phones.phone_type == srcPersonPhone.phone_type ).where(
-					Phones.source_hash == srcHash ).where(	
+					Phones.source_hash == srcHash ).where(
+					Phones.updated_flag == False ).where(	
 					Phones.deleted_at.is_( None ) )	)
 
 			return not ret
@@ -81,19 +83,17 @@ def processPhone( srcPersonPhone, sesTarget ):
 					Phones.source_hash != srcHash ).filter(
 					Phones.updated_flag == False ).first()
 
-			updatePersonPhone.source_hash = srcHash
-			updatePersonPhone.updated_flag = True
-			updatePersonPhone.phone = cleanPhoneNumber()
-			updatePersonPhone.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-			updatePersonPhone.deleted_at = None
+			if updatePersonPhone:
+				updatePersonPhone.source_hash = srcHash
+				updatePersonPhone.updated_flag = True
+				updatePersonPhone.phone = cleanPhoneNumber()
+				updatePersonPhone.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+				updatePersonPhone.deleted_at = None
 
-			return updatePersonPhone
-
+				return updatePersonPhone
 		else:
 			raise TypeError('source person phone record already exists and requires no updates!')
-
 	else:
-
 		srcGetPersonId = sesTarget.query(
 			People.id ).filter(
 				People.emplid == srcPersonPhone.emplid ).one()

@@ -19,7 +19,6 @@ try:
 	#		that warrents that it be scoped.  Reference table so ok to load prior
 	#		to the people data, and must be loaded prior to the 
 	#   File Import:  subAffiliationProcessing
-
 	import subAffiliationProcessing
 
 	srcSubAffiliations = subAffiliationProcessing.getSourceSubAffiliations( )
@@ -28,7 +27,6 @@ try:
 	for srcSubAffiliation in srcSubAffiliations:
 		try:
 			processedsubAffiliation = subAffiliationProcessing.processSubAffiliation( srcSubAffiliation, sesTarget )
-
 		except TypeError as e:
 			pass
 		else:
@@ -36,18 +34,15 @@ try:
 			if iSubAffiliation % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iSubAffiliation += 1
 	try:
 		sesTarget.commit()
-	# except Exception as e:
-	#possible replacement to the very generic Exception...
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
-
 
 	tgtMissingSubAffiliations = subAffiliationProcessing.getTargetSubAffiliations( sesTarget )
 
@@ -62,7 +57,7 @@ try:
 			if iRemoveSubAffiliation % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveSubAffiliation += 1
@@ -115,7 +110,7 @@ try:
 			if iPerson % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 				except RuntimeError as e:
@@ -142,7 +137,7 @@ try:
 			if iMissingPerson % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iMissingPerson += 1
@@ -169,7 +164,7 @@ try:
 			if iMissingPersonWebProfile % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iMissingPersonWebProfile += 1
@@ -234,7 +229,7 @@ try:
 	for srcPersonPhone in srcPersonPhones:
 		try:
 			processPhone = personPhoneProcessing.processPhone( srcPersonPhone, sesTarget )
-		except Exception as e:
+		except TypeError as e:
 			pass
 		else:
 			sesTarget.add( processPhone )
@@ -259,8 +254,7 @@ try:
 		# if the phone no longer is found we remove it but only if the person is active...
 		try:
 			removePhone = personPhoneProcessing.cleanupSourcePhones( tgtMissingPersonPhone, srcPersonPhones )
-		except TypeError, e:
-			# print e
+		except TypeError as e:
 			pass
 		else:
 			sesTarget.add( removePhone )
@@ -436,13 +430,13 @@ try:
 			if iJob % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iJob += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -460,14 +454,14 @@ try:
 			if iRemoveJob % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveJob += 1
 
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -493,13 +487,13 @@ try:
 			if iJobLog % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iJobLog += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -517,14 +511,13 @@ try:
 			if iRemoveJobLog % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveJobLog += 1
-
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -712,13 +705,13 @@ try:
 			if iFarEvaluation % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iFarEvaluation += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -736,14 +729,14 @@ try:
 			if iRemoveFarEvaluation % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarEvaluation += 1
 
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -769,13 +762,13 @@ try:
 			if iFarConferenceProceeding % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iFarConferenceProceeding += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -793,14 +786,14 @@ try:
 			if iRemoveFarConferenceProceeding % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarConferenceProceeding += 1
 
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -826,13 +819,13 @@ try:
 			if iFarAuthoredBook % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iFarAuthoredBook += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -850,14 +843,14 @@ try:
 			if iRemoveFarAuthoredBook % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarAuthoredBook += 1
 
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -883,13 +876,13 @@ try:
 			if iFarRefereedarticle % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iFarRefereedarticle += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -907,14 +900,14 @@ try:
 			if iRemoveFarRefereedarticle % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarRefereedarticle += 1
 
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -940,13 +933,13 @@ try:
 			if iFarNonrefereedarticle % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iFarNonrefereedarticle += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -963,14 +956,14 @@ try:
 			if iRemoveFarNonrefereedarticle % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarNonrefereedarticle += 1
 
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -996,13 +989,13 @@ try:
 			if iFarEditedbook % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iFarEditedbook += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -1020,14 +1013,14 @@ try:
 			if iRemoveFarEditedbook % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarEditedbook += 1
 
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -1054,13 +1047,13 @@ try:
 			if iFarBookChapter % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iFarBookChapter += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -1078,14 +1071,14 @@ try:
 			if iRemoveFarBookChapter % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarBookChapter += 1
 
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -1112,13 +1105,13 @@ try:
 			if iFarBookReview % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iFarBookReview += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -1136,14 +1129,14 @@ try:
 			if iRemoveFarBookReview % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarBookReview += 1
 
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -1169,13 +1162,13 @@ try:
 			if iFarEncyclopediaarticle % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iFarEncyclopediaarticle += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -1193,14 +1186,14 @@ try:
 			if iRemoveFarEncyclopediaarticle % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarEncyclopediaarticle += 1
 
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -1226,13 +1219,13 @@ try:
 			if iFarShortstorie % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iFarShortstorie += 1
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -1250,14 +1243,14 @@ try:
 			if iRemoveFarShortstorie % 1000 == 0:
 				try:
 					sesTarget.flush()
-				except Exception as e:
+				except sqlalchemy.exc.IntegrityError as e:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarShortstorie += 1
 
 	try:
 		sesTarget.commit()
-	except Exception as e:
+	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
@@ -1272,5 +1265,6 @@ finally:
 	sesSource.close()
 
 	bioetlAppRun.cleanUp()
+#
 # End the processing of person addresses records
 ###############################################################################

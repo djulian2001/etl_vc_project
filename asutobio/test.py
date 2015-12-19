@@ -106,7 +106,12 @@ engineSource = create_engine(engSourceString, echo=True)
 conn = engineSource.connect()
 
 
-sql = "SELECT F.* FROM ASUDW.FAR_REFEREEDARTICLES F WHERE F.ABSTRACT IS NOT NULL"
+# sql = "SELECT F.* FROM ASUDW.FAR_REFEREEDARTICLES F WHERE F.ABSTRACT IS NOT NULL"
+sql = "SELECT j.emplid, j.deptid, j.supervisor_id, j.jobcode, j.action, j.action_reason FROM SYSADM.PS_JOB j WHERE j.emplid = 1000091891"
+sql = "SELECT j.* FROM SYSADM.PS_JOBCODE_TBL j WHERE j.jobcode = '191706'"
+sql = "SELECT j.jobcode, j.effdt, j.src_sys_id, j.eff_status, j.descr, j.descrshort  FROM SYSADM.PS_JOBCODE_TBL j WHERE j.jobcode = '191706'"
+sql = "SELECT j.setid, j.jobcode, j.effdt, j.src_sys_id, j.eff_status, j.descr, j.descrshort, j.setid_salary, j.sal_admin_plan, j.grade, j.manager_level, j.job_family, j.flsa_status FROM SYSADM.PS_JOBCODE_TBL j WHERE j.jobcode = '191706'"
+
 r = conn.execute(sql)
 
 for row in r:
@@ -134,9 +139,9 @@ for shema in insp.get_schema_names():
 	print shema
 
 
-for tbl in insp.get_table_names('asudw'):
+for tbl in insp.get_table_names('SYSADM'):
 	print tbl
-	for col in insp.get_columns(tbl, schema='asudw'):
+	for col in insp.get_columns(tbl, schema='SYSADM'):
 		print col
 
 # ## asudw

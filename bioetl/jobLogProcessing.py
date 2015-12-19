@@ -9,6 +9,9 @@ def getSourceJobsLog( sesSource ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the JobsLog table of the source database.
+
+		filtering the data on HR action codes:
+			'HIR', 'REH', 'RET', 'TER', 'XFR'
 	"""
 	srcFilters = AsuPsBioFilters( sesSource )
 
