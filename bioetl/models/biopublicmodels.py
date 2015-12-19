@@ -66,6 +66,8 @@ class People( BioPublic ):
     jobs = relationship( "Jobs", cascade="all, delete-orphan", backref="people" )
     subaffiliations = relationship( "PersonSubAffiliations", cascade="all, delete-orphan", backref="people" )
     far_evaluations = relationship( "FarEvaluations", cascade="all, delete-orphan", backref="people" )
+    jobslog = relationship( "JobsLog", cascade="all, delete-orphan", backref="people" )
+
 
 class PersonExternalLinks( BioPublic ):
     __tablename__ = 'person_externallinks'
@@ -232,7 +234,56 @@ class Departments( BioPublic ):
     budget_deptid = Column( String(15), nullable = False )
 
     jobs = relationship( "Jobs", cascade="all, delete-orphan", backref="departments" )
-    
+    jobslog = relationship( "JobsLog", cascade="all, delete-orphan", backref="departments" )
+
+
+class JobCodes( BioPublic ):
+    """
+        The job codes or at least a sub set of the record, we only migrate 1 record for each
+        jobcode instead of the multipules that exist in SYSADM.PS_DEPT_TBL.
+    """
+    __tablename__ = 'jobs'
+
+    # below are the data fields out of peopleSoft
+    jobcode = Column( String(7), nullable = False)
+    effdt = Column( DATE(), nullable = False)
+    setid = Column( String(7), nullable = False)
+    src_sys_id = Column( String(7), nullable = False)
+    eff_status = Column( String(1), nullable = False)
+    descr = Column( String(31), nullable = False)
+    descrshort = Column( String(15), nullable = False)
+    setid_salary = Column( String(7), nullable = False)
+    sal_admin_plan = Column( String(7), nullable = False)
+    grade = Column( String(7), nullable = False)
+    manager_level = Column( String(7), nullable = False)
+    job_family = Column( String(7), nullable = False)
+    flsa_status = Column( String(1), nullable = False)
+
+    jobslog = relationship( "JobsLog", cascade="all, delete-orphan", backref="jobs" )
+
+class JobsLog( BioPublic ):
+    __tablename__ = 'person_jobslog'
+
+    person_id = Column( Integer, ForeignKey( 'people.id' ) )
+    job_id = Column( Integer, ForeignKey( 'jobs.id' ) )
+    department_id = Column( Integer, ForeignKey( 'departments.id' ) )
+    # below are the data fields out of peopleSoft
+    emplid = Column( Integer, nullable=False )
+    deptid = Column( String(15), nullable = False )
+    jobcode = Column( String(7), nullable = False )
+    supervisor_id = Column( String(15), nullable = False)
+    main_appt_num_jpn = Column(Numeric(scale=0, asdecimal=False ), nullable = False )
+    effdt = Column( Date(), nullable = False )
+    action = Column( String(7), nullable = False )
+    action_reason = Column( String(7), nullable = False )
+    action_dt = Column( Date(), nullable = True )
+    job_entry_dt = Column( Date(), nullable = True )
+    dept_entry_dt = Column( Date(), nullable = True )
+    position_entry_dt = Column( Date(), nullable = True )
+    hire_dt = Column( Date(), nullable = True )
+    last_hire_dt = Column( Date(), nullable = True )
+    termination_dt = Column( Date(), nullable = True )
+
 
 class FarEvaluations( BioPublic ):
     """The far data..."""

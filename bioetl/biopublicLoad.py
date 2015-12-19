@@ -418,6 +418,122 @@ try:
 
 	###############################################################################
 	# 
+	#   File Import:  jobProcessing
+	# pull over all of the data warehouse job codes.
+
+	import jobProcessing
+
+	srcJobCodes = jobProcessing.getSourceJobCodes( sesSource )
+
+	iJob = 1
+	for srcJob in srcJobCodes:
+		try:
+			processedjob = jobProcessing.processJob( srcJob, sesTarget )
+		except TypeError as e:
+			pass
+		else:
+			sesTarget.add( processedjob )
+			if iJob % 1000 == 0:
+				try:
+					sesTarget.flush()
+				except Exception as e:
+					sesTarget.rollback()
+					raise e
+			iJob += 1
+	try:
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
+
+
+	tgtMissingJobCodes = jobProcessing.getTargetJobCodes( sesTarget )
+
+	iRemoveJob = 1
+	for tgtMissingJob in tgtMissingJobCodes:
+		try:
+			removeJob = jobProcessing.softDeleteJob( tgtMissingJob, srcJobCodes )
+		except TypeError as e:
+			pass
+		else:
+			sesTarget.add( removeJob )
+			if iRemoveJob % 1000 == 0:
+				try:
+					sesTarget.flush()
+				except Exception as e:
+					sesTarget.rollback()
+					raise e
+			iRemoveJob += 1
+
+	try:
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
+
+	#	End of jobProcessing
+	###############################################################################
+
+	###############################################################################
+	# 
+	#   File Import:  jobLogProcessing
+
+	import jobLogProcessing
+
+	srcJobsLog = jobLogProcessing.getSourceJobsLog( sesSource )
+
+	iJobLog = 1
+	for srcJobLog in srcJobsLog:
+		try:
+			jrocessedJobLog = jobLogProcessing.processJobLog( srcJobLog, sesTarget )
+		except TypeError as e:
+			pass
+		else:
+			sesTarget.add( jrocessedJobLog )
+			if iJobLog % 1000 == 0:
+				try:
+					sesTarget.flush()
+				except Exception as e:
+					sesTarget.rollback()
+					raise e
+			iJobLog += 1
+	try:
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
+
+
+	tgtMissingJobsLog = jobLogProcessing.getTargetJobsLog( sesTarget )
+
+	iRemoveJobLog = 1
+	for tgtMissingJobLog in tgtMissingJobsLog:
+		try:
+			removeJobLog = jobLogProcessing.softDeleteJobLog( tgtMissingJobLog, srcJobsLog )
+		except TypeError as e:
+			pass
+		else:
+			sesTarget.add( removeJobLog )
+			if iRemoveJobLog % 1000 == 0:
+				try:
+					sesTarget.flush()
+				except Exception as e:
+					sesTarget.rollback()
+					raise e
+			iRemoveJobLog += 1
+
+	try:
+		sesTarget.commit()
+	except Exception as e:
+		sesTarget.rollback()
+		raise e
+
+	#	End of jobLogProcessing
+	###############################################################################
+
+
+	###############################################################################
+	# 
 	#	File Import: personJobsProcessing.py
 	#	The person_jobs data, is a many to many requiring an updated_flag, need it
 	# 	this to be set to false prior to the data pull...  will dub our data otherwise.

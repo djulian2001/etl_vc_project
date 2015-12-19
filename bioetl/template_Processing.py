@@ -106,7 +106,8 @@ def process_Y_( src_Y_, sesTarget ):
 			(ret, ), = sesTarget.query(
 				exists().where(
 					_X_._yyy_ == src_Y_._yyy_ ).where(
-					_X_.source_hash == srcHash ) )
+					_X_.source_hash == srcHash ).where(
+					_X_.deleted_at.is_( None ) ) )
 
 			return not ret
 

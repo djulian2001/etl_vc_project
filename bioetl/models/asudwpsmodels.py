@@ -82,13 +82,13 @@ class AsuPsBioFilters():
 
         sub_jobs = (
             self.session.query(
-                AsuDwPsJobLog.emplid, 
-                AsuDwPsJobLog.deptid, 
-                AsuDwPsJobLog.effdt, 
-                AsuDwPsJobLog.action,
+                AsuDwPsJobsLog.emplid, 
+                AsuDwPsJobsLog.deptid, 
+                AsuDwPsJobsLog.effdt, 
+                AsuDwPsJobsLog.action,
                 func.row_number().over(
-                    partition_by=[AsuDwPsJobLog.emplid, AsuDwPsJobLog.main_appt_num_jpn],
-                    order_by=AsuDwPsJobLog.effdt.desc()
+                    partition_by=[AsuDwPsJobsLog.emplid, AsuDwPsJobsLog.main_appt_num_jpn],
+                    order_by=AsuDwPsJobsLog.effdt.desc()
                     ).label('rn')
                 )
             ).subquery()
@@ -232,12 +232,14 @@ class AsuDwPsSubAffiliations( AsuDwPs ):
     __table_args__ = { "schema": schema }
 
 
-class AsuDwPsJobLog( AsuDwPs ):
+class AsuDwPsJobsLog( AsuDwPs ):
     __tablename__ = 'PS_JOB'
     schema = 'SYSADM'
+
     emplid = Column( Integer, nullable=False )
     deptid = Column( String(15), nullable = False )
     jobcode = Column( String(7), nullable = False )
+    supervisor_id = Column( String(15), nullable = False)
     main_appt_num_jpn = Column(Numeric(scale=0, asdecimal=False ), nullable = False )
     effdt = Column( Date(), nullable = False )
     action = Column( String(7), nullable = False )
@@ -252,6 +254,27 @@ class AsuDwPsJobLog( AsuDwPs ):
 
     __mapper_args__ = { "primary_key":[emplid,deptid,jobcode,effdt,action,action_reason] }
     __table_args__ = { "schema": schema }
+
+class AsuDwPsJobCodes( AsuDwPs ):
+    __tablename__ = 'PS_JOBCODE_TBL'
+    schema = 'SYSADM'
+
+    setid = Column( String(7), nullable = False)
+    jobcode = Column( String(7), nullable = False)
+    effdt = Column( DATE(), nullable = False)
+    src_sys_id = Column( String(7), nullable = False)
+    eff_status = Column( String(1), nullable = False)
+    descr = Column( String(31), nullable = False)
+    descrshort = Column( String(15), nullable = False)
+    setid_salary = Column( String(7), nullable = False)
+    sal_admin_plan = Column( String(7), nullable = False)
+    grade = Column( String(7), nullable = False)
+    manager_level = Column( String(7), nullable = False)
+    job_family = Column( String(7), nullable = False)
+    flsa_status = Column( String(1), nullable = False)
+
+    __mapper_args__ = { "primary_key" : [jobcode,effdt] }
+    __table_args__ = { "schema" : schema }
 
 
 class AsuDwPsDepartments( AsuDwPs ):
