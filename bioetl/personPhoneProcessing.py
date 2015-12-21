@@ -15,7 +15,8 @@ def getSourcePhones( sesSource ):
 	return sesSource.query( 
 		AsuDwPsPhones ).join(
 			srcEmplidsSubQry, AsuDwPsPhones.emplid==srcEmplidsSubQry.c.emplid).order_by(
-				AsuDwPsPhones.emplid).all()
+				AsuDwPsPhones.emplid ).filter(
+				AsuDwPsPhones.type.in_( ('WORK','CELL') ).all()
 
 
 def processPhone( srcPersonPhone, sesTarget ):
@@ -48,7 +49,7 @@ def processPhone( srcPersonPhone, sesTarget ):
 			exists().where( 
 				Phones.emplid == srcPersonPhone.emplid ).where(
 				Phones.phone_type == srcPersonPhone.phone_type ).where(
-				Phones.phone == srcPersonPhone.phone ) )
+				Phones.updated_flag == False ) )
 		
 		return ret
 

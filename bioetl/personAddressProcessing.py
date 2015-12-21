@@ -57,7 +57,8 @@ def processAddress( srcPersonAddress, sesTarget ):
 		(ret, ), = sesTarget.query(
 			exists().where(
 				Addresses.emplid == srcPersonAddress.emplid ).where(
-				Addresses.address_type == srcPersonAddress.address_type ) )
+				Addresses.address_type == srcPersonAddress.address_type ).where(
+				Addresses.updated_flag == False ) )
 
 		return ret
 
@@ -74,7 +75,8 @@ def processAddress( srcPersonAddress, sesTarget ):
 					Addresses.emplid == srcPersonAddress.emplid ).where( 
 					Addresses.address_type == srcPersonAddress.address_type ).where(
 					Addresses.source_hash == srcHash ).where(
-					Addresses.deleted_at.is_( None ) ) )
+					Addresses.deleted_at.is_( None ) ).where(
+					Addresses.updated_flag == False ) )
 
 			return not ret
 

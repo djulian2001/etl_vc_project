@@ -77,7 +77,7 @@ def processPersonJob( srcJob, sesTarget ):
 					Jobs.emplid == srcJob.emplid ).filter(
 					Jobs.title == srcJob.title ).filter(
 					Jobs.deptid == srcJob.deptid ).filter(
-					Jobs.updated_flag == False ).first()
+					Jobs.updated_flag == False ).all()
 
 		updateJobs = jobUpdates()
 
