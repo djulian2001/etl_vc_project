@@ -1,23 +1,16 @@
 import datetime
-from sqlalchemy import exists, literal
 
 from sharedProcesses import hashThisList
 from models.biopublicmodels import PersonWebProfile, People
 
 def processPersonWebProfile( srcPersonWebProfile, sesTarget ):
 	"""
-		Takes in a source PersonWebProfile object from biopsmodels (mysql.bio_ps.PersonWebProfile)
+		Takes in a source PersonWebProfile object from the asudw as a person record 
 		and determines if the object needs to be updated, inserted in the target
-		database (mysql.bio_public.PersonWebProfile), or that nothing needs doing.
-	
-		Selecting Booleans from the databases.  Using conjunctions to make the exists()
-		a boolean return from the query() method.  Bit more syntax but a sqlalchemy object
-		returned will not be truthy/falsey.
-		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
+		database (mysql.bio_public.PersonWebProfile), or that nothing needs doing, but each
+		source record will have an action in the target database via the
+		updated_flag.
 	"""
-
-	true, false = literal(True), literal(False)
-
 	personWebProfileList = [
 		srcPersonWebProfile.emplid,
 		srcPersonWebProfile.bio,
@@ -38,64 +31,66 @@ def processPersonWebProfile( srcPersonWebProfile, sesTarget ):
 	if any( personWebProfileList[1:] ):
 		srcHash = hashThisList( personWebProfileList )
 
-		def personWebProfileExists():
-			"""
-				determine the personWebProfile exists in the target database.
-				@True: The personWebProfile exists in the database
-				@False: The personWebProfile does not exist in the database
-			"""
-			(ret, ), = sesTarget.query(
-				exists().where(
-					PersonWebProfile.emplid == srcPersonWebProfile.emplid ) )
+
+		def getTargetRecords():
+			"""Returns a record set from the target database."""
+
+			ret = sesTarget.query(
+				PersonWebProfile ).filter(
+					PersonWebProfile.emplid == srcPersonWebProfile.emplid )
 
 			return ret
 
-		if personWebProfileExists():
+		tgtRecords = getTargetRecords()
 
-			def personWebProfileUpdateRequired():
-				"""
-					Determine if the personWebProfile that exists requires and update.
-					@True: returned if source_hash is unchanged
-					@False: returned if source_hash is different
-				"""	
-				(ret, ), = sesTarget.query(
-					exists().where(
-						PersonWebProfile.emplid == srcPersonWebProfile.emplid ).where(
-						PersonWebProfile.source_hash == srcHash ).where(	
-						PersonWebProfile.deleted_at.is_( None ) ) )
+		if tgtRecords:
+			""" 
+				If true then an update is required, else an insert is required
+				@True:
+					Because there might be many recornds returned from the db, a loop is required.
+					Trying not to update the data if it is not required, but the source data will
+					require an action.
+					@Else Block (NO BREAK REACHED):
+						If the condition is not reached in the for block the else block 
+						will insure	that a record is updated.  
+						It might not update the record that	was initially created previously,
+						but all source data has to be represented in the target database.
+				@False:
+					insert the new data from the source database.
+			"""
+			for tgtRecord in tgtRecords:
 
-				return not ret
+				if tgtRecord.source_hash == srcHash:
+					tgtRecord.updated_flag = True
+					tgtRecord.deleted_at = None
+					return tgtRecord
+					break
 
-
-			if personWebProfileUpdateRequired():
-				# retrive the tables object to update.
-				updatePersonWebProfile = sesTarget.query(
-					PersonWebProfile ).filter(
-						PersonWebProfile.emplid == srcPersonWebProfile.emplid ).one()
+			else: # NO BREAK REACHED
+				tgtRecord = tgtRecords[0]
 
 				# repeat the following pattern for all mapped attributes:
-				updatePersonWebProfile.source_hash = srcHash
-				updatePersonWebProfile.emplid = srcPersonWebProfile.emplid
-				updatePersonWebProfile.bio
-				updatePersonWebProfile.research_interests
-				updatePersonWebProfile.cv
-				updatePersonWebProfile.website
-				updatePersonWebProfile.teaching_website
-				updatePersonWebProfile.grad_faculties
-				updatePersonWebProfile.professional_associations
-				updatePersonWebProfile.work_history
-				updatePersonWebProfile.education
-				updatePersonWebProfile.research_group
-				updatePersonWebProfile.research_website
-				updatePersonWebProfile.honors_awards
-				updatePersonWebProfile.editorships
-				updatePersonWebProfile.presentations
-				updatePersonWebProfile.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-				updatePersonWebProfile.deleted_at = None
+				tgtRecord.source_hash = srcHash
+				tgtRecord.updated_flag = True
+				tgtRecord.emplid = srcPersonWebProfile.emplid
+				tgtRecord.bio = srcPersonWebProfile.bio
+				tgtRecord.research_interests = srcPersonWebProfile.research_interests
+				tgtRecord.cv = srcPersonWebProfile.cv
+				tgtRecord.website = srcPersonWebProfile.website
+				tgtRecord.teaching_website = srcPersonWebProfile.teaching_website
+				tgtRecord.grad_faculties = srcPersonWebProfile.grad_faculties
+				tgtRecord.professional_associations = srcPersonWebProfile.professional_associations
+				tgtRecord.work_history = srcPersonWebProfile.work_history
+				tgtRecord.education = srcPersonWebProfile.education
+				tgtRecord.research_group = srcPersonWebProfile.research_group
+				tgtRecord.research_website = srcPersonWebProfile.research_website
+				tgtRecord.honors_awards = srcPersonWebProfile.honors_awards
+				tgtRecord.editorships = srcPersonWebProfile.editorships
+				tgtRecord.presentations = srcPersonWebProfile.presentations
+				tgtRecord.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+				tgtRecord.deleted_at = None
 
-				return updatePersonWebProfile
-			else:
-				raise TypeError('source personWebProfile already exists and requires no updates!')
+				return tgtRecord
 				
 		else:
 			
@@ -106,6 +101,7 @@ def processPersonWebProfile( srcPersonWebProfile, sesTarget ):
 			insertPersonWebProfile = PersonWebProfile(
 				person_id = srcGetPersonId.id,
 				source_hash = srcHash,
+				updated_flag = True,
 				emplid = srcPersonWebProfile.emplid,
 				bio = srcPersonWebProfile.bio,
 				research_interests = srcPersonWebProfile.research_interests,

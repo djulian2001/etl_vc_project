@@ -45,7 +45,6 @@ class _X_( BioPublic ):
 
 
 import datetime
-from sqlalchemy import exists, literal
 
 from sharedProcesses import hashThisList
 from models.biopublicmodels import _X_
@@ -77,60 +76,59 @@ def process_Y_( src_Y_, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-	true, false = literal(True), literal(False)
-
 	_y_List = []
 
 	srcHash = hashThisList( _y_List )
 
-	def _y_Exists():
-		"""
-			determine the _y_ exists in the target database.
-			@True: The _y_ exists in the database
-			@False: The _y_ does not exist in the database
-		"""
-		(ret, ), = sesTarget.query(
-			exists().where(
+	def getTargetRecords():
+		"""Returns a record set from the target database."""
+		ret = sesTarget.query(
+			_X_ ).filter(
 				_X_._yyy_ == src_Y_._yyy_ ) )
 
 		return ret
 
-	if _y_Exists():
+	tgtRecords = getTargetRecords()
 
-		def _y_UpdateRequired():
-			"""
-				Determine if the _y_ that exists requires and update.
-				@True: returned if source_hash is unchanged
-				@False: returned if source_hash is different
-			"""	
-			(ret, ), = sesTarget.query(
-				exists().where(
-					_X_._yyy_ == src_Y_._yyy_ ).where(
-					_X_.source_hash == srcHash ).where(
-					_X_.deleted_at.is_( None ) ) )
+	if tgtRecords:
+		""" 
+			If true then an update is required, else an insert is required
+			@True:
+				Because there might be many recornds returned from the db, a loop is required.
+				Trying not to update the data if it is not required, but the source data will
+				require an action.
+				@Else Block (NO BREAK REACHED):
+					If the condition is not reached in the for block the else block 
+					will insure	that a record is updated.  
+					It might not update the record that	was initially created previously,
+					but all source data has to be represented in the target database.
+			@False:
+				insert the new data from the source database.
+		"""
+		for tgtRecord in tgtRecords:
 
-			return not ret
+			if tgtRecord.source_hash == srcHash:
+				tgtRecord.updated_flag = True
+				tgtRecord.deleted_at = None
+				return tgtRecord
+				break
 
-		if _y_UpdateRequired():
-			# retrive the tables object to update.
-			update_Y_ = sesTarget.query(
-				_X_ ).filter(
-					_X_._yyy_ == src_Y_._yyy_ ).one()
+		else: # NO BREAK REACHED
+			tgtRecord = tgtRecords[0]
 
-			# repeat the following pattern for all mapped attributes:
-			update_Y_.source_hash = srcHash
-			update_Y_._yyy_ = src_Y_._yyy_
+			tgtRecord.updated_flag = True
+			tgtRecord.source_hash = srcHash
+			tgtRecord.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			tgtRecord.deleted_at = None
+			# list of the fields that will be updated...
 
-			update_Y_.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-			update_Y_.deleted_at = None
-
-			return update_Y_
-		else:
-			raise TypeError('source _y_ already exists and requires no updates!')
-
+			# ^ 
+			return tgtRecord
+			
 	else:
 		insert_Y_ = _X_(
 			source_hash = srcHash,
+			updated_flag = True,
 			_yyy_ = src_Y_._yyy_,
 			...
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )

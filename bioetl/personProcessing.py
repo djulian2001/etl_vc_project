@@ -1,5 +1,4 @@
 import datetime
-from sqlalchemy import exists, literal
 
 from sharedProcesses import hashThisList
 from models.biopublicmodels import People
@@ -16,22 +15,17 @@ def getSourcePeople( sesSource ):
 
 	return sesSource.query( 
 		AsuDwPsPerson ).join(
-			srcEmplidsSubQry, AsuDwPsPerson.emplid==srcEmplidsSubQry.c.emplid).order_by(
-				AsuDwPsPerson.emplid).all()
+			srcEmplidsSubQry, AsuDwPsPerson.emplid==srcEmplidsSubQry.c.emplid ).order_by(
+				AsuDwPsPerson.emplid ).all()
 	
 def processPerson( srcPerson, sesTarget ):
 	"""
-		Takes in a source person object from biopsmodels (mysql.bio_ps.people)
+		Takes in a source person object from the asudw as a AsuDwPsPerson object
 		and determines if the object needs to be updated, inserted in the target
-		database (mysql.bio_public.people), or that nothing needs doing.
-
-		Selecting Booleans from the databases.  Using conjunctions to make the exists()
-		a boolean return from the query() method.  Bit more syntax but a sqlalchemy object
-		returned will not be truthy/falsey.
-		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
+		database (mysql.bio_public.people), or that nothing needs doing, but each
+		source record will have an action in the target database via the
+		updated_flag.
 	"""
-
-	true, false = literal(True), literal(False)
 
 	personList = [
 		srcPerson.emplid,
@@ -51,66 +45,73 @@ def processPerson( srcPerson, sesTarget ):
 
 	srcHash = hashThisList( personList )
 
-  	def personExists():
+  	def getTargetRecords():
+		"""Returns a record set from the target database."""
 		"""
 			Determine the person exists in the target database.
 			@True: The person exists in the database
 			@False: The person does not exist in the database
 
 		"""
-		(ret, ), = sesTarget.query(
-			exists().where(
-				People.emplid == srcPerson.emplid ) )
+		ret = sesTarget.query(
+			People ).filter(
+				People.emplid == srcPerson.emplid )
 		
 		return ret
 
+	tgtRecords = getTargetRecords()
 
-	if personExists():
-		def personUpdateRequired():
-			"""
-				Determine if the person that exists requires an update.
-				@True: returned from this function if hash is unchangeed
-				@False: returned if hash is changed, indicating a need to updated record.
-			"""
-			(ret, ), = sesTarget.query(
-				exists().where(
-					People.emplid == srcPerson.emplid ).where(
-					People.source_hash == srcHash ).where(
-					People.deleted_at.is_( None ) )	)
+	if tgtRecords:
+		""" 
+			If true then an update is required, else an insert is required
+			@True:
+				Because there might be many recornds returned from the db, a loop is required.
+				Trying not to update the data if it is not required, but the source data will
+				require an action.
+				@Else Block (NO BREAK REACHED):
+					If the condition is not reached in the for block the else block 
+					will insure	that a record is updated.  
+					It might not update the record that	was initially created previously,
+					but all source data has to be represented in the target database.
+			@False:
+				insert the new data from the source database.
+		"""			
+		for tgtRecord in tgtRecords:
 
-			return not ret
-		
-		if personUpdateRequired():
-			# update the database with the source data and return the target object with changes.
-			updatePerson = sesTarget.query( 
-				People ).filter(
-					People.emplid == srcPerson.emplid ).one()
+			if tgtRecord.source_hash == srcHash:
+				tgtRecord.updated_flag = True
+				tgtRecord.deleted_at = None
+				return tgtRecord
+				break
 
-			updatePerson.source_hash = srcHash
-			updatePerson.emplid = srcPerson.emplid
-			updatePerson.asurite_id = srcPerson.asurite_id
-			updatePerson.asu_id = srcPerson.asu_id
-			updatePerson.ferpa = srcPerson.ferpa
-			updatePerson.last_name = srcPerson.last_name
-			updatePerson.first_name = srcPerson.first_name
-			updatePerson.middle_name = srcPerson.middle_name
-			updatePerson.display_name = srcPerson.display_name
-			updatePerson.preferred_first_name = srcPerson.preferred_first_name
-			updatePerson.affiliations = srcPerson.affiliations
-			updatePerson.email_address = srcPerson.email_address
-			updatePerson.eid = srcPerson.eid
-			updatePerson.birthdate = srcPerson.birthdate
-			updatePerson.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-			updatePerson.deleted_at = None
+		else: # NO BREAK REACHED
+			tgtRecord = tgtRecords[0]
 
-			return updatePerson 
-		else:
-			raise TypeError('source person already exists and requires no updates!')
+			tgtRecord.source_hash = srcHash
+			tgtRecord.updated_flag = True
+			tgtRecord.emplid = srcPerson.emplid
+			tgtRecord.asurite_id = srcPerson.asurite_id
+			tgtRecord.asu_id = srcPerson.asu_id
+			tgtRecord.ferpa = srcPerson.ferpa
+			tgtRecord.last_name = srcPerson.last_name
+			tgtRecord.first_name = srcPerson.first_name
+			tgtRecord.middle_name = srcPerson.middle_name
+			tgtRecord.display_name = srcPerson.display_name
+			tgtRecord.preferred_first_name = srcPerson.preferred_first_name
+			tgtRecord.affiliations = srcPerson.affiliations
+			tgtRecord.email_address = srcPerson.email_address
+			tgtRecord.eid = srcPerson.eid
+			tgtRecord.birthdate = srcPerson.birthdate
+			tgtRecord.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			tgtRecord.deleted_at = None
 
+			return tgtRecord 
+	
 	else:
 		# person wasn't in the target databases, add them now
 		insertPerson = People(
 			source_hash = srcHash,
+			updated_flag = True,
 			emplid = srcPerson.emplid,
 			asurite_id = srcPerson.asurite_id,
 			asu_id = srcPerson.asu_id,

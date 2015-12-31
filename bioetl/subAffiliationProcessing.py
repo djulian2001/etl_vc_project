@@ -1,12 +1,9 @@
 import datetime
-from sqlalchemy import exists, literal
 
 from sharedProcesses import hashThisList
 
 from models.biopublicmodels import SubAffiliations
 from models.asudwpsmodels import BiodesignSubAffiliations
-
-#template mapping... plural SubAffiliations    singularCaped SubAffiliation   singularLower subAffiliation 
 
 def getSourceSubAffiliations( ):
 	"""
@@ -29,62 +26,62 @@ def processSubAffiliation( srcSubAffiliation, sesTarget ):
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
-	true, false = literal(True), literal(False)
-
 	# This change here drops a whole database... lets hope..
 	srcHash = hashThisList( srcSubAffiliation.values() )
 
-	def subAffiliationExists():
-		"""
-			determine the subAffiliation exists in the target database.
-			@True: The subAffiliation exists in the database
-			@False: The subAffiliation does not exist in the database
-		"""
-		(ret, ), = sesTarget.query(
-			exists().where(
-				SubAffiliations.code == srcSubAffiliation["code"] ) )
+	def getTargetRecords():
+		"""Returns a record set from the target database"""
+		ret = sesTarget.query(
+			SubAffiliations ).filter(
+				SubAffiliations.code == srcSubAffiliation["code"] ).filter(
+				SubAffiliations.updated_flag == False ).all()
 
 		return ret
 
-	if subAffiliationExists():
+	tgtRecords = getTargetRecords()
 
-		def subAffiliationUpdateRequired():
-			"""
-				Determine if the subAffiliation that exists requires and update.
-				@True: returned if source_hash is unchanged
-				@False: returned if source_hash is different
-			"""	
-			(ret, ), = sesTarget.query(
-				exists().where(
-					SubAffiliations.code == srcSubAffiliation["code"] ).where(
-					SubAffiliations.source_hash == srcHash ).where(
-					SubAffiliations.deleted_at.is_( None ) ) )
+	if tgtRecords:
+		""" 
+			If true then an update is required, else an insert is required
+			@True:
+				Because there might be many recornds returned from the db, a loop is required.
+				Trying not to update the data if it is not required, but the source data will
+				require an action.
+				@Else Block (NO BREAK REACHED):
+					If the condition is not reached in the for block the else block 
+					will insure	that a record is updated.  
+					It might not update the record that	was initially created previously,
+					but all source data has to be represented in the target database.
+			@False:
+				insert the new data from the source database.
+		"""
+		for tgtRecord in tgtRecords:
 
-			return not ret
+			if tgtRecord.source_hash == srcHash:
+				tgtRecord.updated_flag = True
+				tgtRecord.deleted_at = None
+				return tgtRecord
+				break
 
-		if subAffiliationUpdateRequired():
-			# retrive the tables object to update.
-			updateSubAffiliation = sesTarget.query(
-				SubAffiliations ).filter(
-					SubAffiliations.code == srcSubAffiliation["code"] ).one()
+		else: # NO BREAK REACHED
+			tgtRecord = tgtRecords[0]
 
-			# repeat the following pattern for all mapped attributes:
-			updateSubAffiliation.source_hash = srcHash
-			updateSubAffiliation.code = srcSubAffiliation["code"]
-			updateSubAffiliation.title = srcSubAffiliation["title"]
-			updateSubAffiliation.description = srcSubAffiliation["description"]
-			updateSubAffiliation.proximity_scope = srcSubAffiliation["proximity_scope"]
-			updateSubAffiliation.service_access = srcSubAffiliation["service_access"]
-			updateSubAffiliation.distribution_lists = srcSubAffiliation["distribution_lists"]
-			updateSubAffiliation.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-			updateSubAffiliation.deleted_at = None
+			tgtRecord.updated_flag = True
+			tgtRecord.source_hash = srcHash
+			# list of the fields that will be updated...
+			tgtRecord.code = srcSubAffiliation["code"]
+			tgtRecord.title = srcSubAffiliation["title"]
+			tgtRecord.description = srcSubAffiliation["description"]
+			tgtRecord.proximity_scope = srcSubAffiliation["proximity_scope"]
+			tgtRecord.service_access = srcSubAffiliation["service_access"]
+			tgtRecord.distribution_lists = srcSubAffiliation["distribution_lists"]
+			tgtRecord.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			tgtRecord.deleted_at = None
 
-			return updateSubAffiliation
-		else:
-			raise TypeError('source subAffiliation already exists and requires no updates!')
-
+			return tgtRecord
 	else:
 		insertSubAffiliation = SubAffiliations(
+			updated_flag = True,
 			source_hash = srcHash,
 			code = srcSubAffiliation["code"],
 			title = srcSubAffiliation["title"],
@@ -101,7 +98,6 @@ def getTargetSubAffiliations( sesTarget ):
 		Returns a set of SubAffiliations objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		SubAffiliations ).filter(
 			SubAffiliations.deleted_at.is_( None ) ).all()

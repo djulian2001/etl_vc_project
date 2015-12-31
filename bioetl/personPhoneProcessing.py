@@ -1,5 +1,4 @@
 import datetime, re
-from sqlalchemy import exists, literal
 
 from sharedProcesses import hashThisList
 from models.biopublicmodels import People, Phones
@@ -14,23 +13,32 @@ def getSourcePhones( sesSource ):
 
 	return sesSource.query( 
 		AsuDwPsPhones ).join(
-			srcEmplidsSubQry, AsuDwPsPhones.emplid==srcEmplidsSubQry.c.emplid).order_by(
-				AsuDwPsPhones.emplid ).filter(
-				AsuDwPsPhones.type.in_( ('WORK','CELL') ).all()
+			srcEmplidsSubQry, AsuDwPsPhones.emplid==srcEmplidsSubQry.c.emplid ).filter(
+				AsuDwPsPhones.phone_type.in_( ('WORK','CELL') ) ).all()
 
 
 def processPhone( srcPersonPhone, sesTarget ):
 	"""
-		Takes in source phone object and determines what shall be done with the object.
-		Returns a Phone object to be either ignored, updated, or inserted into the target database
-		
-		Selecting Booleans from the databases.  Using conjunctions to make the exists()
-		a boolean return from the query() method.  Bit more syntax but a sqlalchemy object
-		returned will not be truthy/falsey.
-		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
-	"""
-	true, false = literal(True), literal(False)
-	
+		Takes in a source AsuDwPsPhone object from the asudw database
+		and determines if the object needs to be updated, inserted in the target
+		database (mysql.bio_public.person_phones), or that nothing needs doing, but each
+		source record will have an action in the target database via the
+		updated_flag.
+	"""	
+	def cleanPhoneNumber():
+		""""this will clean up the phone numbers."""
+		return re.sub( "[^0-9\+]", "", srcPersonPhone.phone )
+
+	def getTargetRecords():
+		"""Returns a record set from the target database."""
+		ret = sesTarget.query(
+			Phones ).filter( 
+				Phones.emplid == srcPersonPhone.emplid ).filter(
+				Phones.phone_type == srcPersonPhone.phone_type ).filter(
+				Phones.updated_flag == False )
+
+		return ret
+
 	recordToList = [
 		srcPersonPhone.emplid,
 		srcPersonPhone.phone_type,
@@ -39,61 +47,42 @@ def processPhone( srcPersonPhone, sesTarget ):
 	
 	srcHash = hashThisList( recordToList )
 
-	def personPhoneExists():
+	tgtRecords = getTargetRecords()
+
+	if tgtRecords:
+		""" 
+			If true then an update is required, else an insert is required
+			@True:
+				Because there might be many recornds returned from the db, a loop is required.
+				Trying not to update the data if it is not required, but the source data will
+				require an action.
+				@Else Block (NO BREAK REACHED):
+					If the condition is not reached in the for block the else block 
+					will insure	that a record is updated.  
+					It might not update the record that	was initially created previously,
+					but all source data has to be represented in the target database.
+			@False:
+				insert the new data from the source database.
 		"""
-			determine the person exists in the target database.
-			@True: There is a phone record for emplid and type already in the target database
-			@False: The record does not exist and requires insert.
-		"""
-		(ret, ), = sesTarget.query(
-			exists().where( 
-				Phones.emplid == srcPersonPhone.emplid ).where(
-				Phones.phone_type == srcPersonPhone.phone_type ).where(
-				Phones.updated_flag == False ) )
-		
-		return ret
+		for tgtRecord in tgtRecords:
 
-	def cleanPhoneNumber():
-		""""this will clean up the phone numbers."""
-		return re.sub( "[^0-9\+]", "", srcPersonPhone.phone )
+			if tgtRecord.source_hash == srcHash:
+				tgtRecord.updated_flag = True
+				tgtRecord.deleted_at = None
+				return tgtRecord
+				break
 
-	if personPhoneExists():
-		
-		def phoneRequiresUpdate():
-			"""
-				determine if the person that exists requires an update.
-				@True:  The source record object requires update.
-				@False:  The record doesn't require an update
-			"""
-			(ret, ), = sesTarget.query(
-				exists().where(
-					Phones.emplid == srcPersonPhone.emplid ).where(
-					Phones.phone_type == srcPersonPhone.phone_type ).where(
-					Phones.source_hash == srcHash ).where(
-					Phones.updated_flag == False ).where(	
-					Phones.deleted_at.is_( None ) )	)
+		else: # NO BREAK REACHED
+			tgtRecord = tgtRecords[0]
 
-			return not ret
+			tgtRecord.source_hash = srcHash
+			tgtRecord.updated_flag = True
+			tgtRecord.phone = cleanPhoneNumber()
+			tgtRecord.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			tgtRecord.deleted_at = None
 
-		if phoneRequiresUpdate():
+			return tgtRecord
 
-			updatePersonPhone = sesTarget.query(
-				Phones ).filter( 
-					Phones.emplid == srcPersonPhone.emplid ).filter(
-					Phones.phone_type == srcPersonPhone.phone_type ).filter(
-					Phones.source_hash != srcHash ).filter(
-					Phones.updated_flag == False ).first()
-
-			if updatePersonPhone:
-				updatePersonPhone.source_hash = srcHash
-				updatePersonPhone.updated_flag = True
-				updatePersonPhone.phone = cleanPhoneNumber()
-				updatePersonPhone.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-				updatePersonPhone.deleted_at = None
-
-				return updatePersonPhone
-		else:
-			raise TypeError('source person phone record already exists and requires no updates!')
 	else:
 		srcGetPersonId = sesTarget.query(
 			People.id ).filter(
@@ -117,11 +106,6 @@ def getTargetPhones( sesTarget ):
 		Phones ).filter( 
 			Phones.updated_flag == False ).filter(
 			Phones.deleted_at.is_( None ) ).all()
-
-
-		# .join(
-		# People ).filter(
-		# 	People.deleted_at.isnot( None ) ).all()
 
 def cleanupSourcePhones( tgtRecord, srcRecords ):
 	"""

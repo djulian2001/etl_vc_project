@@ -101,7 +101,7 @@ def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
 					FarNonrefereedarticles.nonrefereedarticleid == srcFarNonrefereedarticle.nonrefereedarticleid ).one()
 
 			# repeat the following pattern for all mapped attributes:
-			updateFarNonrefereedarticle.source_hash = srcFarNonrefereedarticle.source_hash
+			updateFarNonrefereedarticle.source_hash = srcHash
 			updateFarNonrefereedarticle.nonrefereedarticleid = srcFarNonrefereedarticle.nonrefereedarticleid
 			updateFarNonrefereedarticle.src_sys_id = srcFarNonrefereedarticle.src_sys_id
 			updateFarNonrefereedarticle.evaluationid = srcFarNonrefereedarticle.evaluationid
@@ -140,7 +140,7 @@ def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
 				FarEvaluations.evaluationid == srcFarNonrefereedarticle.evaluationid ).one()
 
 		insertFarNonrefereedarticle = FarNonrefereedarticles(
-			source_hash = srcFarNonrefereedarticle.source_hash,
+			source_hash = srcHash,
 			nonrefereedarticleid = srcFarNonrefereedarticle.nonrefereedarticleid,
 			far_evaluation_id = srcGetFarEvaluationId.id,
 			src_sys_id = srcFarNonrefereedarticle.src_sys_id,

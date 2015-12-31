@@ -99,7 +99,7 @@ def processFarBookReview( srcFarBookReview, sesTarget ):
 					FarBookReviews.bookreviewid == srcFarBookReview.bookreviewid ).one()
 
 			# repeat the following pattern for all mapped attributes:
-			updateFarBookReview.source_hash = srcFarBookReview.source_hash
+			updateFarBookReview.source_hash = srcHash
 			updateFarBookReview.bookreviewid = srcFarBookReview.bookreviewid
 			updateFarBookReview.src_sys_id = srcFarBookReview.src_sys_id
 			updateFarBookReview.evaluationid = srcFarBookReview.evaluationid
@@ -135,7 +135,7 @@ def processFarBookReview( srcFarBookReview, sesTarget ):
 				FarEvaluations.evaluationid == srcFarBookReview.evaluationid ).one()
 
 		insertFarBookReview = FarBookReviews(
-			source_hash = srcFarBookReview.source_hash,
+			source_hash = srcHash,
 			far_evaluation_id = srcGetFarEvaluationId.id,
 			bookreviewid = srcFarBookReview.bookreviewid,
 			src_sys_id = srcFarBookReview.src_sys_id,

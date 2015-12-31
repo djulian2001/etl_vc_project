@@ -27,6 +27,8 @@ class BioCommonBase(object):
         The below table classes would have it passed in, the same as BioPublic. 
         class TableObj( TimestampThis, BioPublic ):  etc...
     """
+    updated_flag = Column( Boolean(), default=False, nullable=False )
+    """The data within the target table has to be managed during the processing."""
 
 
 BioPublic = declarative_base( cls=BioCommonBase )
@@ -112,7 +114,7 @@ class Addresses( BioPublic ):
     # Define A relationship...    
     person_id = Column( Integer, ForeignKey( 'people.id' ) )
     # below are the data fields out of peopleSoft
-    updated_flag = Column( Boolean(), default=False, nullable=False )
+    # updated_flag = Column( Boolean(), default=False, nullable=False )
     emplid = Column( Integer, nullable=False )
     address_type = Column( String(7), nullable=False )
     address1 = Column( String(63), nullable=False )
@@ -133,7 +135,7 @@ class Phones( BioPublic ):
     __tablename__ = 'person_phones'
 
     person_id = Column( Integer, ForeignKey( 'people.id' ) )
-    updated_flag = Column( Boolean(), default=False, nullable=False )
+    # updated_flag = Column( Boolean(), default=False, nullable=False )
     # below are the data fields out of peopleSoft
     emplid = Column( Integer, nullable=False )
     phone_type = Column( String(7), nullable=False )
@@ -151,7 +153,7 @@ class Jobs( BioPublic ):
 
     person_id = Column( Integer, ForeignKey( 'people.id' ) )
     department_id = Column( Integer, ForeignKey( 'departments.id' ) )
-    updated_flag = Column( Boolean(), default=False, nullable=False )
+    # updated_flag = Column( Boolean(), default=False, nullable=False )
     # below are the data fields out of peopleSoft
     emplid = Column( Integer, nullable=False )
     empl_rcd = Column( Numeric( asdecimal=False ), nullable=False )
@@ -200,7 +202,7 @@ class PersonSubAffiliations( BioPublic ):
     department_id = Column( Integer, ForeignKey( 'departments.id' ), nullable=False )
     subaffiliation_id = Column ( Integer, ForeignKey( 'subaffiliations.id', onupdate="CASCADE", ondelete="SET NULL" ), nullable=True )
     
-    updated_flag = Column( Boolean(), default=False, nullable=False )
+    # updated_flag = Column( Boolean(), default=False, nullable=False )
     # below are the data fields out of peopleSoft
     emplid = Column( Integer, nullable=False )
     deptid = Column( String(15), nullable=False )

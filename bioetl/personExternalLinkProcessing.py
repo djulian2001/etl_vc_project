@@ -1,5 +1,4 @@
 import datetime
-from sqlalchemy import exists, literal
 
 from sharedProcesses import hashThisList
 from models.biopublicmodels import PersonExternalLinks, People
@@ -9,76 +8,73 @@ from models.biopublicmodels import PersonExternalLinks, People
 # change value to the singular
 def processPersonExternalLink( srcPersonExternalLink, sesTarget ):
 	"""
-		Takes in a source PersonExternalLink object from biopsmodels (mysql.bio_ps.PersonExternalLinks)
+		Takes in a source PersonExternalLink object from the asudw as a person record
 		and determines if the object needs to be updated, inserted in the target
-		database (mysql.bio_public.PersonExternalLinks), or that nothing needs doing.
-	
-		Selecting Booleans from the databases.  Using conjunctions to make the exists()
-		a boolean return from the query() method.  Bit more syntax but a sqlalchemy object
-		returned will not be truthy/falsey.
-		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
+		database (mysql.bio_public.PersonExternalLinks), or that nothing needs doing, but each
+		source record will have an action in the target database via the updated_flag.
 	"""
 
-	true, false = literal(True), literal(False)
-
 	recordToList = [
-		srcPerson.emplid,
-		srcPerson.facebook,
-		srcPerson.twitter,
-		srcPerson.google_plus,
-		srcPerson.linkedin ]
+		srcPersonExternalLink.emplid,
+		srcPersonExternalLink.facebook,
+		srcPersonExternalLink.twitter,
+		srcPersonExternalLink.google_plus,
+		srcPersonExternalLink.linkedin ]
 
 	if any( recordToList[1:] ):
-		srcHash = hashThisList( srcSubAffiliation.values() )
+		srcHash = hashThisList( recordToList )
 
-		def personExternalLinkExists():
+		def getTargetRecords():
 			"""
 				determine the personExternalLink exists in the target database.
 				@True: The personExternalLink exists in the database
 				@False: The personExternalLink does not exist in the database
 			"""
-			(ret, ), = sesTarget.query(
-				exists().where(
-					PersonExternalLinks.emplid == srcPersonExternalLink.emplid ) )
+			ret = sesTarget.query(
+				PersonExternalLinks ).filter(
+					PersonExternalLinks.emplid == srcPersonExternalLink.emplid )
 
 			return ret
 
-		if personExternalLinkExists():
+		tgtRecords = getTargetRecords()
 
-			def personExternalLinkUpdateRequired():
-				"""
-					Determine if the personExternalLink that exists requires and update.
-					@True: returned if source_hash is unchanged
-					@False: returned if source_hash is different
-				"""	
-				(ret, ), = sesTarget.query(
-					exists().where(
-						PersonExternalLinks.emplid == srcPersonExternalLink.emplid ).where(
-						PersonExternalLinks.source_hash == srcHash ).where(	
-						PersonExternalLinks.deleted_at.is_( None ) ) )
+		if tgtRecords:
+			""" 
+				If true then an update is required, else an insert is required
+				@True:
+					Because there might be many recornds returned from the db, a loop is required.
+					Trying not to update the data if it is not required, but the source data will
+					require an action.
+					@Else Block (NO BREAK REACHED):
+						If the condition is not reached in the for block the else block 
+						will insure	that a record is updated.  
+						It might not update the record that	was initially created previously,
+						but all source data has to be represented in the target database.
+				@False:
+					insert the new data from the source database.
+			"""
+			for tgtRecord in tgtRecords:
 
-				return not ret
+				if tgtRecord.source_hash == srcHash:
+					tgtRecord.updated_flag = True
+					tgtRecord.deleted_at = None
+					return tgtRecord
+					break
 
-
-			if personExternalLinkUpdateRequired():
-				# retrive the tables object to update.
-				updatePersonExternalLink = sesTarget.query(
-					PersonExternalLinks ).filter(
-						PersonExternalLinks.emplid == srcPersonExternalLink.emplid ).one()
-
+			else: # NO BREAK REACHED
+				tgtRecord = tgtRecords[0]
 				# repeat the following pattern for all mapped attributes:
-				updatePersonExternalLink.source_hash = srcHash
-				updatePersonExternalLink.emplid = srcPersonExternalLink.emplid
-				updatePersonExternalLink.facebook = srcPersonExternalLink.facebook
-				updatePersonExternalLink.twitter = srcPersonExternalLink.twitter
-				updatePersonExternalLink.google_plus = srcPersonExternalLink.google_plus
-				updatePersonExternalLink.linkedin = srcPersonExternalLink.linkedin
-				updatePersonExternalLink.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-				updatePersonExternalLink.deleted_at = None
+				tgtRecord.source_hash = srcHash
+				tgtRecord.updated_flag = True
+				tgtRecord.emplid = srcPersonExternalLink.emplid
+				tgtRecord.facebook = srcPersonExternalLink.facebook
+				tgtRecord.twitter = srcPersonExternalLink.twitter
+				tgtRecord.google_plus = srcPersonExternalLink.google_plus
+				tgtRecord.linkedin = srcPersonExternalLink.linkedin
+				tgtRecord.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+				tgtRecord.deleted_at = None
 
-				return updatePersonExternalLink
-			else:
-				raise TypeError('source personExternalLink already exists and requires no updates!')
+				return tgtRecord
 
 		else:
 			srcGetPersonId = sesTarget.query(
@@ -87,6 +83,7 @@ def processPersonExternalLink( srcPersonExternalLink, sesTarget ):
 
 			insertPersonExternalLink = PersonExternalLinks(
 				source_hash = srcHash,
+				updated_flag = True,
 				person_id = srcGetPersonId.id,
 				emplid = srcPersonExternalLink.emplid,
 				facebook = srcPersonExternalLink.facebook,

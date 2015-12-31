@@ -131,7 +131,7 @@ def processFarEvaluation( srcFarEvaluation, sesTarget ):
 
 		srcGetPersonId = sesTarget.query(
 			People.id ).filter(
-				People.emplid == srcPersonWebProfile.emplid ).one()
+				People.emplid == srcFarEvaluation.emplid ).one()
 
 		insertFarEvaluation = FarEvaluations(
 			person_id = srcGetPersonId.id,
