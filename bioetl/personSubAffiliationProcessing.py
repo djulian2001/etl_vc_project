@@ -1,11 +1,8 @@
 import datetime
-from sqlalchemy import exists, literal
 
 from sharedProcesses import hashThisList
 from models.biopublicmodels import PersonSubAffiliations, Departments, People, SubAffiliations
 from models.asudwpsmodels import AsuDwPsSubAffiliations, AsuPsBioFilters
-
-#template mapping... plural PersonSubAffiliations    singularCaped PersonSubAffiliation   singularLower personSubAffiliation
 
 def getSourcePersonSubAffiliations( sesSource ):
 	"""
@@ -22,7 +19,6 @@ def getSourcePersonSubAffiliations( sesSource ):
 				AsuDwPsSubAffiliations.emplid ).all()
 
 
-# change value to the singular
 def processPersonSubAffiliation( srcPersonSubAffiliation, sesTarget ):
 	"""
 		Takes in a source PersonSubAffiliation object from biopsmodels (mysql.bio_ps.PersonSubAffiliations)
@@ -34,8 +30,6 @@ def processPersonSubAffiliation( srcPersonSubAffiliation, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-	true, false = literal(True), literal(False)
-
 	recordToList = [
 		srcPersonSubAffiliation.emplid,
 		srcPersonSubAffiliation.deptid,
@@ -51,65 +45,65 @@ def processPersonSubAffiliation( srcPersonSubAffiliation, sesTarget ):
 
 	srcHash = hashThisList( recordToList )
 
-	def personSubAffiliationExists():
+	def getTargetRecords():
 		"""
 			determine the personSubAffiliation exists in the target database.
 			@True: The personSubAffiliation exists in the database
 			@False: The personSubAffiliation does not exist in the database
 		"""
 		(ret, ), = sesTarget.query(
-			exists().where(
-				PersonSubAffiliations.emplid == srcPersonSubAffiliation.emplid ).where(
-				PersonSubAffiliations.deptid == srcPersonSubAffiliation.deptid ).where(
-				PersonSubAffiliations.subaffiliation_code == srcPersonSubAffiliation.subaffiliation_code ).where(
-				PersonSubAffiliations.updated_flag == False) )
+			PersonSubAffiliations ).filter(
+				PersonSubAffiliations.emplid == srcPersonSubAffiliation.emplid ).filter(
+				PersonSubAffiliations.deptid == srcPersonSubAffiliation.deptid ).filter(
+				PersonSubAffiliations.subaffiliation_code == srcPersonSubAffiliation.subaffiliation_code ).filter(
+				PersonSubAffiliations.updated_flag == False ) 
 
 		return ret
 
-	if personSubAffiliationExists():
+	tgtRecords = getTargetRecords()
 
-		def personSubAffiliationUpdates():
-			"""
-				Determine if the personSubAffiliation that exists requires and update.
-				@True: returned if source_hash is unchanged
-				@False: returned if source_hash is different
-			"""
-			return sesTarget.query(
-				PersonSubAffiliations ).filter(
-					PersonSubAffiliations.emplid == srcPersonSubAffiliation.emplid ).filter(
-					PersonSubAffiliations.deptid == srcPersonSubAffiliation.deptid ).filter(
-					PersonSubAffiliations.subaffiliation_code == srcPersonSubAffiliation.subaffiliation_code ).filter(
-					PersonSubAffiliations.updated_flag == False ).all()
+	if tgtRecords:
+		""" 
+			If true then an update is required, else an insert is required
+			@True:
+				Because there might be many recornds returned from the db, a loop is required.
+				Trying not to update the data if it is not required, but the source data will
+				require an action.
+				@Else Block (NO BREAK REACHED):
+					If the condition is not reached in the for block the else block 
+					will insure	that a record is updated.  
+					It might not update the record that	was initially created previously,
+					but all source data has to be represented in the target database.
+			@False:
+				insert the new data from the source database.
+		"""
+		for tgtRecord in tgtRecords:
 
-		updateOneOfThese = personSubAffiliationUpdates()
-
-		for updateThisOne in updateOneOfThese:
-			if updateThisOne.source_hash == srcHash:
-				
-				updateThisOne.updated_flag = True
-				updateThisOne.deleted_at = None
-				
-				return updateThisOne
+			if tgtRecord.source_hash == srcHash:
+				tgtRecord.updated_flag = True
+				tgtRecord.deleted_at = None
+				return tgtRecord
 				break
-		else: # no break reached
-			updateThisOne = updateOneOfThese[0]
 
-			updateThisOne.source_hash = srcHash
-			updateThisOne.updated_flag = True
-			updateThisOne.emplid = srcPersonSubAffiliation.emplid
-			updateThisOne.deptid = srcPersonSubAffiliation.deptid
-			updateThisOne.subaffiliation_code = srcPersonSubAffiliation.subaffiliation_code
-			updateThisOne.campus = srcPersonSubAffiliation.campus
-			updateThisOne.title = srcPersonSubAffiliation.title
-			updateThisOne.short_description = srcPersonSubAffiliation.short_description
-			updateThisOne.description = srcPersonSubAffiliation.description
-			updateThisOne.directory_publish = srcPersonSubAffiliation.directory_publish
-			updateThisOne.department = srcPersonSubAffiliation.department
-			updateThisOne.department_directory = srcPersonSubAffiliation.department_directory
-			updateThisOne.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-			updateThisOne.deleted_at = None
+		else: # NO BREAK REACHED
+			tgtRecord = tgtRecords[0]
 
-			return updateThisOne
+			tgtRecord.source_hash = srcHash
+			tgtRecord.updated_flag = True
+			tgtRecord.emplid = srcPersonSubAffiliation.emplid
+			tgtRecord.deptid = srcPersonSubAffiliation.deptid
+			tgtRecord.subaffiliation_code = srcPersonSubAffiliation.subaffiliation_code
+			tgtRecord.campus = srcPersonSubAffiliation.campus
+			tgtRecord.title = srcPersonSubAffiliation.title
+			tgtRecord.short_description = srcPersonSubAffiliation.short_description
+			tgtRecord.description = srcPersonSubAffiliation.description
+			tgtRecord.directory_publish = srcPersonSubAffiliation.directory_publish
+			tgtRecord.department = srcPersonSubAffiliation.department
+			tgtRecord.department_directory = srcPersonSubAffiliation.department_directory
+			tgtRecord.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			tgtRecord.deleted_at = None
+
+			return tgtRecord
 	
 	else:
 		srcGetPersonId = sesTarget.query(

@@ -69,12 +69,9 @@ def process_Y_( src_Y_, sesTarget ):
 	"""
 		Takes in a source _Y_ object from biopsmodels (mysql.bio_ps._X_)
 		and determines if the object needs to be updated, inserted in the target
-		database (mysql.bio_public._X_), or that nothing needs doing.
-	
-		Selecting Booleans from the databases.  Using conjunctions to make the exists()
-		a boolean return from the query() method.  Bit more syntax but a sqlalchemy object
-		returned will not be truthy/falsey.
-		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
+		database (mysql.bio_public._X_), or that nothing needs doing, but each
+		source record will have an action in the target database via the
+		updated_flag.
 	"""
 	_y_List = []
 

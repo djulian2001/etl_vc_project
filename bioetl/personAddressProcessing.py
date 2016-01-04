@@ -1,5 +1,4 @@
 import datetime
-from sqlalchemy import exists, literal
 
 from sharedProcesses import hashThisList
 from models.biopublicmodels import People, Addresses
@@ -29,9 +28,6 @@ def processAddress( srcPersonAddress, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
-	true, false = literal(True), literal(False)
-
 	recordToList = [
 		srcPersonAddress.emplid,
 		srcPersonAddress.address_type,
@@ -48,67 +44,65 @@ def processAddress( srcPersonAddress, sesTarget ):
 
 	srcHash = hashThisList( recordToList )
 
-	def personAddressExists():
+	def getTargetRecords():
 		"""
 			Determine the person address exists in the target database.
 			@True: The person address exists and requires update checks
 			@False: The person doesn't exist and will prepare for insert
 		"""
-		(ret, ), = sesTarget.query(
-			exists().where(
-				Addresses.emplid == srcPersonAddress.emplid ).where(
-				Addresses.address_type == srcPersonAddress.address_type ).where(
-				Addresses.updated_flag == False ) )
+		ret = sesTarget.query(
+			Addresses ).filter(
+				Addresses.emplid == srcPersonAddress.emplid ).filter(
+				Addresses.address_type == srcPersonAddress.address_type ).filter(
+				Addresses.updated_flag == False )
 
 		return ret
 
-	if personAddressExists():
+	tgtRecords = getTargetRecords()
 
-		def addressRequiresUpdate():
-			"""
-				Determine that the address record from the source database requires update
-				@True: The record was not found and in the target database and should be updated
-				@False: The record was found and should be ingnored with no changes required
-			"""
-			(ret, ), = sesTarget.query(
-				exists().where( 
-					Addresses.emplid == srcPersonAddress.emplid ).where( 
-					Addresses.address_type == srcPersonAddress.address_type ).where(
-					Addresses.source_hash == srcHash ).where(
-					Addresses.deleted_at.is_( None ) ).where(
-					Addresses.updated_flag == False ) )
+	if tgtRecords:
+		""" 
+			If true then an update is required, else an insert is required
+			@True:
+				Because there might be many recornds returned from the db, a loop is required.
+				Trying not to update the data if it is not required, but the source data will
+				require an action.
+				@Else Block (NO BREAK REACHED):
+					If the condition is not reached in the for block the else block 
+					will insure	that a record is updated.  
+					It might not update the record that	was initially created previously,
+					but all source data has to be represented in the target database.
+			@False:
+				insert the new data from the source database.
+		"""
+		for tgtRecord in tgtRecords:
 
-			return not ret
+			if tgtRecord.source_hash == srcHash:
+				tgtRecord.updated_flag = True
+				tgtRecord.deleted_at = None
+				return tgtRecord
+				break
 
-		if addressRequiresUpdate():
-			
-			updatePersonAddress = sesTarget.query(
-				Addresses ).filter( 
-					Addresses.emplid == srcPersonAddress.emplid ).filter( 
-					Addresses.address_type == srcPersonAddress.address_type ).filter( 
-					Addresses.source_hash != srcHash ).filter(
-					Addresses.updated_flag == False ).first()
-
+		else: # NO BREAK REACHED
+			tgtRecord = tgtRecords[0]
 			# the record in the target database that will be updated.
-			updatePersonAddress.source_hash = srcHash
-			updatePersonAddress.updated_flag = True
-			updatePersonAddress.address1 = srcPersonAddress.address1
-			updatePersonAddress.address2 = srcPersonAddress.address2
-			updatePersonAddress.address3 = srcPersonAddress.address3
-			updatePersonAddress.address4 = srcPersonAddress.address4
-			updatePersonAddress.city = srcPersonAddress.city
-			updatePersonAddress.state = srcPersonAddress.state
-			updatePersonAddress.postal = srcPersonAddress.postal
-			updatePersonAddress.country_code = srcPersonAddress.country_code
-			updatePersonAddress.country_descr = srcPersonAddress.country_descr
+			tgtRecord.source_hash = srcHash
+			tgtRecord.updated_flag = True
+			tgtRecord.address1 = srcPersonAddress.address1
+			tgtRecord.address2 = srcPersonAddress.address2
+			tgtRecord.address3 = srcPersonAddress.address3
+			tgtRecord.address4 = srcPersonAddress.address4
+			tgtRecord.city = srcPersonAddress.city
+			tgtRecord.state = srcPersonAddress.state
+			tgtRecord.postal = srcPersonAddress.postal
+			tgtRecord.country_code = srcPersonAddress.country_code
+			tgtRecord.country_descr = srcPersonAddress.country_descr
 			# update the bio timestamp
-			updatePersonAddress.updated_at = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-			updatePersonAddress.deleted_at = None
+			tgtRecord.updated_at = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+			tgtRecord.deleted_at = None
 			# add the object to the session to commit the updated
-			return updatePersonAddress
+			return tgtRecord
 
-		else:
-			raise TypeError('Person address record required no insert or updates.')
 	else:
 		getPersonId = sesTarget.query(
 			People.id ).filter(

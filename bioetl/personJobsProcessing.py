@@ -1,5 +1,4 @@
 import datetime
-from sqlalchemy import exists, literal
 
 from sharedProcesses import hashThisList
 from models.biopublicmodels import Jobs, People, Departments
@@ -31,8 +30,6 @@ def processPersonJob( srcJob, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-	true, false = literal(True), literal(False)
-
 	recordToList = [
 		srcJob.emplid,
 		srcJob.empl_rcd,
@@ -51,67 +48,68 @@ def processPersonJob( srcJob, sesTarget ):
 
 	srcHash = hashThisList( recordToList )
 
-	def jobExists():
+	def getTargetRecords():
 		"""
 			determine the job exists in the target database.
 			@True: The job exists in the database
 			@False: The job does not exist in the database
 		"""
-		(ret, ), = sesTarget.query(
-			exists().where(
-				Jobs.emplid == srcJob.emplid ).where(
-				Jobs.title == srcJob.title ).where(
-				Jobs.deptid == srcJob.deptid ).where(
-				Jobs.updated_flag == False ) )
+		ret = sesTarget.query(
+			Jobs ).filter(
+				Jobs.emplid == srcJob.emplid ).filter(
+				Jobs.title == srcJob.title ).filter(
+				Jobs.deptid == srcJob.deptid ).filter(
+				Jobs.updated_flag == False )
 
 		return ret
 
-	if jobExists():
-		def jobUpdates():
-			"""
-				Determine if the job that exists requires and update.
-				@returns: returns the first record that matches the conditions.
-			"""
-			return sesTarget.query(
-				Jobs ).filter(
-					Jobs.emplid == srcJob.emplid ).filter(
-					Jobs.title == srcJob.title ).filter(
-					Jobs.deptid == srcJob.deptid ).filter(
-					Jobs.updated_flag == False ).all()
+	tgtRecords = getTargetRecords()
 
-		updateJobs = jobUpdates()
+	if tgtRecords:
+		""" 
+			If true then an update is required, else an insert is required
+			@True:
+				Because there might be many recornds returned from the db, a loop is required.
+				Trying not to update the data if it is not required, but the source data will
+				require an action.
+				@Else Block (NO BREAK REACHED):
+					If the condition is not reached in the for block the else block 
+					will insure	that a record is updated.  
+					It might not update the record that	was initially created previously,
+					but all source data has to be represented in the target database.
+			@False:
+				insert the new data from the source database.
+		"""
+		for tgtRecord in tgtRecords:
 
-		for updateJob in updateJobs:
-			if updateJob.source_hash == srcHash:
-				
-				updateJob.updated_flag = True
-				updateJob.deleted_at = None
-				return updateJob
+			if tgtRecord.source_hash == srcHash:
+				tgtRecord.updated_flag = True
+				tgtRecord.deleted_at = None
+				return tgtRecord
 				break
 
-		else: # no break reached
-			updateJob = updateJobs[0]
-
+		else: # NO BREAK REACHED
+			tgtRecord = tgtRecords[0]
 			# repeat the following pattern for all mapped attributes:
-			updateJob.source_hash = srcHash
-			updateJob.updated_flag = True
-			updateJob.emplid = srcJob.emplid
-			updateJob.empl_rcd = srcJob.empl_rcd
-			updateJob.title = srcJob.title
-			updateJob.department = srcJob.department
-			updateJob.mailcode = srcJob.mailcode
-			updateJob.empl_class = srcJob.empl_class
-			updateJob.job_indicator = srcJob.job_indicator
-			updateJob.location = srcJob.location
-			updateJob.hr_status = srcJob.hr_status
-			updateJob.deptid = srcJob.deptid
-			updateJob.empl_status = srcJob.empl_status
-			updateJob.fte = srcJob.fte
-			updateJob.department_directory = srcJob.department_directory
-			updateJob.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-			updateJob.deleted_at = None
+			tgtRecord.source_hash = srcHash
+			tgtRecord.updated_flag = True
+			tgtRecord.emplid = srcJob.emplid
+			tgtRecord.empl_rcd = srcJob.empl_rcd
+			tgtRecord.title = srcJob.title
+			tgtRecord.department = srcJob.department
+			tgtRecord.mailcode = srcJob.mailcode
+			tgtRecord.empl_class = srcJob.empl_class
+			tgtRecord.job_indicator = srcJob.job_indicator
+			tgtRecord.location = srcJob.location
+			tgtRecord.hr_status = srcJob.hr_status
+			tgtRecord.deptid = srcJob.deptid
+			tgtRecord.empl_status = srcJob.empl_status
+			tgtRecord.fte = srcJob.fte
+			tgtRecord.department_directory = srcJob.department_directory
+			tgtRecord.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			tgtRecord.deleted_at = None
 			
-			return updateJob
+			return tgtRecord
 
 	else:
 		# get the ids required to maintain relationships 

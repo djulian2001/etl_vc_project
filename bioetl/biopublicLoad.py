@@ -329,12 +329,6 @@ try:
 	#	End of personPhoneProcessing
 	###############################################################################
 
-
-
-####**####**####**####**####**####**####**####**####**####**####**####
-# CODE UPDATE Stopped HERE...  BELOW NEEDS UPDATES...
-####**####**####**####**####**####**####**####**####**####**####**####
-
 	###############################################################################
 	# Load the asu data warehouse people data table in into the final destination:
 	#	mysql:
@@ -469,6 +463,10 @@ try:
 	# end of for tgtMissingDepartments
 	###############################################################################
 
+####**####**####**####**####**####**####**####**####**####**####**####
+# CODE UPDATE Stopped HERE...  BELOW NEEDS UPDATES...
+####**####**####**####**####**####**####**####**####**####**####**####
+
 	###############################################################################
 	# 
 	#   File Import:  jobProcessing
@@ -498,7 +496,6 @@ try:
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
-
 
 	tgtMissingJobCodes = jobProcessing.getTargetJobCodes( sesTarget )
 
@@ -594,11 +591,7 @@ try:
 		resetUpdatedFlag( sesTarget, "person_jobs" )
 	except Exception as e:
 		print e
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+
 	import personJobsProcessing
 
 	srcPersonJobs = personJobsProcessing.getSourcePersonJobs( sesSource )

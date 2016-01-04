@@ -52,8 +52,6 @@ def processJob( srcJob, sesTarget ):
 		srcJob.job_family,
 		srcJob.flsa_status ]
 
-
-
 	srcHash = hashThisList( jobList )
 
 	def jobExists():
