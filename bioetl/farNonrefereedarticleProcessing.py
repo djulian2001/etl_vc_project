@@ -79,7 +79,6 @@ def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
 		return ret
 
 	if farNonrefereedarticleExists():
-
 		def farNonrefereedarticleUpdateRequired():
 			"""
 				Determine if the farNonrefereedarticle that exists requires and update.
@@ -130,11 +129,8 @@ def processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget ):
 			updateFarNonrefereedarticle.deleted_at = None
 
 			return updateFarNonrefereedarticle
-		else:
-			raise TypeError('source farNonrefereedarticle already exists and requires no updates!')
 
 	else:
-
 		srcGetFarEvaluationId = sesTarget.query(
 			FarEvaluations.id ).filter(
 				FarEvaluations.evaluationid == srcFarNonrefereedarticle.evaluationid ).one()
@@ -175,7 +171,6 @@ def getTargetFarNonrefereedarticles( sesTarget ):
 		Returns a set of FarNonrefereedarticles objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		FarNonrefereedarticles ).filter(
 			FarNonrefereedarticles.deleted_at.is_( None ) ).all()
@@ -188,7 +183,6 @@ def softDeleteFarNonrefereedarticle( tgtRecord, srcRecords ):
 
 		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
 	def dataMissing():
 		"""
 			The origional list of selected data is then used to see if data requires a soft-delete
@@ -197,9 +191,6 @@ def softDeleteFarNonrefereedarticle( tgtRecord, srcRecords ):
 		"""
 		return not any( srcRecord.nonrefereedarticleid == tgtRecord.nonrefereedarticleid for srcRecord in srcRecords )
 
-
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')

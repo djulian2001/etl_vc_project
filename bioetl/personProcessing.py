@@ -55,7 +55,7 @@ def processPerson( srcPerson, sesTarget ):
 		"""
 		ret = sesTarget.query(
 			People ).filter(
-				People.emplid == srcPerson.emplid )
+				People.emplid == srcPerson.emplid ).all()
 		
 		return ret
 
@@ -160,8 +160,8 @@ def softDeletePerson( tgtRecord, srcRecords ):
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
+	# else:
+	# 	return None
 
 
 

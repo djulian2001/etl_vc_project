@@ -35,7 +35,7 @@ def processPhone( srcPersonPhone, sesTarget ):
 			Phones ).filter( 
 				Phones.emplid == srcPersonPhone.emplid ).filter(
 				Phones.phone_type == srcPersonPhone.phone_type ).filter(
-				Phones.updated_flag == False )
+				Phones.updated_flag == False ).all()
 
 		return ret
 

@@ -76,7 +76,6 @@ def processFarEncyclopediaarticle( srcFarEncyclopediaarticle, sesTarget ):
 		return ret
 
 	if farEncyclopediaarticleExists():
-
 		def farEncyclopediaarticleUpdateRequired():
 			"""
 				Determine if the farEncyclopediaarticle that exists requires and update.
@@ -125,11 +124,8 @@ def processFarEncyclopediaarticle( srcFarEncyclopediaarticle, sesTarget ):
 			updateFarEncyclopediaarticle.deleted_at = None
 
 			return updateFarEncyclopediaarticle
-		else:
-			raise TypeError('source farEncyclopediaarticle already exists and requires no updates!')
 
 	else:
-
 		srcGetFarEvaluationId = sesTarget.query(
 			FarEvaluations.id ).filter(
 				FarEvaluations.evaluationid == srcFarEncyclopediaarticle.evaluationid ).one()
@@ -180,7 +176,6 @@ def softDeleteFarEncyclopediaarticle( tgtRecord, srcRecords ):
 
 		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
 	def dataMissing():
 		"""
 			The origional list of selected data is then used to see if data requires a soft-delete
@@ -189,11 +184,6 @@ def softDeleteFarEncyclopediaarticle( tgtRecord, srcRecords ):
 		"""
 		return not any( srcRecord.encyclopediaarticleid == tgtRecord.encyclopediaarticleid for srcRecord in srcRecords )
 
-
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
-
-

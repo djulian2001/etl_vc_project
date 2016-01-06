@@ -77,7 +77,6 @@ def processFarShortstorie( srcFarShortstorie, sesTarget ):
 		return ret
 
 	if farShortstoriesExists():
-
 		def farShortstoriesUpdateRequired():
 			"""
 				Determine if the farShortstories that exists requires and update.
@@ -97,7 +96,6 @@ def processFarShortstorie( srcFarShortstorie, sesTarget ):
 			updateFarShortstorie = sesTarget.query(
 				FarShortstories ).filter(
 					FarShortstories.shortstoryid == srcFarShortstorie.shortstoryid ).one()
-
 			# repeat the following pattern for all mapped attributes:
 			updateFarShortstorie.source_hash = srcHash
 			updateFarShortstorie.shortstoryid = srcFarShortstorie.shortstoryid
@@ -127,11 +125,7 @@ def processFarShortstorie( srcFarShortstorie, sesTarget ):
 			updateFarShortstorie.deleted_at = None
 
 			return updateFarShortstorie
-		else:
-			raise TypeError('source farShortstories already exists and requires no updates!')
-
 	else:
-
 		srcGetFarEvaluationId = sesTarget.query(
 			FarEvaluations.id ).filter(
 				FarEvaluations.evaluationid == srcFarShortstorie.evaluationid ).one()
@@ -191,11 +185,6 @@ def softDeleteFarShortstorie( tgtRecord, srcRecords ):
 		"""
 		return not any( srcRecord.shortstoryid == tgtRecord.shortstoryid for srcRecord in srcRecords )
 
-
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
-
-

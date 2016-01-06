@@ -37,7 +37,6 @@ def processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
 	true, false = literal(True), literal(False)
 
 	farConferenceProceedingList = [
@@ -132,11 +131,8 @@ def processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget ):
 			updateFarConferenceProceeding.deleted_at = None
 
 			return updateFarConferenceProceeding
-		else:
-			raise TypeError('source farConferenceProceeding already exists and requires no updates!')
 
 	else:
-
 		srcGetFarEvaluationId = sesTarget.query(
 			FarEvaluations.id ).filter(
 				FarEvaluations.evaluationid == srcFarConferenceProceeding.evaluationid ).one()
@@ -177,7 +173,6 @@ def getTargetFarConferenceProceedings( sesTarget ):
 		Returns a set of FarConferenceProceedings objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		FarConferenceProceedings ).filter(
 			FarConferenceProceedings.deleted_at.is_( None ) ).all()
@@ -198,9 +193,6 @@ def softDeleteFarConferenceProceeding( tgtRecord, srcRecords ):
 		"""
 		return not any( srcRecord.conferenceproceedingid == tgtRecord.conferenceproceedingid for srcRecord in srcRecords )
 
-
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')

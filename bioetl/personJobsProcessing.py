@@ -59,7 +59,7 @@ def processPersonJob( srcJob, sesTarget ):
 				Jobs.emplid == srcJob.emplid ).filter(
 				Jobs.title == srcJob.title ).filter(
 				Jobs.deptid == srcJob.deptid ).filter(
-				Jobs.updated_flag == False )
+				Jobs.updated_flag == False ).all()
 
 		return ret
 
@@ -177,5 +177,3 @@ def softDeletePersonJob( tgtRecord, srcRecords ):
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')

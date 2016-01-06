@@ -51,12 +51,12 @@ def processPersonSubAffiliation( srcPersonSubAffiliation, sesTarget ):
 			@True: The personSubAffiliation exists in the database
 			@False: The personSubAffiliation does not exist in the database
 		"""
-		(ret, ), = sesTarget.query(
+		ret = sesTarget.query(
 			PersonSubAffiliations ).filter(
 				PersonSubAffiliations.emplid == srcPersonSubAffiliation.emplid ).filter(
 				PersonSubAffiliations.deptid == srcPersonSubAffiliation.deptid ).filter(
 				PersonSubAffiliations.subaffiliation_code == srcPersonSubAffiliation.subaffiliation_code ).filter(
-				PersonSubAffiliations.updated_flag == False ) 
+				PersonSubAffiliations.updated_flag == False ).all()
 
 		return ret
 
@@ -145,9 +145,6 @@ def processPersonSubAffiliation( srcPersonSubAffiliation, sesTarget ):
 
 			return insertPersonSubAffiliation
 
-		else:
-			raise RuntimeError('source person(%s) or department(%s) does not exist within People and or Departments!' % ( srcPersonSubAffiliation.emplid, srcPersonSubAffiliation.deptid ))
-
 
 def getTargetPersonSubAffiliations( sesTarget ):
 	"""
@@ -157,7 +154,6 @@ def getTargetPersonSubAffiliations( sesTarget ):
 	return sesTarget.query(
 		PersonSubAffiliations ).filter(
 			PersonSubAffiliations.deleted_at.is_( None ) ).all()
-
 
 def softDeletePersonSubAffiliation( tgtRecord, srcRecords ):
 	"""
@@ -180,5 +176,3 @@ def softDeletePersonSubAffiliation( tgtRecord, srcRecords ):
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')

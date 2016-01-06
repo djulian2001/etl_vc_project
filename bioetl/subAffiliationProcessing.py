@@ -118,11 +118,11 @@ def softDeleteSubAffiliation( tgtMissingSubAffiliation, srcList ):
 		"""
 		return not any( srcDict["code"] == tgtMissingSubAffiliation.code for srcDict in srcList )
 
-
 	if dataMissing():
 		tgtMissingSubAffiliation.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		
 		return tgtMissingSubAffiliation
+	
 	else:
-		raise TypeError('source subAffiliation still exists and requires no soft delete!')
-
+		return None
 

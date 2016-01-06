@@ -37,7 +37,8 @@ def processPersonWebProfile( srcPersonWebProfile, sesTarget ):
 
 			ret = sesTarget.query(
 				PersonWebProfile ).filter(
-					PersonWebProfile.emplid == srcPersonWebProfile.emplid )
+					PersonWebProfile.emplid == srcPersonWebProfile.emplid ).filter(
+					PersonWebProfile.updated_flag == False ).all()
 
 			return ret
 
@@ -100,6 +101,7 @@ def processPersonWebProfile( srcPersonWebProfile, sesTarget ):
 
 			insertPersonWebProfile = PersonWebProfile(
 				person_id = srcGetPersonId.id,
+				# person_id = person.id,
 				source_hash = srcHash,
 				updated_flag = True,
 				emplid = srcPersonWebProfile.emplid,
@@ -151,6 +153,6 @@ def softDeletePersonWebProfile( tgtRecord, srcRecords ):
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
+	# else:
+	# 	raise TypeError('source target record still exists and requires no soft delete!')
 

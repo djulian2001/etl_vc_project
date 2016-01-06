@@ -83,7 +83,6 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 		return ret
 
 	if farBookChapterExists():
-
 		def farBookChapterUpdateRequired():
 			"""
 				Determine if the farBookChapter that exists requires and update.
@@ -138,8 +137,6 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 			updateFarBookChapter.deleted_at = None
 
 			return updateFarBookChapter
-		else:
-			raise TypeError('source farBookChapter already exists and requires no updates!')
 
 	else:
 		srcGetFarEvaluationId = sesTarget.query(
@@ -181,13 +178,11 @@ def processFarBookChapter( srcFarBookChapter, sesTarget ):
 
 		return insertFarBookChapter
 
-
 def getTargetFarBookChapters( sesTarget ):
 	"""
 		Returns a set of FarBookChapters objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		FarBookChapters ).filter(
 			FarBookChapters.deleted_at.is_( None ) ).all()
@@ -200,7 +195,6 @@ def softDeleteFarBookChapter( tgtRecord, srcRecords ):
 
 		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
 	def dataMissing():
 		"""
 			The origional list of selected data is then used to see if data requires a soft-delete
@@ -209,9 +203,6 @@ def softDeleteFarBookChapter( tgtRecord, srcRecords ):
 		"""
 		return not any( srcRecord.bookchapterid == tgtRecord.bookchapterid for srcRecord in srcRecords )
 
-
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')

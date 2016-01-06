@@ -5,7 +5,6 @@ from sharedProcesses import hashThisList
 from models.biopublicmodels import FarEditedbooks, FarEvaluations
 from models.asudwpsmodels import AsuDwPsFarEditedbooks, AsuDwPsFarEvaluations, AsuPsBioFilters
 
-
 def getSourceFarEditedbooks( sesSource ):
 	"""
 		Isolate the imports for the ORM records into this file
@@ -81,7 +80,6 @@ def processFarEditedbook( srcFarEditedbook, sesTarget ):
 		return ret
 
 	if farEditedbookExists():
-
 		def farEditedbookUpdateRequired():
 			"""
 				Determine if the farEditedbook that exists requires and update.
@@ -134,11 +132,8 @@ def processFarEditedbook( srcFarEditedbook, sesTarget ):
 			updateFarEditedbook.deleted_at = None
 
 			return updateFarEditedbook
-		else:
-			raise TypeError('source farEditedbook already exists and requires no updates!')
 
 	else:
-
 		srcGetFarEvaluationId = sesTarget.query(
 			FarEvaluations.id ).filter(
 				FarEvaluations.evaluationid == srcFarEditedbook.evaluationid ).one()
@@ -181,7 +176,6 @@ def getTargetFarEditedbooks( sesTarget ):
 		Returns a set of FarEditedbooks objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		FarEditedbooks ).filter(
 			FarEditedbooks.deleted_at.is_( None ) ).all()
@@ -194,7 +188,6 @@ def softDeleteFarEditedbook( tgtRecord, srcRecords ):
 
 		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
 	def dataMissing():
 		"""
 			The origional list of selected data is then used to see if data requires a soft-delete
@@ -203,9 +196,6 @@ def softDeleteFarEditedbook( tgtRecord, srcRecords ):
 		"""
 		return not any( srcRecord.editedbookid == tgtRecord.editedbookid for srcRecord in srcRecords )
 
-
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')

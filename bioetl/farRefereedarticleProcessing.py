@@ -5,7 +5,6 @@ from sharedProcesses import hashThisList
 from models.biopublicmodels import FarRefereedarticles, FarEvaluations
 from models.asudwpsmodels import AsuDwPsFarRefereedarticles, AsuDwPsFarEvaluations, AsuPsBioFilters
 
-
 def getSourceFarRefereedarticles( sesSource ):
 	"""
 		Isolate the imports for the ORM records into this file
@@ -130,8 +129,6 @@ def processFarRefereedarticle( srcFarRefereedarticle, sesTarget ):
 			updateFarRefereedarticle.deleted_at = None
 
 			return updateFarRefereedarticle
-		else:
-			raise TypeError('source farRefereedarticle already exists and requires no updates!')
 
 	else:
 
@@ -175,7 +172,6 @@ def getTargetFarRefereedarticles( sesTarget ):
 		Returns a set of FarRefereedarticles objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		FarRefereedarticles ).filter(
 			FarRefereedarticles.deleted_at.is_( None ) ).all()
@@ -188,7 +184,6 @@ def softDeleteFarRefereedarticle( tgtRecord, srcRecords ):
 
 		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
 	def dataMissing():
 		"""
 			The origional list of selected data is then used to see if data requires a soft-delete
@@ -197,10 +192,6 @@ def softDeleteFarRefereedarticle( tgtRecord, srcRecords ):
 		"""
 		return not any( srcRecord.refereedarticleid == tgtRecord.refereedarticleid for srcRecord in srcRecords )
 
-
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
-

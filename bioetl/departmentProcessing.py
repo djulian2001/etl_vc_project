@@ -91,9 +91,7 @@ def processDepartment( srcDepartment, sesTarget ):
 			updateDepartment.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			updateDepartment.deleted_at = None
 			
-			return updateDepartment
-		else:
-			raise TypeError('source department already exists and requires no updates!')
+			return updateDepartment	
 	else:
 		insertDepartment = Departments(
 			source_hash = srcHash,
@@ -108,7 +106,6 @@ def processDepartment( srcDepartment, sesTarget ):
 
 		return insertDepartment
 
-
 def getTargetDepartments( sesTarget ):
 	"""
 		Returns a set of Departments objects from the target database where the records are not flagged
@@ -117,7 +114,6 @@ def getTargetDepartments( sesTarget ):
 	return sesTarget.query(
 		Departments ).filter(
 			Departments.deleted_at.is_( None ) ).all()
-
 
 def softDeleteDepartment( tgtRecord, srcRecords ):
 	"""
@@ -138,6 +134,3 @@ def softDeleteDepartment( tgtRecord, srcRecords ):
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
-

@@ -32,7 +32,8 @@ def processPersonExternalLink( srcPersonExternalLink, sesTarget ):
 			"""
 			ret = sesTarget.query(
 				PersonExternalLinks ).filter(
-					PersonExternalLinks.emplid == srcPersonExternalLink.emplid )
+					PersonExternalLinks.emplid == srcPersonExternalLink.emplid ).filter(
+					PersonExternalLinks.updated_flag == False ).all()
 
 			return ret
 
@@ -79,7 +80,7 @@ def processPersonExternalLink( srcPersonExternalLink, sesTarget ):
 		else:
 			srcGetPersonId = sesTarget.query(
 				People.id ).filter(
-					People.emplid == srcPersonExternalLink.emplid ).one()
+					People.emplid == srcPersonExternalLink.emplid ).first()
 
 			insertPersonExternalLink = PersonExternalLinks(
 				source_hash = srcHash,
@@ -126,7 +127,7 @@ def softDeletePersonExternalLink( tgtRecord, srcRecords ):
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
+	# else:
+	# 	raise TypeError('source target record still exists and requires no soft delete!')
 
 

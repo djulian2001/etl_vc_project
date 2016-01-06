@@ -1,49 +1,57 @@
-import datetime
-
 from sharedProcesses import resetUpdatedFlag
 from app.connectdb import EtlConnections
 
 bioetlAppRun = EtlConnections("asutobio")
 
-try:
-	sesSource = bioetlAppRun.getSourceSession()
-	sesTarget = bioetlAppRun.getTargetSession()
+sesSource = bioetlAppRun.getSourceSession()
+sesTarget = bioetlAppRun.getTargetSession()
 
-	###############################################################################
-	### biopublicLoad.py cut and paste into proper stop in the file all below:
-	###############################################################################
+def cleanUp(e):
+	"""
+		Try/Catch...  As errors pop up, use the Exception passed by python and or sqlalchemy
+		as how to handle the error.  Wrap the code block as specific as possible to either 
+		handle the Exception or log the error ( TO_DO )
+		@False: application failed to run, an Exception was raised
+		@True: the application ran, no Exception was raised
+	"""
+	import sys
 
+	sesTarget.close()
+	sesSource.close()
+	bioetlAppRun.cleanUp()
+	if e:
+		print type(e), e
+		sys.exit(1)
+	else:
+		sys.exit(0)
 
-	###############################################################################
-	# 	The Biodesign Defined subaffiliations.  There is BI aspects of this data
-	#		that warrents that it be scoped.  Reference table so ok to load prior
-	#		to the people data, and must be loaded prior to the 
-	#   File Import:  subAffiliationProcessing
+###############################################################################
+# 	The Biodesign Defined subaffiliations.  There is BI aspects of this data
+#		that warrents that it be scoped.  Reference table so ok to load prior
+#		to the people data, and must be loaded prior to the 
+#   File Import:  subAffiliationProcessing
 
-	try:
-		resetUpdatedFlag( sesTarget, "subaffiliations" )
-	except Exception as e:
-		print e
+import subAffiliationProcessing
 
-	import subAffiliationProcessing
-
-	srcSubAffiliations = subAffiliationProcessing.getSourceSubAffiliations( )
+if True:
+	resetUpdatedFlag( sesTarget, "subaffiliations" )
+	
+	srcSubAffiliations = subAffiliationProcessing.getSourceSubAffiliations()
 
 	iSubAffiliation = 1
 	for srcSubAffiliation in srcSubAffiliations:
-		try:
-			processedsubAffiliation = subAffiliationProcessing.processSubAffiliation( srcSubAffiliation, sesTarget )
-		except TypeError as e:
-			pass
-		else:
-			sesTarget.add( processedsubAffiliation )
-			if iSubAffiliation % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iSubAffiliation += 1
+		processedsubAffiliation = subAffiliationProcessing.processSubAffiliation( srcSubAffiliation, sesTarget )
+
+		sesTarget.add( processedsubAffiliation )
+
+		if iSubAffiliation % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except sqlalchemy.exc.IntegrityError as e:
+				sesTarget.rollback()
+				raise e
+		iSubAffiliation += 1
+
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
@@ -54,12 +62,11 @@ try:
 
 	iRemoveSubAffiliation = 1
 	for tgtMissingSubAffiliation in tgtMissingSubAffiliations:
-		try:
-			removeSubAffiliation = subAffiliationProcessing.softDeleteSubAffiliation( tgtMissingSubAffiliation, srcSubAffiliations )
-		except TypeError as e:
-			pass
-		else:
+		removeSubAffiliation = subAffiliationProcessing.softDeleteSubAffiliation( tgtMissingSubAffiliation, srcSubAffiliations )
+
+		if removeSubAffiliation:
 			sesTarget.add( removeSubAffiliation )
+
 			if iRemoveSubAffiliation % 1000 == 0:
 				try:
 					sesTarget.flush()
@@ -74,10 +81,7 @@ try:
 		sesTarget.rollback()
 		raise e
 
-	try:
-		resetUpdatedFlag( sesTarget, "subaffiliations" )
-	except Exception as e:
-		print e
+	resetUpdatedFlag( sesTarget, "subaffiliations" )
 
 	try:
 		sesTarget.commit()
@@ -85,80 +89,68 @@ try:
 		sesTarget.rollback()
 		raise e
 
+#	End of subAffiliationProcessing
+###############################################################################
 
 
-	#	End of subAffiliationProcessing
-	###############################################################################
 
-	###############################################################################
-	# Load the asu data warehouse people table in into the final destination:
-	#	mysql:
-	#		bio_public.people to bio_public.people
-	# 
-	try:
-		resetUpdatedFlag( sesTarget, "people" )
-		resetUpdatedFlag( sesTarget, "person_externallinks" )
-		resetUpdatedFlag( sesTarget, "person_webprofile" )
-	except Exception as e:
-		print e
+###############################################################################
+# Load the asu data warehouse people table in into the final destination:
+#	mysql:
+#		bio_public.people to bio_public.people
+# 
 
-	import personProcessing
-	import personWebProfileProcessing
-	import personExternalLinkProcessing
+import personProcessing
+import personWebProfileProcessing
+import personExternalLinkProcessing
+
+if True:
+	resetUpdatedFlag( sesTarget, "people" )
+	resetUpdatedFlag( sesTarget, "person_externallinks" )
+	resetUpdatedFlag( sesTarget, "person_webprofile" )
 
 	srcPeople = personProcessing.getSourcePeople( sesSource )
 
 	iPerson = 1
 	for srcPerson in srcPeople:
-		try:
-			personStatus = personProcessing.processPerson( srcPerson, sesTarget )
-		except TypeError as e:
-			pass  # replace this with 'continue'
-		else:
-			sesTarget.add( personStatus )
+		# try:
+		personStatus = personProcessing.processPerson( srcPerson, sesTarget )
+		# except TypeError as e:
+			# print 1,e  # replace this with 'continue'
+		# else:
+		sesTarget.add( personStatus )
+		sesTarget.flush()
 
+		processedpersonWebProfile = personWebProfileProcessing.processPersonWebProfile( srcPerson, sesTarget )
+		if processedpersonWebProfile:
+			sesTarget.add( processedpersonWebProfile )
+
+		processedpersonExternalLink = personExternalLinkProcessing.processPersonExternalLink( srcPerson, sesTarget )
+		if processedpersonExternalLink:
+			sesTarget.add( processedpersonExternalLink )
+
+		if iPerson % 1000 == 0:
 			try:
-				processedpersonWebProfile = personWebProfileProcessing.processPersonWebProfile( srcPerson, sesTarget )
-			except TypeError as e:
-				pass
-			else:
-				if processedpersonWebProfile:
-					sesTarget.add( processedpersonWebProfile )
-
-			try:
-				processedpersonExternalLink = personExternalLinkProcessing.processPersonExternalLink( srcPerson, sesTarget )
-			except TypeError as e:
-				pass
-			else:
-				if processedpersonExternalLink:
-					sesTarget.add( processedpersonExternalLink )
-
-			if iPerson % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-				except RuntimeError as e:
-					raise e
-			iPerson += 1
+				sesTarget.flush()
+			except sqlalchemy.exc.IntegrityError as e:
+				sesTarget.rollback()
+				raise e
+			except RuntimeError as e:
+				raise e
+		iPerson += 1
+	
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
-
 	tgtMissingPeople = personProcessing.getTargetPeople( sesTarget )
 
 	iMissingPerson = 1
 	for tgtMissingPerson in tgtMissingPeople:
-		try:
-			personMissing = personProcessing.softDeletePerson( tgtMissingPerson, srcPeople )
-		except TypeError as e:
-			# print e
-			pass
-		else:
+		personMissing = personProcessing.softDeletePerson( tgtMissingPerson, srcPeople )
+		if personMissing:
 			sesTarget.add( personMissing )
 			if iMissingPerson % 1000 == 0:
 				try:
@@ -167,6 +159,7 @@ try:
 					sesTarget.rollback()
 					raise e
 			iMissingPerson += 1
+	
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
@@ -181,11 +174,8 @@ try:
 
 	iMissingPersonWebProfile = 1
 	for tgtMissingPersonWebProfile in tgtMissingPersonWebProfiles:
-		try:
-			removePersonWebProfile = personWebProfileProcessing.softDeletePersonWebProfile( tgtMissingPersonWebProfile, srcPeople )
-		except TypeError as e:
-			pass
-		else:
+		removePersonWebProfile = personWebProfileProcessing.softDeletePersonWebProfile( tgtMissingPersonWebProfile, srcPeople )
+		if removePersonWebProfile:
 			sesTarget.add( removePersonWebProfile )
 			if iMissingPersonWebProfile % 1000 == 0:
 				try:
@@ -212,11 +202,8 @@ try:
 
 	iRemovePersonExternalLink = 1
 	for tgtMissingPersonExternalLink in tgtMissingPersonExternalLinks:
-		try:
-			removePersonExternalLink = personExternalLinkProcessing.softDeletePersonExternalLink( tgtMissingPersonExternalLink, srcPeople )
-		except TypeError as e:
-			pass
-		else:
+		removePersonExternalLink = personExternalLinkProcessing.softDeletePersonExternalLink( tgtMissingPersonExternalLink, srcPeople )
+		if removePersonExternalLink:
 			sesTarget.add( removePersonExternalLink )
 			if iRemovePersonExternalLink % 1000 == 0:
 				try:
@@ -235,89 +222,65 @@ try:
 	#	End of personExternalLinkProcessing
 	###############################################################################
 
-	try:
-		resetUpdatedFlag( sesTarget, "people" )
-		resetUpdatedFlag( sesTarget, "person_externallinks" )
-		resetUpdatedFlag( sesTarget, "person_webprofile" )
-	except Exception as e:
-		print e
+	resetUpdatedFlag( sesTarget, "people" )
+	resetUpdatedFlag( sesTarget, "person_externallinks" )
+	resetUpdatedFlag( sesTarget, "person_webprofile" )
 
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
-	# End of the process for the source person data (1 table into 3 tables)
-	###############################################################################
 
-	###############################################################################
-	# Load the asu data warehouse people data table in into the final destination:
-	#	mysql:
-	#		bio_public.person_phones to bio_public.person_phones
-	# 	
-	# Using Group By on the source to limit likely duplicates.
-	#
-	try:
-		resetUpdatedFlag( sesTarget, "person_phones" )
-	except Exception as e:
-		print e
+# End of the process for the source person data (1 table into 3 tables)
+###############################################################################
 
-	import personPhoneProcessing
+
+###############################################################################
+# Load the asu data warehouse people data table in into the final destination:
+#	mysql:
+#		bio_public.person_phones to bio_public.person_phones
+# 	
+# Using Group By on the source to limit likely duplicates.
+
+import personPhoneProcessing
+
+if True:
+	resetUpdatedFlag( sesTarget, "person_phones" )
 
 	srcPersonPhones = personPhoneProcessing.getSourcePhones( sesSource )
 
 	iPersonPhone = 1
 	for srcPersonPhone in srcPersonPhones:
-		try:
-			processedPhone = personPhoneProcessing.processPhone( srcPersonPhone, sesTarget )
-		except TypeError as e:
-			pass
-		else:
-			sesTarget.add( processedPhone )
-			if iPersonPhone % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iPersonPhone += 1
+		processedPhone = personPhoneProcessing.processPhone( srcPersonPhone, sesTarget )
+		sesTarget.add( processedPhone )
+		if iPersonPhone % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except sqlalchemy.exc.IntegrityError as e:
+				sesTarget.rollback()
+				raise e
+		iPersonPhone += 1
+
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
-	# Remove the data that was no longer was found for an active person.
 	tgtMissingPersonPhones = personPhoneProcessing.getTargetPhones( sesTarget )
 
 	iRemovePhone = 1
 	for tgtMissingPersonPhone in tgtMissingPersonPhones:
-		# if the phone no longer is found we remove it but only if the person is active...
-		try:
-			removePhone = personPhoneProcessing.cleanupSourcePhones( tgtMissingPersonPhone, srcPersonPhones )
-		except TypeError as e:
-			pass
-		else:
-			sesTarget.add( removePhone )
-			if iRemovePhone % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemovePhone += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-	# reset the updated_flag for all records for the next round of changes.
-	# engineTarget.execute("UPDATE person_phones SET updated_flag = 0;")
-	try:
-		resetUpdatedFlag( sesTarget, "person_phones" )
-	except Exception as e:
-		print e
+		removePhone = personPhoneProcessing.cleanupSourcePhones( tgtMissingPersonPhone, srcPersonPhones )
+		sesTarget.add( removePhone )
+		if iRemovePhone % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except sqlalchemy.exc.IntegrityError as e:
+				sesTarget.rollback()
+				raise e
+		iRemovePhone += 1
 
 	try:
 		sesTarget.commit()
@@ -325,40 +288,39 @@ try:
 		sesTarget.rollback()
 		raise e
 
+	resetUpdatedFlag( sesTarget, "person_phones" )
 
-	#	End of personPhoneProcessing
-	###############################################################################
-
-	###############################################################################
-	# Load the asu data warehouse people data table in into the final destination:
-	#	mysql:
-	#		bio_public.person_addresses to bio_public.person_addresses
-	# 	
-	# Using Group By on the source to limit likely duplicates.
 	try:
-		resetUpdatedFlag( sesTarget, "person_addresses" )
-	except Exception as e:
-		print e
+		sesTarget.commit()
+	except sqlalchemy.exc.IntegrityError as e:
+		sesTarget.rollback()
+		raise e
 
-	import personAddressProcessing
+#	End of personPhoneProcessing
+###############################################################################
 
+###############################################################################
+# Load the asu data warehouse people data table in into the final destination:
+#	mysql:
+#		bio_public.person_addresses to bio_public.person_addresses
+
+import personAddressProcessing
+
+if True:
+	resetUpdatedFlag( sesTarget, "person_addresses" )
 	srcPersonAddresses = personAddressProcessing.getSourceAddresses( sesSource )
 
 	iPersonAddresses = 1
 	for srcPersonAddress in srcPersonAddresses:
-		try:
-			processedAddress = personAddressProcessing.processAddress( srcPersonAddress, sesTarget )
-		except TypeError as e:
-			pass
-		else:
-			sesTarget.add( processedAddress )
-			if iPersonAddresses % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iPersonAddresses += 1
+		processedAddress = personAddressProcessing.processAddress( srcPersonAddress, sesTarget )
+		sesTarget.add( processedAddress )
+		if iPersonAddresses % 1000 == 0:
+			try:
+				sesTarget.flush()
+			except sqlalchemy.exc.IntegrityError as e:
+				sesTarget.rollback()
+				raise e
+		iPersonAddresses += 1
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
@@ -370,11 +332,8 @@ try:
 
 	iRemoveAddresses = 1
 	for tgtMissingPersonAddress in tgtMissingPersonAddresses:
-		try:
-			removePersonAddress = personAddressProcessing.cleanupSourceAddresses( tgtMissingPersonAddress, srcPersonAddresses )
-		except TypeError as e:
-			pass
-		else:
+		removePersonAddress = personAddressProcessing.cleanupSourceAddresses( tgtMissingPersonAddress, srcPersonAddresses )
+		if removePersonAddress:
 			sesTarget.add( removePersonAddress )
 			if iRemoveAddresses % 1000 == 0:
 				try:
@@ -389,11 +348,7 @@ try:
 		sesTarget.rollback()
 		raise e
 
-	# RESET the updated_flag for all records for the next round of changes.
-	try:
-		resetUpdatedFlag( sesTarget, "person_addresses" )
-	except Exception as e:
-		print e
+	resetUpdatedFlag( sesTarget, "person_addresses" )
 
 	try:
 		sesTarget.commit()
@@ -401,26 +356,25 @@ try:
 		sesTarget.rollback()
 		raise e
 
-	#	End of personAddressProcessing
-	###############################################################################
+#	End of personAddressProcessing
+###############################################################################
 
 
 
-	# ###############################################################################
-	# 
-	# pull over all of the data warehouse department codes.
+###############################################################################
+# 
+#	File Import: departmentProcessing
+# 	pull over all of the data warehouse department codes.
 
-	import departmentProcessing
+import departmentProcessing
 
+if True:
 	srcDepartments = departmentProcessing.getSourceDepartments( sesSource )
 
 	iDepartment = 1
 	for srcDepartment in srcDepartments:
-		try:
-			processedDepartment = departmentProcessing.processDepartment( srcDepartment, sesTarget )
-		except TypeError as e:
-			pass
-		else:
+		processedDepartment = departmentProcessing.processDepartment( srcDepartment, sesTarget )
+		if processedDepartment:
 			sesTarget.add( processedDepartment )
 			if iDepartment % 1000 == 0:
 				try:
@@ -440,11 +394,8 @@ try:
 
 	iRemoveDepartment = 1
 	for tgtMissingDepartment in tgtMissingDepartments:
-		try:
-			removeDepartment = departmentProcessing.softDeleteDepartment( tgtMissingDepartment, srcDepartments )
-		except TypeError as e:
-			pass
-		else:
+		removeDepartment = departmentProcessing.softDeleteDepartment( tgtMissingDepartment, srcDepartments )
+		if removeDepartment:
 			sesTarget.add( removeDepartment )
 			if iRemoveDepartment % 1000 == 0:
 				try:
@@ -460,29 +411,23 @@ try:
 		sesTarget.rollback()
 		raise e
 
-	# end of for tgtMissingDepartments
-	###############################################################################
+# end of for tgtMissingDepartments
+###############################################################################
 
-####**####**####**####**####**####**####**####**####**####**####**####
-# CODE UPDATE Stopped HERE...  BELOW NEEDS UPDATES...
-####**####**####**####**####**####**####**####**####**####**####**####
+###############################################################################
+# 
+#   File Import:  jobProcessing
+# 	pull over all of the data warehouse job codes.
 
-	###############################################################################
-	# 
-	#   File Import:  jobProcessing
-	# pull over all of the data warehouse job codes.
+import jobProcessing
 
-	import jobProcessing
-
+if True:
 	srcJobCodes = jobProcessing.getSourceJobCodes( sesSource )
 
 	iJob = 1
 	for srcJob in srcJobCodes:
-		try:
-			processedjob = jobProcessing.processJob( srcJob, sesTarget )
-		except TypeError as e:
-			pass
-		else:
+		processedjob = jobProcessing.processJob( srcJob, sesTarget )
+		if processedjob:
 			sesTarget.add( processedjob )
 			if iJob % 1000 == 0:
 				try:
@@ -501,11 +446,8 @@ try:
 
 	iRemoveJob = 1
 	for tgtMissingJob in tgtMissingJobCodes:
-		try:
-			removeJob = jobProcessing.softDeleteJob( tgtMissingJob, srcJobCodes )
-		except TypeError as e:
-			pass
-		else:
+		removeJob = jobProcessing.softDeleteJob( tgtMissingJob, srcJobCodes )
+		if removeJob:
 			sesTarget.add( removeJob )
 			if iRemoveJob % 1000 == 0:
 				try:
@@ -521,25 +463,23 @@ try:
 		sesTarget.rollback()
 		raise e
 
-	#	End of jobProcessing
-	###############################################################################
+#	End of jobProcessing
+###############################################################################
 
-	###############################################################################
-	# 
-	#   File Import:  jobLogProcessing
+###############################################################################
+# 
+#   File Import:  jobLogProcessing
 
-	import jobLogProcessing
+import jobLogProcessing
 
+if True:
 	srcJobsLog = jobLogProcessing.getSourceJobsLog( sesSource )
 
 	iJobLog = 1
 	for srcJobLog in srcJobsLog:
-		try:
-			jrocessedJobLog = jobLogProcessing.processJobLog( srcJobLog, sesTarget )
-		except TypeError as e:
-			pass
-		else:
-			sesTarget.add( jrocessedJobLog )
+		processedJobLog = jobLogProcessing.processJobLog( srcJobLog, sesTarget )
+		if processedJobLog:
+			sesTarget.add( processedJobLog )
 			if iJobLog % 1000 == 0:
 				try:
 					sesTarget.flush()
@@ -553,16 +493,12 @@ try:
 		sesTarget.rollback()
 		raise e
 
-
 	tgtMissingJobsLog = jobLogProcessing.getTargetJobsLog( sesTarget )
 
 	iRemoveJobLog = 1
 	for tgtMissingJobLog in tgtMissingJobsLog:
-		try:
-			removeJobLog = jobLogProcessing.softDeleteJobLog( tgtMissingJobLog, srcJobsLog )
-		except TypeError as e:
-			pass
-		else:
+		removeJobLog = jobLogProcessing.softDeleteJobLog( tgtMissingJobLog, srcJobsLog )
+		if removeJobLog:
 			sesTarget.add( removeJobLog )
 			if iRemoveJobLog % 1000 == 0:
 				try:
@@ -577,32 +513,26 @@ try:
 		sesTarget.rollback()
 		raise e
 
-	#	End of jobLogProcessing
-	###############################################################################
+#	End of jobLogProcessing
+###############################################################################
 
 
-	###############################################################################
-	# 
-	#	File Import: personJobsProcessing.py
-	#	The person_jobs data, is a many to many requiring an updated_flag, need it
-	# 	this to be set to false prior to the data pull...  will dub our data otherwise.
-	#
-	try:
-		resetUpdatedFlag( sesTarget, "person_jobs" )
-	except Exception as e:
-		print e
+###############################################################################
+# 
+#	File Import: personJobsProcessing.py
+#	The person_jobs data, is a many to many requiring an updated_flag, need it
+# 	this to be set to false prior to the data pull...  will dub our data otherwise.
+#
+import personJobsProcessing
 
-	import personJobsProcessing
-
+if True:
+	resetUpdatedFlag( sesTarget, "person_jobs" )
 	srcPersonJobs = personJobsProcessing.getSourcePersonJobs( sesSource )
 
 	iPersonJob = 1
 	for srcPersonJob in srcPersonJobs:
-		try:
-			processedPersonJob = personJobsProcessing.processPersonJob( srcPersonJob, sesTarget )
-		except TypeError as e:
-			pass
-		else:
+		processedPersonJob = personJobsProcessing.processPersonJob( srcPersonJob, sesTarget )
+		if processedPersonJob:
 			sesTarget.add( processedPersonJob )
 			if iPersonJob % 1000 == 0:
 				try:
@@ -611,7 +541,6 @@ try:
 					sesTarget.rollback()
 					raise e
 			iPersonJob += 1
-
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
@@ -622,11 +551,8 @@ try:
 
 	iRemovePersonJob = 1
 	for tgtMissingPersonJob in tgtMissingPersonJobs:
-		try:
-			removePersonJob = personJobsProcessing.softDeletePersonJob( tgtMissingPersonJob, srcPersonJobs )
-		except TypeError as e:
-			pass
-		else:
+		removePersonJob = personJobsProcessing.softDeletePersonJob( tgtMissingPersonJob, srcPersonJobs )
+		if removePersonJob:
 			sesTarget.add( removePersonJob )
 			if iRemovePersonJob % 1000 == 0:
 				try:
@@ -635,6 +561,13 @@ try:
 					sesTarget.rollback()
 					raise e
 			iRemovePersonJob += 1
+	try:
+		sesTarget.commit()
+	except sqlalchemy.exc.IntegrityError as e:
+		sesTarget.rollback()
+		raise e
+
+	resetUpdatedFlag( sesTarget, "person_jobs" )
 
 	try:
 		sesTarget.commit()
@@ -642,48 +575,27 @@ try:
 		sesTarget.rollback()
 		raise e
 
-	try:
-		resetUpdatedFlag( sesTarget, "person_jobs" )
-	except Exception as e:
-		print e
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-	# end of for tgtMissingPersonJobs
-	###############################################################################
-
+# end of for tgtMissingPersonJobs
+###############################################################################
 	
-	###############################################################################
-	# 
-	#   File Import:  personSubAffiliationProcessing.py
-	#	The person_department_subaffiliations data, is a many to many requiring an 
-	#	updated_flag, need it this to be set to false prior to the data pull...  
-	#	will dub our data otherwise.
-	#
-	try:
-		resetUpdatedFlag( sesTarget, "person_department_subaffiliations" )
-	except Exception as e:
-		print e
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+###############################################################################
+# 
+#   File Import:  personSubAffiliationProcessing.py
+#	The person_department_subaffiliations data, is a many to many requiring an 
+#	updated_flag, need it this to be set to false prior to the data pull...  
+#	will dub our data otherwise.
+#
 
-	import personSubAffiliationProcessing
+import personSubAffiliationProcessing
 
+if True:
+	resetUpdatedFlag( sesTarget, "person_department_subaffiliations" )
 	srcPersonSubAffiliations = personSubAffiliationProcessing.getSourcePersonSubAffiliations( sesSource )
 
 	iPersonSubAffiliation = 1
 	for srcPersonSubAffiliation in srcPersonSubAffiliations:
-		try:
-			processedpersonSubAffiliation = personSubAffiliationProcessing.processPersonSubAffiliation( srcPersonSubAffiliation, sesTarget )
-		except TypeError as e:
-			pass
-		else:
+		processedpersonSubAffiliation = personSubAffiliationProcessing.processPersonSubAffiliation( srcPersonSubAffiliation, sesTarget )
+		if processedpersonSubAffiliation:
 			sesTarget.add( processedpersonSubAffiliation )
 			if iPersonSubAffiliation % 1000 == 0:
 				try:
@@ -702,13 +614,8 @@ try:
 
 	iRemovePersonSubAffiliation = 1
 	for tgtMissingPersonSubAffiliation in tgtMissingPersonSubAffiliations:
-		try:
-			removePersonSubAffiliation = personSubAffiliationProcessing.softDeletePersonSubAffiliation( tgtMissingPersonSubAffiliation, srcPersonSubAffiliations )
-		except TypeError as e:
-			pass
-		# except RuntimeError as e:
-		# 	raise e
-		else:
+		removePersonSubAffiliation = personSubAffiliationProcessing.softDeletePersonSubAffiliation( tgtMissingPersonSubAffiliation, srcPersonSubAffiliations )
+		if removePersonSubAffiliation:
 			sesTarget.add( removePersonSubAffiliation )
 			if iRemovePersonSubAffiliation % 1000 == 0:
 				try:
@@ -717,17 +624,13 @@ try:
 					sesTarget.rollback()
 					raise e
 			iRemovePersonSubAffiliation += 1
-
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
-	try:
-		resetUpdatedFlag( sesTarget, "person_department_subaffiliations" )
-	except Exception as e:
-		print e
+	resetUpdatedFlag( sesTarget, "person_department_subaffiliations" )
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
@@ -735,24 +638,22 @@ try:
 		raise e
 
 
-	#	End of personSubAffiliationProcessing
-	###############################################################################
+#	End of personSubAffiliationProcessing
+###############################################################################
 
-	###############################################################################
-	# 
-	#   File Import:  farEvaluationProcessing.py
+###############################################################################
+# 
+#   File Import:  farEvaluationProcessing.py
 
-	import farEvaluationProcessing
+import farEvaluationProcessing
 
+if True:	
 	srcFarEvaluations = farEvaluationProcessing.getSourceFarEvaluations( sesSource )
 
 	iFarEvaluation = 1
 	for srcFarEvaluation in srcFarEvaluations:
-		try:
-			processedfarEvaluation = farEvaluationProcessing.processFarEvaluation( srcFarEvaluation, sesTarget )
-		except TypeError as e:
-			pass
-		else:
+		processedfarEvaluation = farEvaluationProcessing.processFarEvaluation( srcFarEvaluation, sesTarget )
+		if processedfarEvaluation:
 			sesTarget.add( processedfarEvaluation )
 			if iFarEvaluation % 1000 == 0:
 				try:
@@ -767,16 +668,12 @@ try:
 		sesTarget.rollback()
 		raise e
 
-
 	tgtMissingFarEvaluations = farEvaluationProcessing.getTargetFarEvaluations( sesTarget )
 
 	iRemoveFarEvaluation = 1
 	for tgtMissingFarEvaluation in tgtMissingFarEvaluations:
-		try:
-			removeFarEvaluation = farEvaluationProcessing.softDeleteFarEvaluation( tgtMissingFarEvaluation, srcFarEvaluations )
-		except TypeError as e:
-			pass
-		else:
+		removeFarEvaluation = farEvaluationProcessing.softDeleteFarEvaluation( tgtMissingFarEvaluation, srcFarEvaluations )
+		if removeFarEvaluation:
 			sesTarget.add( removeFarEvaluation )
 			if iRemoveFarEvaluation % 1000 == 0:
 				try:
@@ -785,31 +682,28 @@ try:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarEvaluation += 1
-
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
-	#	End of farEvaluationProcessing
-	###############################################################################
+#	End of farEvaluationProcessing
+###############################################################################
 
-	###############################################################################
-	# 
-	#   File Import:  farConferenceProceedingProcessing
+###############################################################################
+# 
+#   File Import:  farConferenceProceedingProcessing
 
-	import farConferenceProceedingProcessing
+import farConferenceProceedingProcessing
 
+if True:
 	srcFarConferenceProceedings = farConferenceProceedingProcessing.getSourceFarConferenceProceedings( sesSource )
 
 	iFarConferenceProceeding = 1
 	for srcFarConferenceProceeding in srcFarConferenceProceedings:
-		try:
-			processedfarConferenceProceeding = farConferenceProceedingProcessing.processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget )
-		except TypeError as e:
-			pass
-		else:
+		processedfarConferenceProceeding = farConferenceProceedingProcessing.processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget )
+		if processedfarConferenceProceeding:
 			sesTarget.add( processedfarConferenceProceeding )
 			if iFarConferenceProceeding % 1000 == 0:
 				try:
@@ -824,16 +718,12 @@ try:
 		sesTarget.rollback()
 		raise e
 
-
 	tgtMissingFarConferenceProceedings = farConferenceProceedingProcessing.getTargetFarConferenceProceedings( sesTarget )
 
 	iRemoveFarConferenceProceeding = 1
 	for tgtMissingFarConferenceProceeding in tgtMissingFarConferenceProceedings:
-		try:
-			removeFarConferenceProceeding = farConferenceProceedingProcessing.softDeleteFarConferenceProceeding( tgtMissingFarConferenceProceeding, srcFarConferenceProceedings )
-		except TypeError as e:
-			pass
-		else:
+		removeFarConferenceProceeding = farConferenceProceedingProcessing.softDeleteFarConferenceProceeding( tgtMissingFarConferenceProceeding, srcFarConferenceProceedings )
+		if removeFarConferenceProceeding:
 			sesTarget.add( removeFarConferenceProceeding )
 			if iRemoveFarConferenceProceeding % 1000 == 0:
 				try:
@@ -849,24 +739,22 @@ try:
 		sesTarget.rollback()
 		raise e
 
-	#	End of farConferenceProceedingProcessing
-	###############################################################################
+#	End of farConferenceProceedingProcessing
+###############################################################################
 
-	###############################################################################
-	# 
-	#   File Import:  farAuthoredBookProcessing
+###############################################################################
+# 
+#   File Import:  farAuthoredBookProcessing
 
-	import farAuthoredBookProcessing
+import farAuthoredBookProcessing
 
+if True:
 	srcFarAuthoredBooks = farAuthoredBookProcessing.getSourceFarAuthoredBooks( sesSource )
 
 	iFarAuthoredBook = 1
 	for srcFarAuthoredBook in srcFarAuthoredBooks:
-		try:
-			processedfarAuthoredBook = farAuthoredBookProcessing.processFarAuthoredBook( srcFarAuthoredBook, sesTarget )
-		except TypeError as e:
-			pass
-		else:
+		processedfarAuthoredBook = farAuthoredBookProcessing.processFarAuthoredBook( srcFarAuthoredBook, sesTarget )
+		if processedfarAuthoredBook:
 			sesTarget.add( processedfarAuthoredBook )
 			if iFarAuthoredBook % 1000 == 0:
 				try:
@@ -881,16 +769,12 @@ try:
 		sesTarget.rollback()
 		raise e
 
-
 	tgtMissingFarAuthoredBooks = farAuthoredBookProcessing.getTargetFarAuthoredBooks( sesTarget )
 
 	iRemoveFarAuthoredBook = 1
 	for tgtMissingFarAuthoredBook in tgtMissingFarAuthoredBooks:
-		try:
-			removeFarAuthoredBook = farAuthoredBookProcessing.softDeleteFarAuthoredBook( tgtMissingFarAuthoredBook, srcFarAuthoredBooks )
-		except TypeError as e:
-			pass
-		else:
+		removeFarAuthoredBook = farAuthoredBookProcessing.softDeleteFarAuthoredBook( tgtMissingFarAuthoredBook, srcFarAuthoredBooks )
+		if removeFarAuthoredBook:
 			sesTarget.add( removeFarAuthoredBook )
 			if iRemoveFarAuthoredBook % 1000 == 0:
 				try:
@@ -899,31 +783,28 @@ try:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarAuthoredBook += 1
-
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
-	#	End of farAuthoredBookProcessing
-	# ###############################################################################
+#	End of farAuthoredBookProcessing
+# ###############################################################################
 
-	###############################################################################
-	# 
-	#   File Import:  farRefereedarticleProcessing
+###############################################################################
+# 
+#   File Import:  farRefereedarticleProcessing
 
-	import farRefereedarticleProcessing
+import farRefereedarticleProcessing
 
+if True:
 	srcFarRefereedarticles = farRefereedarticleProcessing.getSourceFarRefereedarticles( sesSource )
 
 	iFarRefereedarticle = 1
 	for srcFarRefereedarticle in srcFarRefereedarticles:
-		try:
-			processedfarRefereedarticle = farRefereedarticleProcessing.processFarRefereedarticle( srcFarRefereedarticle, sesTarget )
-		except TypeError as e:
-			pass
-		else:
+		processedfarRefereedarticle = farRefereedarticleProcessing.processFarRefereedarticle( srcFarRefereedarticle, sesTarget )
+		if processedfarRefereedarticle:
 			sesTarget.add( processedfarRefereedarticle )
 			if iFarRefereedarticle % 1000 == 0:
 				try:
@@ -938,16 +819,12 @@ try:
 		sesTarget.rollback()
 		raise e
 
-
 	tgtMissingFarRefereedarticles = farRefereedarticleProcessing.getTargetFarRefereedarticles( sesTarget )
 
 	iRemoveFarRefereedarticle = 1
 	for tgtMissingFarRefereedarticle in tgtMissingFarRefereedarticles:
-		try:
-			removeFarRefereedarticle = farRefereedarticleProcessing.softDeleteFarRefereedarticle( tgtMissingFarRefereedarticle, srcFarRefereedarticles )
-		except TypeError as e:
-			pass
-		else:
+		removeFarRefereedarticle = farRefereedarticleProcessing.softDeleteFarRefereedarticle( tgtMissingFarRefereedarticle, srcFarRefereedarticles )
+		if removeFarRefereedarticle:
 			sesTarget.add( removeFarRefereedarticle )
 			if iRemoveFarRefereedarticle % 1000 == 0:
 				try:
@@ -956,31 +833,28 @@ try:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarRefereedarticle += 1
-
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
-	#	End of farRefereedarticleProcessing
-	###############################################################################
+#	End of farRefereedarticleProcessing
+###############################################################################
 
-	###############################################################################
-	# 
-	#   File Import:  farNonrefereedarticleProcessing
+###############################################################################
+# 
+#   File Import:  farNonrefereedarticleProcessing
 
-	import farNonrefereedarticleProcessing
+import farNonrefereedarticleProcessing
 
+if True:
 	srcFarNonrefereedarticles = farNonrefereedarticleProcessing.getSourceFarNonrefereedarticles( sesSource )
 
 	iFarNonrefereedarticle = 1
 	for srcFarNonrefereedarticle in srcFarNonrefereedarticles:
-		try:
-			processedfarNonrefereedarticle = farNonrefereedarticleProcessing.processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget )
-		except TypeError as e:
-			pass
-		else:
+		processedfarNonrefereedarticle = farNonrefereedarticleProcessing.processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget )
+		if processedfarNonrefereedarticle:
 			sesTarget.add( processedfarNonrefereedarticle )
 			if iFarNonrefereedarticle % 1000 == 0:
 				try:
@@ -999,11 +873,8 @@ try:
 
 	iRemoveFarNonrefereedarticle = 1
 	for tgtMissingFarNonrefereedarticle in tgtMissingFarNonrefereedarticles:
-		try:
-			removeFarNonrefereedarticle = farNonrefereedarticleProcessing.softDeleteFarNonrefereedarticle( tgtMissingFarNonrefereedarticle, srcFarNonrefereedarticles )
-		except TypeError as e:
-			pass
-		else:
+		removeFarNonrefereedarticle = farNonrefereedarticleProcessing.softDeleteFarNonrefereedarticle( tgtMissingFarNonrefereedarticle, srcFarNonrefereedarticles )
+		if removeFarNonrefereedarticle:
 			sesTarget.add( removeFarNonrefereedarticle )
 			if iRemoveFarNonrefereedarticle % 1000 == 0:
 				try:
@@ -1019,24 +890,22 @@ try:
 		sesTarget.rollback()
 		raise e
 
-	#	End of farNonrefereedarticleProcessing
-	###############################################################################
+#	End of farNonrefereedarticleProcessing
+###############################################################################
 
-	###############################################################################
-	# 
-	#   File Import:  farEditedbookProcessing
+###############################################################################
+# 
+#   File Import:  farEditedbookProcessing
 
-	import farEditedbookProcessing
+import farEditedbookProcessing
 
+if True:
 	srcFarEditedbooks = farEditedbookProcessing.getSourceFarEditedbooks( sesSource )
 
 	iFarEditedbook = 1
 	for srcFarEditedbook in srcFarEditedbooks:
-		try:
-			processedfarEditedbook = farEditedbookProcessing.processFarEditedbook( srcFarEditedbook, sesTarget )
-		except TypeError as e:
-			pass
-		else:
+		processedfarEditedbook = farEditedbookProcessing.processFarEditedbook( srcFarEditedbook, sesTarget )
+		if processedfarEditedbook:
 			sesTarget.add( processedfarEditedbook )
 			if iFarEditedbook % 1000 == 0:
 				try:
@@ -1051,16 +920,12 @@ try:
 		sesTarget.rollback()
 		raise e
 
-
 	tgtMissingFarEditedbooks = farEditedbookProcessing.getTargetFarEditedbooks( sesTarget )
 
 	iRemoveFarEditedbook = 1
 	for tgtMissingFarEditedbook in tgtMissingFarEditedbooks:
-		try:
-			removeFarEditedbook = farEditedbookProcessing.softDeleteFarEditedbook( tgtMissingFarEditedbook, srcFarEditedbooks )
-		except TypeError as e:
-			pass
-		else:
+		removeFarEditedbook = farEditedbookProcessing.softDeleteFarEditedbook( tgtMissingFarEditedbook, srcFarEditedbooks )
+		if removeFarEditedbook:
 			sesTarget.add( removeFarEditedbook )
 			if iRemoveFarEditedbook % 1000 == 0:
 				try:
@@ -1069,32 +934,29 @@ try:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarEditedbook += 1
-
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
-	#	End of farEditedbookProcessing
-	###############################################################################
+#	End of farEditedbookProcessing
+###############################################################################
 
 
-	###############################################################################
-	# 
-	#   File Import:  farBookChapterProcessing
+###############################################################################
+# 
+#   File Import:  farBookChapterProcessing
 
-	import farBookChapterProcessing
+import farBookChapterProcessing
 
+if True:
 	srcFarBookChapters = farBookChapterProcessing.getSourceFarBookChapters( sesSource )
 
 	iFarBookChapter = 1
 	for srcFarBookChapter in srcFarBookChapters:
-		try:
-			processedfarBookChapter = farBookChapterProcessing.processFarBookChapter( srcFarBookChapter, sesTarget )
-		except TypeError as e:
-			pass
-		else:
+		processedfarBookChapter = farBookChapterProcessing.processFarBookChapter( srcFarBookChapter, sesTarget )
+		if processedfarBookChapter:
 			sesTarget.add( processedfarBookChapter )
 			if iFarBookChapter % 1000 == 0:
 				try:
@@ -1109,16 +971,12 @@ try:
 		sesTarget.rollback()
 		raise e
 
-
 	tgtMissingFarBookChapters = farBookChapterProcessing.getTargetFarBookChapters( sesTarget )
 
 	iRemoveFarBookChapter = 1
 	for tgtMissingFarBookChapter in tgtMissingFarBookChapters:
-		try:
-			removeFarBookChapter = farBookChapterProcessing.softDeleteFarBookChapter( tgtMissingFarBookChapter, srcFarBookChapters )
-		except TypeError as e:
-			pass
-		else:
+		removeFarBookChapter = farBookChapterProcessing.softDeleteFarBookChapter( tgtMissingFarBookChapter, srcFarBookChapters )
+		if removeFarBookChapter:
 			sesTarget.add( removeFarBookChapter )
 			if iRemoveFarBookChapter % 1000 == 0:
 				try:
@@ -1127,33 +985,29 @@ try:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarBookChapter += 1
-
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
-	#	End of farBookChapterProcessing
-	###############################################################################
+#	End of farBookChapterProcessing
+###############################################################################
 
+###############################################################################
+# 
+#   File Import:  farBookReviewProcessing
 
-	###############################################################################
-	# 
-	#   File Import:  farBookReviewProcessing
+import farBookReviewProcessing
 
-	import farBookReviewProcessing
-
+if True:
 	srcFarBookReviews = farBookReviewProcessing.getSourceFarBookReviews( sesSource )
 
 	iFarBookReview = 1
 	for srcFarBookReview in srcFarBookReviews:
-		try:
-			frocessedFarBookReview = farBookReviewProcessing.processFarBookReview( srcFarBookReview, sesTarget )
-		except TypeError as e:
-			pass
-		else:
-			sesTarget.add( frocessedFarBookReview )
+		processedFarBookReview = farBookReviewProcessing.processFarBookReview( srcFarBookReview, sesTarget )
+		if processedFarBookReview:
+			sesTarget.add( processedFarBookReview )
 			if iFarBookReview % 1000 == 0:
 				try:
 					sesTarget.flush()
@@ -1167,16 +1021,12 @@ try:
 		sesTarget.rollback()
 		raise e
 
-
 	tgtMissingFarBookReviews = farBookReviewProcessing.getTargetFarBookReviews( sesTarget )
 
 	iRemoveFarBookReview = 1
 	for tgtMissingFarBookReview in tgtMissingFarBookReviews:
-		try:
-			removeFarBookReview = farBookReviewProcessing.softDeleteFarBookReview( tgtMissingFarBookReview, srcFarBookReviews )
-		except TypeError as e:
-			pass
-		else:
+		removeFarBookReview = farBookReviewProcessing.softDeleteFarBookReview( tgtMissingFarBookReview, srcFarBookReviews )
+		if removeFarBookReview:
 			sesTarget.add( removeFarBookReview )
 			if iRemoveFarBookReview % 1000 == 0:
 				try:
@@ -1185,32 +1035,29 @@ try:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarBookReview += 1
-
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
-	#	End of farBookReviewProcessing
-	###############################################################################
+#	End of farBookReviewProcessing
+###############################################################################
 
-	###############################################################################
-	# 
-	#   File Import:  farEncyclopediaarticleProcessing
+###############################################################################
+# 
+#   File Import:  farEncyclopediaarticleProcessing
 
-	import farEncyclopediaarticleProcessing
+import farEncyclopediaarticleProcessing
 
+if True:
 	srcFarEncyclopediaarticles = farEncyclopediaarticleProcessing.getSourceFarEncyclopediaarticles( sesSource )
 
 	iFarEncyclopediaarticle = 1
 	for srcFarEncyclopediaarticle in srcFarEncyclopediaarticles:
-		try:
-			frocessedFarEncyclopediaarticle = farEncyclopediaarticleProcessing.processFarEncyclopediaarticle( srcFarEncyclopediaarticle, sesTarget )
-		except TypeError as e:
-			pass
-		else:
-			sesTarget.add( frocessedFarEncyclopediaarticle )
+		processedFarEncyclopediaarticle = farEncyclopediaarticleProcessing.processFarEncyclopediaarticle( srcFarEncyclopediaarticle, sesTarget )
+		if processedFarEncyclopediaarticle:
+			sesTarget.add( processedFarEncyclopediaarticle )
 			if iFarEncyclopediaarticle % 1000 == 0:
 				try:
 					sesTarget.flush()
@@ -1224,16 +1071,12 @@ try:
 		sesTarget.rollback()
 		raise e
 
-
 	tgtMissingFarEncyclopediaarticles = farEncyclopediaarticleProcessing.getTargetFarEncyclopediaarticles( sesTarget )
 
 	iRemoveFarEncyclopediaarticle = 1
 	for tgtMissingFarEncyclopediaarticle in tgtMissingFarEncyclopediaarticles:
-		try:
-			removeFarEncyclopediaarticle = farEncyclopediaarticleProcessing.softDeleteFarEncyclopediaarticle( tgtMissingFarEncyclopediaarticle, srcFarEncyclopediaarticles )
-		except TypeError as e:
-			pass
-		else:
+		removeFarEncyclopediaarticle = farEncyclopediaarticleProcessing.softDeleteFarEncyclopediaarticle( tgtMissingFarEncyclopediaarticle, srcFarEncyclopediaarticles )
+		if removeFarEncyclopediaarticle:
 			sesTarget.add( removeFarEncyclopediaarticle )
 			if iRemoveFarEncyclopediaarticle % 1000 == 0:
 				try:
@@ -1242,32 +1085,29 @@ try:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarEncyclopediaarticle += 1
-
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
-	#	End of farEncyclopediaarticleProcessing
-	###############################################################################
+#	End of farEncyclopediaarticleProcessing
+###############################################################################
 
-	###############################################################################
-	# 
-	#   File Import:  farShortstoriesProcessing
+###############################################################################
+# 
+#   File Import:  farShortstoriesProcessing
 
-	import farShortstoriesProcessing
+import farShortstoriesProcessing
 
+if True:
 	srcFarShortstories = farShortstoriesProcessing.getSourceFarShortstories( sesSource )
 
 	iFarShortstorie = 1
 	for srcFarShortstorie in srcFarShortstories:
-		try:
-			frocessedFarShortstories = farShortstoriesProcessing.processFarShortstorie( srcFarShortstorie, sesTarget )
-		except TypeError as e:
-			pass
-		else:
-			sesTarget.add( frocessedFarShortstories )
+		processedFarShortstories = farShortstoriesProcessing.processFarShortstorie( srcFarShortstorie, sesTarget )
+		if processedFarShortstories:
+			sesTarget.add( processedFarShortstories )
 			if iFarShortstorie % 1000 == 0:
 				try:
 					sesTarget.flush()
@@ -1281,16 +1121,12 @@ try:
 		sesTarget.rollback()
 		raise e
 
-
 	tgtMissingFarShortstories = farShortstoriesProcessing.getTargetFarShortstories( sesTarget )
 
 	iRemoveFarShortstorie = 1
 	for tgtMissingFarShortstorie in tgtMissingFarShortstories:
-		try:
-			removeFarShortstorie = farShortstoriesProcessing.softDeleteFarShortstorie( tgtMissingFarShortstorie, srcFarShortstories )
-		except TypeError as e:
-			pass
-		else:
+		removeFarShortstorie = farShortstoriesProcessing.softDeleteFarShortstorie( tgtMissingFarShortstorie, srcFarShortstories )
+		if removeFarShortstorie:
 			sesTarget.add( removeFarShortstorie )
 			if iRemoveFarShortstorie % 1000 == 0:
 				try:
@@ -1299,24 +1135,17 @@ try:
 					sesTarget.rollback()
 					raise e
 			iRemoveFarShortstorie += 1
-
 	try:
 		sesTarget.commit()
 	except sqlalchemy.exc.IntegrityError as e:
 		sesTarget.rollback()
 		raise e
 
-	#	End of farShortstoriesProcessing
-	###############################################################################
+#	End of farShortstoriesProcessing
+###############################################################################
 
+cleanUp( None )
 
-except IndexError as e:
-	raise e
-finally:
-	sesTarget.close()
-	sesSource.close()
-
-	bioetlAppRun.cleanUp()
 #
-# End the processing of person addresses records
+# 	End of the BIOETL scripts...
 ###############################################################################

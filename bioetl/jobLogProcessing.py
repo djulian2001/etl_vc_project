@@ -41,6 +41,7 @@ def processJobLog( srcJobLog, sesTarget ):
 		srcJobLog.deptid,
 		srcJobLog.jobcode,
 		srcJobLog.supervisor_id,
+		srcJobLog.reports_to,
 		srcJobLog.main_appt_num_jpn,
 		srcJobLog.effdt,
 		srcJobLog.action,
@@ -111,6 +112,7 @@ def processJobLog( srcJobLog, sesTarget ):
 			updateJobLog.deptid = srcJobLog.deptid
 			updateJobLog.jobcode = srcJobLog.jobcode
 			updateJobLog.supervisor_id = srcJobLog.supervisor_id
+			updateJobLog.reports_to = srcJobLog.reports_to
 			updateJobLog.main_appt_num_jpn = srcJobLog.main_appt_num_jpn
 			updateJobLog.effdt = srcJobLog.effdt
 			updateJobLog.action = srcJobLog.action
@@ -126,8 +128,6 @@ def processJobLog( srcJobLog, sesTarget ):
 			updateJobLog.deleted_at = None
 
 			return updateJobLog
-		else:
-			raise TypeError('source jobLog already exists and requires no updates!')
 
 	else:
 		srcGetPersonId = sesTarget.query(
@@ -151,6 +151,7 @@ def processJobLog( srcJobLog, sesTarget ):
 			deptid = srcJobLog.deptid,
 			jobcode = srcJobLog.jobcode,
 			supervisor_id = srcJobLog.supervisor_id,
+			reports_to = srcJobLog.reports_to,
 			main_appt_num_jpn = srcJobLog.main_appt_num_jpn,
 			effdt = srcJobLog.effdt,
 			action = srcJobLog.action,
@@ -203,7 +204,3 @@ def softDeleteJobLog( tgtRecord, srcRecords ):
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
-
-

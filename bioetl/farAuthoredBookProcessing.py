@@ -22,7 +22,6 @@ def getSourceFarAuthoredBooks( sesSource ):
 		AsuDwPsFarAuthoredBooks ).join(
 			farEvals, AsuDwPsFarAuthoredBooks.evaluationid == farEvals.c.evaluationid ).filter(
 				AsuDwPsFarAuthoredBooks.ispublic !='N' ).all()
-		
 
 # change value to the singular
 def processFarAuthoredBook( srcFarAuthoredBook, sesTarget ):
@@ -134,8 +133,6 @@ def processFarAuthoredBook( srcFarAuthoredBook, sesTarget ):
 			updateFarAuthoredBook.deleted_at = None
 
 			return updateFarAuthoredBook
-		else:
-			raise TypeError('source farAuthoredBook already exists and requires no updates!')
 
 	else:
 		
@@ -181,7 +178,6 @@ def getTargetFarAuthoredBooks( sesTarget ):
 		Returns a set of FarAuthoredBooks objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		FarAuthoredBooks ).filter(
 			FarAuthoredBooks.deleted_at.is_( None ) ).all()
@@ -194,7 +190,6 @@ def softDeleteFarAuthoredBook( tgtRecord, srcRecords ):
 
 		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
 	def dataMissing():
 		"""
 			The origional list of selected data is then used to see if data requires a soft-delete
@@ -203,10 +198,6 @@ def softDeleteFarAuthoredBook( tgtRecord, srcRecords ):
 		"""
 		return not any( srcRecord.authoredbookid == tgtRecord.authoredbookid for srcRecord in srcRecords )
 
-
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
-

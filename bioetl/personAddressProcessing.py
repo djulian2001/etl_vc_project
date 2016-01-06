@@ -54,7 +54,7 @@ def processAddress( srcPersonAddress, sesTarget ):
 			Addresses ).filter(
 				Addresses.emplid == srcPersonAddress.emplid ).filter(
 				Addresses.address_type == srcPersonAddress.address_type ).filter(
-				Addresses.updated_flag == False )
+				Addresses.updated_flag == False ).all()
 
 		return ret
 
@@ -159,8 +159,4 @@ def cleanupSourceAddresses( tgtRecord, srcRecords ):
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
-
-
-
+	

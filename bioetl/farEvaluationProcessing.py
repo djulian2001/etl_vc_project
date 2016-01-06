@@ -5,7 +5,6 @@ from sharedProcesses import hashThisList
 from models.biopublicmodels import FarEvaluations, People
 from models.asudwpsmodels import AsuDwPsFarEvaluations, AsuPsBioFilters
 
-
 def getSourceFarEvaluations( sesSource ):
 	"""
 		Isolate the imports for the ORM records into this file
@@ -20,7 +19,6 @@ def getSourceFarEvaluations( sesSource ):
 			srcEmplidsSubQry, AsuDwPsFarEvaluations.emplid == srcEmplidsSubQry.c.emplid ).order_by(
 				AsuDwPsFarEvaluations.emplid ).all()
 
-# change value to the singular
 def processFarEvaluation( srcFarEvaluation, sesTarget ):
 	"""
 		Takes in a source FarEvaluation object from biopsmodels (mysql.bio_ps.FarEvaluations)
@@ -32,9 +30,7 @@ def processFarEvaluation( srcFarEvaluation, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-
 	true, false = literal(True), literal(False)
-
 
 	farEvaluationList = [
 		srcFarEvaluation.evaluationid,
@@ -124,11 +120,8 @@ def processFarEvaluation( srcFarEvaluation, sesTarget ):
 			updateFarEvaluation.deleted_at = None
 
 			return updateFarEvaluation
-		else:
-			raise TypeError('source farEvaluation already exists and requires no updates!')
 
 	else:
-
 		srcGetPersonId = sesTarget.query(
 			People.id ).filter(
 				People.emplid == srcFarEvaluation.emplid ).one()
@@ -177,7 +170,6 @@ def softDeleteFarEvaluation( tgtRecord, srcRecords ):
 
 		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
 	def dataMissing():
 		"""
 			The origional list of selected data is then used to see if data requires a soft-delete
@@ -186,11 +178,6 @@ def softDeleteFarEvaluation( tgtRecord, srcRecords ):
 		"""
 		return not any( srcRecord.emplid == tgtRecord.emplid and srcRecord.evaluationid == tgtRecord.evaluationid for srcRecord in srcRecords )
 
-
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
-
-

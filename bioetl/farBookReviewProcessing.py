@@ -126,8 +126,6 @@ def processFarBookReview( srcFarBookReview, sesTarget ):
 			updateFarBookReview.deleted_at = None
 
 			return updateFarBookReview
-		else:
-			raise TypeError('source farBookReview already exists and requires no updates!')
 	else:
 
 		srcGetFarEvaluationId = sesTarget.query(
@@ -192,6 +190,3 @@ def softDeleteFarBookReview( tgtRecord, srcRecords ):
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
-

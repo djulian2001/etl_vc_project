@@ -107,8 +107,6 @@ def processJob( srcJob, sesTarget ):
 			updateJob.deleted_at = None
 
 			return updateJob
-		else:
-			raise TypeError('source job already exists and requires no updates!')
 
 	else:
 		insertJob = JobCodes(
@@ -157,10 +155,7 @@ def softDeleteJob( tgtRecord, srcRecords ):
 		"""
 		return not any( srcRecord.jobcode == tgtRecord.jobcode for srcRecord in srcRecords )
 
-
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
 
