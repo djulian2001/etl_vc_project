@@ -109,6 +109,10 @@ def processPerson( srcPerson, sesTarget ):
 	
 	else:
 		# person wasn't in the target databases, add them now
+		
+		if srcPerson.emplid >= 2147483647L:
+			raise ValueError
+
 		insertPerson = People(
 			source_hash = srcHash,
 			updated_flag = True,

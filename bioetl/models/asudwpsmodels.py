@@ -136,7 +136,6 @@ class AsuDwPsPerson( AsuDwPs ):
     twitter = Column( String(255), nullable=True )
     google_plus = Column( String(255), nullable=True )
     linkedin = Column( String(1024), nullable=True )
-    emplid = Column( Integer, nullable=False )
     bio = Column( Text(), nullable=True )
     research_interests = Column( Text(), nullable=True )
     cv = Column( String(1024), nullable=True )

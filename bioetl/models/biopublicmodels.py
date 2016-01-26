@@ -39,7 +39,6 @@ class People( BioPublic ):
         Commented out are the attributes removed.
     """
     __tablename__ = "people"
-
     # below are the data fields out of peopleSoft
     emplid = Column( Integer, nullable=False )
     asurite_id = Column( String(23), nullable=True )
