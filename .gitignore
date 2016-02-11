@@ -6,3 +6,4 @@ vm-asutobio/**
 .project
 *.pyc
 *.egg-info
+alembic.ini
