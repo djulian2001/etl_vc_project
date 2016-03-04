@@ -5,8 +5,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from datetime import datetime, date
 
-from bioetl.models.biopublicmodels import BioPublic, People, PersonWebProfile, Phones, Departments, Jobs, SubAffiliations, PersonSubAffiliations
-from bioetl.models.asudwpsmodels import AsuDwPsPerson, AsuDwPsPhones, AsuDwPsJobs, AsuDwPsSubAffiliations
+from bioetl.models.biopublicmodels import BioPublic, People, PersonWebProfile, Phones, Departments, Jobs, JobCodes, JobsLog, SubAffiliations, PersonSubAffiliations
+from bioetl.models.asudwpsmodels import AsuDwPsPerson, AsuDwPsPhones, AsuDwPsJobs, AsuDwPsJobsLog, AsuDwPsSubAffiliations
 from bioetl.sharedProcesses import hashThisList
 from asutobiodesign_seeds import *
 
@@ -22,6 +22,16 @@ class bioetlTests( unittest.TestCase ):
 			personSeedObj.created_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			self.session.add( personSeedObj )
 
+	def seedJobs( self ):
+		"""Seed the Jobs"""
+		setJobsSeeds = copy.deepcopy(jobsSeed)
+		for jobSeed in setJobsSeeds:
+			srcHash = hashThisList( jobSeed.values() )
+			jobObj = JobCodes( **jobSeed )
+			jobObj.source_hash = srcHash
+			jobObj.created_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			self.session.add( jobObj )
+
 	def seedDepartments( self ):
 		"""Seed the Departments"""
 		setDeptSeeds = copy.deepcopy( departmentsSeed )
@@ -31,6 +41,25 @@ class bioetlTests( unittest.TestCase ):
 			deptObj.source_hash = srcHash
 			deptObj.created_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			self.session.add( deptObj )
+
+	def seedPersonJobLog( self ):
+		"""Seed the Job logs table"""
+		setJobsLogSeeds = copy.deepcopy( personJobsLogSeed )
+		self.seedPeople()
+		self.seedDepartments()
+		self.seedJobs()
+		for jobLogSeed in setJobsLogSeeds:
+			srcHash = hashThisList( jobLogSeed.values() )
+			jobLogObj = JobsLog( **jobLogSeed )
+			jobLogObj.source_hash = srcHash
+			person = self.session.query( People.id ).filter( People.emplid==jobLogObj.emplid ).one()
+			jobLogObj.person_id = person.id
+			dept = self.session.query( Departments.id ).filter( Departments.deptid==jobLogObj.deptid ).one()
+			jobLogObj.department_id = dept.id
+			job = self.session.query( JobCodes.id ).filter( JobCodes.jobcode==jobLogObj.jobcode ).one()
+			jobLogObj.job_id = job.id
+			jobLogObj.created_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			self.session.add( jobLogObj )
 
 	def seedPersonJobs( self ):
 		"""Seed the needed records to work with the personJobs application scripts"""
@@ -678,6 +707,55 @@ class bioetlTests( unittest.TestCase ):
 				PersonSubAffiliations.updated_flag == True ).all()
 
 		self.assertEquals( newTitle2, update2Found[0].title )
+
+	def test_updatePersonJobsLog( self ):
+		from bioetl.jobLogProcessing import processJobLog
+		self.seedPersonJobLog()
+		mySeed = copy.deepcopy( personJobsLogSeed[3] )
+		oldEffdt = mySeed['effdt']
+		newEffdt = '2008-01-30'
+		mySeed['effdt'] = newEffdt
+
+		preCount = self.session.query( JobsLog ).filter( JobsLog.emplid == mySeed['emplid'] ).all()
+
+		result = processJobLog( AsuDwPsJobsLog( **mySeed ), self.session )
+		self.assertIsInstance( result, JobsLog )
+		self.recordEqualsTest( result, mySeed, JobsLog )
+		self.assertNotEquals( result.effdt, oldEffdt )
+
+		postCount = self.session.query( JobsLog ).filter( JobsLog.emplid == mySeed['emplid'] ).all()
+		self.assertEquals( len(preCount), len(postCount) )
+
+	def test_insertPersonJobsLog( self ):
+		from bioetl.jobLogProcessing import processJobLog
+		self.seedPersonJobLog()
+		newSeed = copy.deepcopy( newPersonJobsLogSeed )
+		
+		preCount = self.session.query( JobsLog ).all()
+
+		newResult = processJobLog( AsuDwPsJobsLog( **newSeed ), self.session )
+		self.assertIsInstance( newResult, JobsLog )
+		self.recordEqualsTest( newResult, newSeed, JobsLog )
+		self.session.add( newResult )
+
+		postCount = self.session.query( JobsLog ).all()
+		self.assertNotEquals( len( preCount ),len( postCount ) )
+
+	def test_insertDubPersonJobsLog( self ):
+		from bioetl.jobLogProcessing import processJobLog
+		self.seedPersonJobLog()
+		newSeed = copy.deepcopy( dubPersonJobsLogSeed )
+		
+		preCount = self.session.query( JobsLog ).all()
+
+		newResult = processJobLog( AsuDwPsJobsLog( **newSeed ), self.session )
+		self.assertIsInstance( newResult, JobsLog )
+		self.recordEqualsTest( newResult, newSeed, JobsLog )
+		self.session.add( newResult )
+
+		postCount = self.session.query( JobsLog ).all()
+		self.assertEquals( len( preCount ),len( postCount ) )
+
 
 
 if __name__ == '__main__':

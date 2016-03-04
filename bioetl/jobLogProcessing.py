@@ -1,5 +1,4 @@
 import datetime
-from sqlalchemy import exists, literal
 
 from sharedProcesses import hashThisList
 from models.biopublicmodels import JobsLog, People, Departments, JobCodes
@@ -34,8 +33,6 @@ def processJobLog( srcJobLog, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
-	true, false = literal(True), literal(False)
-
 	jobLogList = [
 		srcJobLog.emplid,
 		srcJobLog.deptid,
@@ -56,78 +53,71 @@ def processJobLog( srcJobLog, sesTarget ):
 
 	srcHash = hashThisList( jobLogList )
 
-	def jobLogExists():
+	def getTargetRecords():
 		"""
 			determine the jobLog exists in the target database.
-			@True: The jobLog exists in the database
-			@False: The jobLog does not exist in the database
+			@return recordset of jobLog objects
 		"""
-		(ret, ), = sesTarget.query(
-			exists().where(
-				JobsLog.emplid == srcJobLog.emplid ).where(
-				JobsLog.deptid == srcJobLog.deptid ).where(
-				JobsLog.jobcode == srcJobLog.jobcode ).where(
-				JobsLog.effdt == srcJobLog.effdt ).where(
-				JobsLog.action == srcJobLog.action ).where(
-				JobsLog.action_reason == srcJobLog.action_reason ) )
+		ret = sesTarget.query(
+			JobsLog ).filter(
+				JobsLog.emplid == srcJobLog.emplid ).filter(
+				JobsLog.deptid == srcJobLog.deptid ).filter(
+				JobsLog.jobcode == srcJobLog.jobcode ).filter(
+				JobsLog.effdt == srcJobLog.effdt ).filter(
+				JobsLog.action == srcJobLog.action ).filter(
+				JobsLog.action_reason == srcJobLog.action_reason ).filter(
+				JobsLog.updated_flag == False ).all()
 
 		return ret
 
-	if jobLogExists():
+	tgtRecords = getTargetRecords()
 
-		def jobLogUpdateRequired():
-			"""
-				Determine if the jobLog that exists requires and update.
-				@True: returned if source_hash is unchanged
-				@False: returned if source_hash is different
-			"""	
-			(ret, ), = sesTarget.query(
-				exists().where(
-					JobsLog.emplid == srcJobLog.emplid ).where(
-					JobsLog.deptid == srcJobLog.deptid ).where(
-					JobsLog.jobcode == srcJobLog.jobcode ).where(
-					JobsLog.effdt == srcJobLog.effdt ).where(
-					JobsLog.action == srcJobLog.action ).where(
-					JobsLog.action_reason == srcJobLog.action_reason ).where(
-					JobsLog.source_hash == srcHash ).where(
-					JobsLog.deleted_at.is_( None ) ) )
+	if tgtRecords:
+		""" 
+			If true then an update is required, else an insert is required
+			@True:
+				Because there might be many recornds returned from the db, a loop is required.
+				Trying not to update the data if it is not required, but the source data will
+				require an action.
+				@Else Block (NO BREAK REACHED):
+					If the condition is not reached in the for block the else block 
+					will insure	that a record is updated.  
+					It might not update the record that	was initially created previously,
+					but all source data has to be represented in the target database.
+			@False:
+				insert the new data from the source database.
+		"""
+		for tgtRecord in tgtRecords:
+			if tgtRecord.source_hash == srcHash:
+				tgtRecord.updated_flag = True
+				tgtRecord.deleted_at = None
+				return tgtRecord
+				break
 
-			return not ret
-
-		if jobLogUpdateRequired():
-			# retrive the tables object to update.
-			updateJobLog = sesTarget.query(
-				JobsLog ).filter(
-					JobsLog.emplid == srcJobLog.emplid ).filter(
-					JobsLog.deptid == srcJobLog.deptid ).filter(
-					JobsLog.jobcode == srcJobLog.jobcode ).filter(
-					JobsLog.effdt == srcJobLog.effdt ).filter(
-					JobsLog.action == srcJobLog.action ).filter(
-					JobsLog.action_reason == srcJobLog.action_reason ).filter(
-					JobsLog.deleted_at.is_( None ) ).one()
-
+		else: # NO BREAK REACHED
+			tgtRecord = tgtRecords[0]
 			# repeat the following pattern for all mapped attributes:
-			updateJobLog.source_hash = srcHash
-			updateJobLog.emplid = srcJobLog.emplid
-			updateJobLog.deptid = srcJobLog.deptid
-			updateJobLog.jobcode = srcJobLog.jobcode
-			updateJobLog.supervisor_id = srcJobLog.supervisor_id
-			updateJobLog.reports_to = srcJobLog.reports_to
-			updateJobLog.main_appt_num_jpn = srcJobLog.main_appt_num_jpn
-			updateJobLog.effdt = srcJobLog.effdt
-			updateJobLog.action = srcJobLog.action
-			updateJobLog.action_reason = srcJobLog.action_reason
-			updateJobLog.action_dt = srcJobLog.action_dt
-			updateJobLog.job_entry_dt = srcJobLog.job_entry_dt
-			updateJobLog.dept_entry_dt = srcJobLog.dept_entry_dt
-			updateJobLog.position_entry_dt = srcJobLog.position_entry_dt
-			updateJobLog.hire_dt = srcJobLog.hire_dt
-			updateJobLog.last_hire_dt = srcJobLog.last_hire_dt
-			updateJobLog.termination_dt = srcJobLog.termination_dt
-			updateJobLog.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-			updateJobLog.deleted_at = None
+			tgtRecord.source_hash = srcHash
+			tgtRecord.emplid = srcJobLog.emplid
+			tgtRecord.deptid = srcJobLog.deptid
+			tgtRecord.jobcode = srcJobLog.jobcode
+			tgtRecord.supervisor_id = srcJobLog.supervisor_id
+			tgtRecord.reports_to = srcJobLog.reports_to
+			tgtRecord.main_appt_num_jpn = srcJobLog.main_appt_num_jpn
+			tgtRecord.effdt = srcJobLog.effdt
+			tgtRecord.action = srcJobLog.action
+			tgtRecord.action_reason = srcJobLog.action_reason
+			tgtRecord.action_dt = srcJobLog.action_dt
+			tgtRecord.job_entry_dt = srcJobLog.job_entry_dt
+			tgtRecord.dept_entry_dt = srcJobLog.dept_entry_dt
+			tgtRecord.position_entry_dt = srcJobLog.position_entry_dt
+			tgtRecord.hire_dt = srcJobLog.hire_dt
+			tgtRecord.last_hire_dt = srcJobLog.last_hire_dt
+			tgtRecord.termination_dt = srcJobLog.termination_dt
+			tgtRecord.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			tgtRecord.deleted_at = None
 
-			return updateJobLog
+			return tgtRecord
 
 	else:
 		srcGetPersonId = sesTarget.query(
@@ -172,7 +162,6 @@ def getTargetJobsLog( sesTarget ):
 		Returns a set of JobsLog objects from the target database where the records are not flagged
 		deleted_at.
 	"""
-
 	return sesTarget.query(
 		JobsLog ).filter(
 			JobsLog.deleted_at.is_( None ) ).all()
@@ -185,7 +174,6 @@ def softDeleteJobLog( tgtRecord, srcRecords ):
 
 		The return of this function returns a sqlalchemy object to update a target record object.
 	"""
-
 	def dataMissing():
 		"""
 			The origional list of selected data is then used to see if data requires a soft-delete
