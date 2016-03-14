@@ -3,6 +3,7 @@ import logging
 import copy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
 from datetime import datetime, date
 
 from bioetl.models.biopublicmodels import BioPublic, People, PersonWebProfile, Phones, Departments, Jobs, JobCodes, JobsLog, SubAffiliations, PersonSubAffiliations
@@ -756,7 +757,13 @@ class bioetlTests( unittest.TestCase ):
 		postCount = self.session.query( JobsLog ).all()
 		self.assertEquals( len( preCount ),len( postCount ) )
 
-
+	def test_noPersonMatchForJobsLog( self ):
+		from bioetl.jobLogProcessing import processJobLog
+		self.seedPersonJobLog()
+		noneSeed = copy.deepcopy( nonePersonJobsLogSeed )
+		with self.assertRaises( NoResultFound ):
+			noneJobLogObj = AsuDwPsJobsLog( **noneSeed )
+			noneResult = processJobLog( noneJobLogObj, self.session )
 
 if __name__ == '__main__':
 	unittest.main()

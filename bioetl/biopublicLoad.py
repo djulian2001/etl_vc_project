@@ -1,6 +1,8 @@
 from sharedProcesses import resetUpdatedFlag
 from app.connectdb import EtlConnections
 
+from sqlalchemy.orm.exc import NoResultFound
+
 bioetlAppRun = EtlConnections("asutobio")
 
 sesSource = bioetlAppRun.getSourceSession()
@@ -477,7 +479,21 @@ if True:
 
 	iJobLog = 1
 	for srcJobLog in srcJobsLog:
-		processedJobLog = jobLogProcessing.processJobLog( srcJobLog, sesTarget )
+
+##############################
+# I STOPPED HERE.....
+##############################
+
+		try:
+			processedJobLog = jobLogProcessing.processJobLog( srcJobLog, sesTarget )
+		except NoResultFound as e:
+			print(e)
+			for x in srcJobLog:
+				print(x)
+			break
+		
+
+
 		if processedJobLog:
 			sesTarget.add( processedJobLog )
 			if iJobLog % 1000 == 0:

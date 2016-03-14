@@ -2,7 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-class EtlConnections(object):
+import logging
+
+class AppSetup(object):
 	"""docstring for ClassName"""
 	def __init__( self, appScope ):
 		self.appScope = appScope
@@ -12,10 +14,56 @@ class EtlConnections(object):
 			
 			self.config = ConfigAsuToBio()
 			self.setupAsuToBio()
+			self.setupLogging()
 			
 		else:
 			raise TypeError('Applications scope not correctly defined, no connections setup!')
 	
+
+	def setupLogging( self ):
+		"""
+			Setup the applications logging, using python lib logging
+			Log Message Structure and application scopes:
+				[configured upon setup]
+				Timestamp + TZ ( when )
+					-- format='%( asctime )s %( message )s', datefmt='%m/%d/%Y %I:%M:%S %p'
+				User ( who )
+					-- owner of the files, backend process implied
+			
+				[Application runtime]
+				System, application, component ( where ) 
+					-- system and application implied by the logfiles location
+					-- component apart of the %( message )s
+				Action ( what )
+				 	-- apart of the %( message )s
+				Status ( result )
+					-- apart of the %( message )s
+				Priority ( severity, importance, rank, level, etc )
+					format='%%(levelname)s:%%(message)s', level=logging.DEBUG	
+			Log files need to be rotated and managed:
+				library logging.handlers RotatingFileHandler
+		
+				class logging.handlers.RotatingFileHandler(filename, mode='a', maxBytes=0, backupCount=0, encoding=None, delay=0)		
+				
+				class logging.handlers.TimedRotatingFileHandler(filename, when='h', interval=1, backupCount=0, encoding=None, delay=False, utc=False)
+		"""
+		# str.format() and string.Template -- other string formating options to research further.
+		
+		self.config.setLoggingConfigs()
+		
+
+	def getLogger( self, name ):
+		"""
+			The following will return the logger object used by the application to log activities,
+				the setupLogging() method sets up the logging.
+		"""
+		logger = logging.getLogger( name )
+		logger.setLevel( self.config.rootLoggingLevel )
+		logger.addHandler( self.config.fileHandler )
+		logger.addHandler( self.config.consoleHandler )
+
+		return logger
+
 	def getOracleEngine( self, oracleUser, oraclePw, netServiceName ):
 		"""The returned object will be an sa engine."""
 		engineString = 'oracle+cx_oracle://%s:%s@%s' % ( oracleUser, oraclePw, netServiceName )
@@ -35,8 +83,8 @@ class EtlConnections(object):
 		engineString = 'mysql+mysqldb://%s:%s@%s/%s' % ( dbUser, dbPw, dbHost, dbName )
 
 		try:
-			engine = create_engine( engineString, echo=True )
-			# engine = create_engine( engineString )
+			# engine = create_engine( engineString, echo=True )
+			engine = create_engine( engineString )
 		except DBAPIError:
 			raise
 

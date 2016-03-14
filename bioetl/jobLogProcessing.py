@@ -1,4 +1,5 @@
 import datetime
+from sqlalchemy.orm.exc import NoResultFound
 
 from sharedProcesses import hashThisList
 from models.biopublicmodels import JobsLog, People, Departments, JobCodes
@@ -120,42 +121,47 @@ def processJobLog( srcJobLog, sesTarget ):
 			return tgtRecord
 
 	else:
-		srcGetPersonId = sesTarget.query(
-			People.id ).filter(
-				People.emplid == srcJobLog.emplid ).one()
+		try:
+			srcGetPersonId = sesTarget.query(
+				People.id ).filter(
+					People.emplid == srcJobLog.emplid ).one()
 
-		srcGetDepartmentId = sesTarget.query(
-			Departments.id ).filter(
-				Departments.deptid == srcJobLog.deptid ).one()
+		except NoResultFound as e:
+			raise e
 
-		srcGetJobId = sesTarget.query(
-			JobCodes.id ).filter(
-				JobCodes.jobcode == srcJobLog.jobcode ).one()
+		else:
+			srcGetDepartmentId = sesTarget.query(
+				Departments.id ).filter(
+					Departments.deptid == srcJobLog.deptid ).one()
 
-		insertJobLog = JobsLog(
-			source_hash = srcHash,
-			person_id = srcGetPersonId.id,
-			department_id = srcGetDepartmentId.id,
-			job_id = srcGetJobId.id,
-			emplid = srcJobLog.emplid,
-			deptid = srcJobLog.deptid,
-			jobcode = srcJobLog.jobcode,
-			supervisor_id = srcJobLog.supervisor_id,
-			reports_to = srcJobLog.reports_to,
-			main_appt_num_jpn = srcJobLog.main_appt_num_jpn,
-			effdt = srcJobLog.effdt,
-			action = srcJobLog.action,
-			action_reason = srcJobLog.action_reason,
-			action_dt = srcJobLog.action_dt,
-			job_entry_dt = srcJobLog.job_entry_dt,
-			dept_entry_dt = srcJobLog.dept_entry_dt,
-			position_entry_dt = srcJobLog.position_entry_dt,
-			hire_dt = srcJobLog.hire_dt,
-			last_hire_dt = srcJobLog.last_hire_dt,
-			termination_dt = srcJobLog.termination_dt,
-			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
+			srcGetJobId = sesTarget.query(
+				JobCodes.id ).filter(
+					JobCodes.jobcode == srcJobLog.jobcode ).one()
 
-		return insertJobLog
+			insertJobLog = JobsLog(
+				source_hash = srcHash,
+				person_id = srcGetPersonId.id,
+				department_id = srcGetDepartmentId.id,
+				job_id = srcGetJobId.id,
+				emplid = srcJobLog.emplid,
+				deptid = srcJobLog.deptid,
+				jobcode = srcJobLog.jobcode,
+				supervisor_id = srcJobLog.supervisor_id,
+				reports_to = srcJobLog.reports_to,
+				main_appt_num_jpn = srcJobLog.main_appt_num_jpn,
+				effdt = srcJobLog.effdt,
+				action = srcJobLog.action,
+				action_reason = srcJobLog.action_reason,
+				action_dt = srcJobLog.action_dt,
+				job_entry_dt = srcJobLog.job_entry_dt,
+				dept_entry_dt = srcJobLog.dept_entry_dt,
+				position_entry_dt = srcJobLog.position_entry_dt,
+				hire_dt = srcJobLog.hire_dt,
+				last_hire_dt = srcJobLog.last_hire_dt,
+				termination_dt = srcJobLog.termination_dt,
+				created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
+
+			return insertJobLog
 
 def getTargetJobsLog( sesTarget ):
 	"""
