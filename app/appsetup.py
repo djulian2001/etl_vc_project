@@ -59,6 +59,7 @@ class AppSetup(object):
 		"""
 		logger = logging.getLogger( name )
 		logger.setLevel( self.config.rootLoggingLevel )
+		
 		logger.addHandler( self.config.fileHandler )
 		logger.addHandler( self.config.consoleHandler )
 
