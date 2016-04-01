@@ -1,18 +1,27 @@
 from sharedProcesses import resetUpdatedFlag
-from app.appsetup import AppSetup
+from app.appsetup import AppSetup, LoggingSetup
 
 from sqlalchemy.orm.exc import NoResultFound
 
-bioetlAppRun = AppSetup("asutobio")
 
-sesSource = bioetlAppRun.getSourceSession()
-sesTarget = bioetlAppRun.getTargetSession()
-test_logger = bioetlAppRun.getLogger( __name__ )
+def main():
+	# import logging
+	# LoggingSetup()
+	# logger = logging.getLogger(__name__)
 
-print( sesSource, type( sesSource ) )
-print( sesTarget, type( sesTarget ) )
-print( test_logger, type( test_logger ), dir( test_logger ) )
+	logger.info("Begin bioetl application setup")
+	try:
+		bioetlAppRun = AppSetup("asutobio")
+	except Exception as e:
+		logger.warning( 'Application Failed to setup correctly:', exc_info=True )
+		cleanUp(e)
 
+	logger.info("Completed bioetl application setup")
+
+	sesSource = bioetlAppRun.getSourceSession()
+	sesTarget = bioetlAppRun.getTargetSession()
+
+	runStuff()
 
 def cleanUp(e):
 	"""
@@ -23,84 +32,115 @@ def cleanUp(e):
 		@True: the application ran, no Exception was raised
 	"""
 	import sys
+	errors = []
 
-	sesTarget.close()
-	sesSource.close()
-	bioetlAppRun.cleanUp()
-	if e:
-		print type(e), e
-		sys.exit(1)
+	try:
+		sesTarget.close()
+	except Exception as eTarget:
+		errors.append( eTarget )
+
+	try:
+		sesSource.close()
+	except Exception as eTarget:
+		errors.append( eTarget )
+	
+	try:
+		bioetlAppRun.cleanUp()
+	except Exception as eTarget:
+		errors.apppend( eTarget )
+
+	for i in errors:
+		"""
+			In the event that there is an issue closing the various connections that are established
+			when the application is in various states.
+			The else block runs to report the issue that cause the application to close, via an error
+			or because the end of the etl process occured.
+		"""
+		logger.error( i, exc_info=True )
 	else:
-		sys.exit(0)
-
-
-
+		if e:
+			logger.error( 'BIOETL application terminated prematurely.', exc_info=True )
+			sys.exit(1)
+		else:
+			logger.info( "BIOETL application process - completed cleanly" )
+			sys.exit(0)
 
 ###############################################################################
 # 
 #   File Import:  jobLogProcessing
+def runStuff():
+	import jobLogProcessing
 
-import jobLogProcessing
+	if True:
+		logger.info("Starting source database query.")
+		# srcJobsLog = jobLogProcessing.getSourceJobsLog( sesSource )
+		logger.info("Finished source database query.")
 
-if True:
-	test_logger.info("Starting source database query.")
-	srcJobsLog = jobLogProcessing.getSourceJobsLog( sesSource )
-	test_logger.info("Finished source database query.")
-
-	iJobLog = 1
-	
-	test_logger.info("Starting source database query.")
-	for srcJobLog in srcJobsLog:
-
-		# print( type(srcJobLog) )
-##############################
-# I STOPPED HERE.....
-##############################
-
-		try:
-			processedJobLog = jobLogProcessing.processJobLog( srcJobLog, sesTarget )
-		except NoResultFound as e:
-			test_logger.warning( 'Constraint Failed to match a record from {o.schema}.{o.__tablename__};  Record @ emplid: {o.emplid}, deptid: {o.deptid}, jobcode: {o.jobcode}, effdt: {o.effdt}, action: {o.action}, action_reason: {o.action_reason};'.format(o=srcJobLog) )			
-		except Exception as e:
-			test_logger.error( 'Code Failure:', exc_info=True )
-			cleanUp(None)
+		iJobLog = 1
 		
-		if processedJobLog:
-			sesTarget.add( processedJobLog )
-			if iJobLog % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iJobLog += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+		logger.info("Starting source database query.")
+	# 	for srcJobLog in srcJobsLog:
 
-	tgtMissingJobsLog = jobLogProcessing.getTargetJobsLog( sesTarget )
+	# 		# print( type(srcJobLog) )
+	# ##############################
+	# # I STOPPED HERE.....
+	# ##############################
 
-	iRemoveJobLog = 1
-	for tgtMissingJobLog in tgtMissingJobsLog:
-		removeJobLog = jobLogProcessing.softDeleteJobLog( tgtMissingJobLog, srcJobsLog )
-		if removeJobLog:
-			sesTarget.add( removeJobLog )
-			if iRemoveJobLog % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveJobLog += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+	# 		try:
+	# 			processedJobLog = jobLogProcessing.processJobLog( srcJobLog, sesTarget )
+	# 		except NoResultFound as e:
+	# 			logger.warning( 'Constraint Failed to match a record from {o.schema}.{o.__tablename__};  Record @ emplid: {o.emplid}, deptid: {o.deptid}, jobcode: {o.jobcode}, effdt: {o.effdt}, action: {o.action}, action_reason: {o.action_reason};'.format(o=srcJobLog) )			
+	# 		except Exception as e:
+	# 			logger.error( 'Code Failure:', exc_info=True )
+	# 			cleanUp(None)
+			
+	# 		if processedJobLog:
+	# 			sesTarget.add( processedJobLog )
+	# 			if iJobLog % 1000 == 0:
+	# 				try:
+	# 					sesTarget.flush()
+	# 				except sqlalchemy.exc.IntegrityError as e:
+	# 					sesTarget.rollback()
+	# 					raise e
+	# 			iJobLog += 1
+	# 	try:
+	# 		sesTarget.commit()
+	# 	except sqlalchemy.exc.IntegrityError as e:
+	# 		sesTarget.rollback()
+	# 		raise e
+
+	# 	tgtMissingJobsLog = jobLogProcessing.getTargetJobsLog( sesTarget )
+
+	# 	iRemoveJobLog = 1
+	# 	for tgtMissingJobLog in tgtMissingJobsLog:
+	# 		removeJobLog = jobLogProcessing.softDeleteJobLog( tgtMissingJobLog, srcJobsLog )
+	# 		if removeJobLog:
+	# 			sesTarget.add( removeJobLog )
+	# 			if iRemoveJobLog % 1000 == 0:
+	# 				try:
+	# 					sesTarget.flush()
+	# 				except sqlalchemy.exc.IntegrityError as e:
+	# 					sesTarget.rollback()
+	# 					raise e
+	# 			iRemoveJobLog += 1
+	# 	try:
+	# 		sesTarget.commit()
+	# 	except sqlalchemy.exc.IntegrityError as e:
+	# 		sesTarget.rollback()
+	# 		raise e
+		logger.info("End of jobLogProcessing")
+		logger.info("Starting EtlProcess...")
+		from etlProcess import EtlProcess
+		etl = EtlProcess()
 
 #	End of jobLogProcessing
 ###############################################################################
 
-cleanUp( None )
+	cleanUp( None )
+
+if __name__=="__main__":
+	import logging
+	LoggingSetup()
+	logger = logging.getLogger(__name__)
+
+	main()

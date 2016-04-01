@@ -1,21 +1,9 @@
 import os, sys
-# import logging
-import logging.handlers
-# import logging.config
 
 try:
 	import ConfigParser as configparser
 except ImportError:
 	import configparser
-
-
-
-####
-# tasks:
-
-# The logging_config.cfg has been added...  add it
-####
-
 
 class ConfigAsuToBio( object ):
 	"""
@@ -30,11 +18,6 @@ class ConfigAsuToBio( object ):
 			self.appConfigFile = os.path.abspath( '/usr/local/etc/asutobiodesign/.bioetl_config.cfg' )
 		except Exception:
 			self.appConfigFile = os.path.join( os.path.dirname(__file__), '.bioetl_config.cfg' )
-		# try:
-		# 	self.loggingConfigFile = os.path.abspath( '/usr/local/etc/asutobiodesign/.logging_config.cfg' )
-		# except Exception:
-		# 	self.loggingConfigFile = os.path.join( os.path.dirname(__file__), '.logging_config.cfg' )
-
 
 	def setSshTunnel( self ):
 		# parser = configparser.RawConfigParser()
@@ -75,23 +58,36 @@ class ConfigAsuToBio( object ):
 			self.targetDbHost	= parser.get( 'mysqlBioPublicDb', 'dbServer' )
 			self.targetDbName	= parser.get( 'mysqlBioPublicDb', 'dbName' )
 
-	def setLoggingConfigs( self ):
+	
+
+class ConfigLogging( object ):
+	"""The first part of this application is to initiate the logging.  Have to know when stuff stops working"""
+	def __init__(self):
+		super( ConfigLogging, self).__init__()
+		try:
+			self.logConfigFile = os.path.abspath( '/usr/local/etc/asutobiodesign/.bioetl_logging_config.cfg' )
+		except Exception:
+			self.logConfigFile = os.path.join( os.path.dirname(__file__), '.bioetl_logging_config.cfg' )
+
+	def getConfigFile( self ):
 		"""
 			There are 2 logging methods being applied to this application, where we want to be able to
 				scope the log output based on the appliation scope of development.  The idea being that
 				when on production we will log nothing to the console, but only to the log file.  This of
 				course would be set differently for staging and dev scopes.
-
 			handlers: 
-				@ as a timed file rotation
+				@ as a file rotation
 				@ as a console standard output
 			formatters:
 				@file format (includes timestamp)
 				@console format (excluldes timestamp)
 			handlsers levels:
 				@ passing the configured value through to logger initialization and set level method call.
-		"""
-		parser = configparser.SafeConfigParser()
+		"""			 
+		return self.logConfigFile
+
+		# parser = configparser.SafeConfigParser()
+		
 
 		# LOGGING = {
 		# 	'version': 1,
@@ -122,46 +118,46 @@ class ConfigAsuToBio( object ):
 		# 			'handlers': ['consoleHandler','rotateFileHandler'],
 		# 			'level':'DEBUG', },	}, }
 
-		try:
-			parser.read( self.appConfigFile )
+		# try:
+		# 	parser.read( self.appConfigFile )
 			# self.logger = logging.config.fileConfig( parser, disable_existing_loggers=False )
 			# self.logger = logging.config.fileConfig( self.appConfigFile, disable_existing_loggers=False )
 			# self.logConfig = LOGGING
 			
 
-		except Exception as e:
-			raise e
-		else:
-			levelDict={ "CRITICAL":logging.CRITICAL,"ERROR":logging.ERROR,"WARNING":logging.WARNING,"INFO":logging.INFO,"DEBUG":logging.DEBUG,"NOTSET":logging.NOTSET, }
-			streamDict={ "stdout":sys.stdout, "stderr":sys.stderr }
+		# except Exception as e:
+		# 	raise e
+		# else:
+		# 	levelDict={ "CRITICAL":logging.CRITICAL,"ERROR":logging.ERROR,"WARNING":logging.WARNING,"INFO":logging.INFO,"DEBUG":logging.DEBUG,"NOTSET":logging.NOTSET, }
+		# 	streamDict={ "stdout":sys.stdout, "stderr":sys.stderr }
 			
-			def logStream( stream ):
-				return streamDict[ stream ]
+		# 	def logStream( stream ):
+		# 		return streamDict[ stream ]
 
-			def logLevel( lvl ):
-				"""Extract the appropriate level..."""
-				return levelDict[ lvl ]
+		# 	def logLevel( lvl ):
+		# 		"""Extract the appropriate level..."""
+		# 		return levelDict[ lvl ]
 
-			self.rootLoggingLevel = logLevel( parser.get( 'logger_root','level' ) )
-			# formatters
-			fileFormatter = logging.Formatter(
-								fmt 	= parser.get( 'formatter_rotateFileFormatter','format' ) ,
-								datefmt = parser.get( 'formatter_rotateFileFormatter','datefmt' ) )
+		# 	self.rootLoggingLevel = logLevel( parser.get( 'logger_root','level' ) )
+		# 	# formatters
+		# 	fileFormatter = logging.Formatter(
+		# 						fmt 	= parser.get( 'formatter_rotateFileFormatter','format' ) ,
+		# 						datefmt = parser.get( 'formatter_rotateFileFormatter','datefmt' ) )
 
-			consoleFormatter = logging.Formatter(
-								fmt 	= parser.get( 'formatter_consoleFormatter','format'), 
-								datefmt = None )
+		# 	consoleFormatter = logging.Formatter(
+		# 						fmt 	= parser.get( 'formatter_consoleFormatter','format'), 
+		# 						datefmt = None )
 
-			self.fileHandler = logging.handlers.RotatingFileHandler(
-								parser.get('handler_rotateFileHandler','filename'),
-								mode		= parser.get('handler_rotateFileHandler','mode'),
-								maxBytes	= parser.get('handler_rotateFileHandler','maxBytes'),
-								backupCount	= parser.get('handler_rotateFileHandler','backupCount'),
-								encoding	= parser.get('handler_rotateFileHandler','encoding'),
-								delay		= parser.get('handler_rotateFileHandler','delay') )
+		# 	self.fileHandler = logging.handlers.RotatingFileHandler(
+		# 						parser.get('handler_rotateFileHandler','filename'),
+		# 						mode		= parser.get('handler_rotateFileHandler','mode'),
+		# 						maxBytes	= parser.get('handler_rotateFileHandler','maxBytes'),
+		# 						backupCount	= parser.get('handler_rotateFileHandler','backupCount'),
+		# 						encoding	= parser.get('handler_rotateFileHandler','encoding'),
+		# 						delay		= parser.get('handler_rotateFileHandler','delay') )
 
-			self.fileHandler.setLevel( logLevel( parser.get( 'handler_rotateFileHandler','level' ) ) )
-			self.fileHandler.setFormatter( fileFormatter )
+		# 	self.fileHandler.setLevel( logLevel( parser.get( 'handler_rotateFileHandler','level' ) ) )
+		# 	self.fileHandler.setFormatter( fileFormatter )
 
 			# self.fileHandler = logging.handlers.TimedRotatingFileHandler(
 			# 					parser.get( 'handler_timedRotatingFileHandler','filename' ),
@@ -172,11 +168,11 @@ class ConfigAsuToBio( object ):
 			# 					delay 		= parser.get( 'handler_timedRotatingFileHandler','delay' ) )
 			# 					# utc 		= parser.get( 'handler_timedRotatingFileHandler','utc' ) )
 
-			self.consoleHandler = logging.StreamHandler( logStream( parser.get( 'handler_consoleHandler','stream' ) ) )
+			# self.consoleHandler = logging.StreamHandler( logStream( parser.get( 'handler_consoleHandler','stream' ) ) )
 
-			self.consoleHandler.setLevel( logLevel( parser.get('handler_consoleHandler','level' ) ) )
+			# self.consoleHandler.setLevel( logLevel( parser.get('handler_consoleHandler','level' ) ) )
 
-			self.consoleHandler.setFormatter( consoleFormatter )
+			# self.consoleHandler.setFormatter( consoleFormatter )
 
 			# because the level has to be applied to the logger, we will pass the config through.
 			# self.fileHandlerLevel =	parser.get('handler_rotateFileHandler','level')

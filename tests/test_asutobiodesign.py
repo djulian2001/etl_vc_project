@@ -765,5 +765,28 @@ class bioetlTests( unittest.TestCase ):
 			noneJobLogObj = AsuDwPsJobsLog( **noneSeed )
 			noneResult = processJobLog( noneJobLogObj, self.session )
 
+	def test_initOfEtlProcess( self ):
+		"""Test that an etl process can be intaintiated, 
+			args:
+				sessions -> @src & @tgt
+				
+				logging? -> pass in name of log?
+				missing data (emplid)? -> just initiated...
+				scoped method runs, factory? (admin, publications, etc...)?
+
+
+		"""
+		from bioetl.etlProcess import EtlProcess
+		# model the def __main__():
+		etl = EtlProcess()
+		
+		self.assertIsInstance( etl, EtlProcess )
+		self.assertIsInstance( etl.missingemplid, list )
+		self.assertIsNotNone( etl.missingemplid )
+		self.assertFalse( etl.missingemplid )
+		
+
+
+
 if __name__ == '__main__':
 	unittest.main()
