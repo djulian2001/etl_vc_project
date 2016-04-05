@@ -5,7 +5,10 @@ from sharedProcesses import hashThisList
 from models.biopublicmodels import SubAffiliations
 from models.asudwpsmodels import BiodesignSubAffiliations
 
-def getSourceSubAffiliations( ):
+def getTableName():
+	return SubAffiliations.__table__.name
+
+def getSourceData( sesSource=None ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the SubAffiliations table of the source database.
@@ -14,7 +17,7 @@ def getSourceSubAffiliations( ):
 	return BiodesignSubAffiliations.seedMe()
 
 # change value to the singular
-def processSubAffiliation( srcSubAffiliation, sesTarget ):
+def processData( srcSubAffiliation, sesTarget ):
 	"""
 		Takes in a source SubAffiliation object from biopsmodels (mysql.bio_ps.SubAffiliations)
 		and determines if the object needs to be updated, inserted in the target
@@ -93,7 +96,7 @@ def processSubAffiliation( srcSubAffiliation, sesTarget ):
 
 		return insertSubAffiliation
 
-def getTargetSubAffiliations( sesTarget ):
+def getTargetData( sesTarget ):
 	"""
 		Returns a set of SubAffiliations objects from the target database where the records are not flagged
 		deleted_at.
@@ -102,7 +105,7 @@ def getTargetSubAffiliations( sesTarget ):
 		SubAffiliations ).filter(
 			SubAffiliations.deleted_at.is_( None ) ).all()
 
-def softDeleteSubAffiliation( tgtMissingSubAffiliation, srcList ):
+def softDeleteData( tgtMissingSubAffiliation, srcList ):
 	"""
 		The list of SubAffiliations changes as time moves on, the SubAffiliations removed from the list are not
 		deleted, but flaged removed by the deleted_at field.

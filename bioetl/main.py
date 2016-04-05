@@ -17,7 +17,7 @@ def main():
 		etlSetup = AppSetup("asutobio")
 	except Exception as e:
 		logger.error( 'Application Failed to setup correctly:', exc_info=True )
-		cleanUp(e)
+		cleanUp( e )
 
 	logger.info( "Application setup, bioetl: COMPLETED" )
 
@@ -29,11 +29,11 @@ def main():
 		logger.info( "Application ETL Process, bioetl: COMPLETED")
 
 	except Exception as e:
-		cleanUp( etlSetup, e )
+		cleanUp( e, etlSetup )
 	else:
-		cleanUp( etlSetup, None )
+		cleanUp( None, etlSetup )
 
-def cleanUp(appSetup, e):
+def cleanUp(e , appSetup=None):
 	"""
 		Try/Catch...  As errors pop up, use the Exception passed by python and or sqlalchemy
 		as how to handle the error.  Wrap the code block as specific as possible to either 
@@ -64,23 +64,7 @@ def cleanUp(appSetup, e):
 			logger.info( "Application shutdown, bioetl - COMPLETED: cleanly" )
 			sys.exit(0)
 
-###############################################################################
-# 
-#   File Import:  jobLogProcessing
-def runStuff():
-	import jobLogProcessing
 
-	if True:
-		logger.info("Starting source database query.")
-		# srcJobsLog = jobLogProcessing.getSourceJobsLog( sesSource )
-		logger.info("Finished source database query.")
-
-		iJobLog = 1
-		
-		logger.info("Starting source database query.")
-	# 	for srcJobLog in srcJobsLog:
-
-	# 		# print( type(srcJobLog) )
 	# ##############################
 	# # I STOPPED HERE.....
 	# ##############################
@@ -92,49 +76,7 @@ def runStuff():
 	# 		except Exception as e:
 	# 			logger.error( 'Code Failure:', exc_info=True )
 	# 			cleanUp(None)
-			
-	# 		if processedJobLog:
-	# 			sesTarget.add( processedJobLog )
-	# 			if iJobLog % 1000 == 0:
-	# 				try:
-	# 					sesTarget.flush()
-	# 				except sqlalchemy.exc.IntegrityError as e:
-	# 					sesTarget.rollback()
-	# 					raise e
-	# 			iJobLog += 1
-	# 	try:
-	# 		sesTarget.commit()
-	# 	except sqlalchemy.exc.IntegrityError as e:
-	# 		sesTarget.rollback()
-	# 		raise e
 
-	# 	tgtMissingJobsLog = jobLogProcessing.getTargetJobsLog( sesTarget )
-
-	# 	iRemoveJobLog = 1
-	# 	for tgtMissingJobLog in tgtMissingJobsLog:
-	# 		removeJobLog = jobLogProcessing.softDeleteJobLog( tgtMissingJobLog, srcJobsLog )
-	# 		if removeJobLog:
-	# 			sesTarget.add( removeJobLog )
-	# 			if iRemoveJobLog % 1000 == 0:
-	# 				try:
-	# 					sesTarget.flush()
-	# 				except sqlalchemy.exc.IntegrityError as e:
-	# 					sesTarget.rollback()
-	# 					raise e
-	# 			iRemoveJobLog += 1
-	# 	try:
-	# 		sesTarget.commit()
-	# 	except sqlalchemy.exc.IntegrityError as e:
-	# 		sesTarget.rollback()
-	# 		raise e
-		logger.info("End of jobLogProcessing")
-		logger.info("Starting EtlProcess...")
-		etl = EtlProcess(sesSource)
-
-#	End of jobLogProcessing
-###############################################################################
-
-	cleanUp( None )
 
 if __name__=="__main__":
 	LoggingSetup()

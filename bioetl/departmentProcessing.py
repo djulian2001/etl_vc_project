@@ -5,9 +5,10 @@ from sharedProcesses import hashThisList
 from models.biopublicmodels import Departments
 from models.asudwpsmodels import AsuDwPsDepartments
 
-#template mapping... plural Departments    singularCaped Department   singularLower department 
+def getTableName():
+	return Departments.__table__.name
 
-def getSourceDepartments( sesSource ):
+def getSourceData( sesSource ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the Departments table of the source database.
@@ -27,7 +28,7 @@ def getSourceDepartments( sesSource ):
 				subDepartments.c.deptid ).all()
 
 
-def processDepartment( srcDepartment, sesTarget ):
+def processData( srcDepartment, sesTarget ):
 	"""
 		Takes in a source Department object from biopsmodels (mysql.bio_ps.Departments)
 		and determines if the object needs to be updated, inserted in the target
@@ -106,7 +107,7 @@ def processDepartment( srcDepartment, sesTarget ):
 
 		return insertDepartment
 
-def getTargetDepartments( sesTarget ):
+def getTargetData( sesTarget ):
 	"""
 		Returns a set of Departments objects from the target database where the records are not flagged
 		deleted_at.
@@ -115,7 +116,7 @@ def getTargetDepartments( sesTarget ):
 		Departments ).filter(
 			Departments.deleted_at.is_( None ) ).all()
 
-def softDeleteDepartment( tgtRecord, srcRecords ):
+def softDeleteData( tgtRecord, srcRecords ):
 	"""
 		The list of source records changes as time moves on, the source records
 		removed from the list are not deleted, but flaged removed by the 

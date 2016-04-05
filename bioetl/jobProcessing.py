@@ -5,7 +5,10 @@ from sharedProcesses import hashThisList
 from models.biopublicmodels import JobCodes
 from models.asudwpsmodels import AsuDwPsJobCodes
 
-def getSourceJobCodes( sesSource ):
+def getTableName():
+	return JobCodes.__table__.name
+
+def getSourceData( sesSource ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the JobCodes table of the source database.
@@ -24,7 +27,7 @@ def getSourceJobCodes( sesSource ):
 				subJobCodes.c.jobcode ).all()
 
 # change value to the singular
-def processJob( srcJob, sesTarget ):
+def processData( srcJob, sesTarget ):
 	"""
 		Takes in a source Job object from biopsmodels (mysql.bio_ps.JobCodes)
 		and determines if the object needs to be updated, inserted in the target
@@ -128,7 +131,7 @@ def processJob( srcJob, sesTarget ):
 
 		return insertJob
 
-def getTargetJobCodes( sesTarget ):
+def getTargetData( sesTarget ):
 	"""
 		Returns a set of JobCodes objects from the target database where the records are not flagged
 		deleted_at.
@@ -138,7 +141,7 @@ def getTargetJobCodes( sesTarget ):
 		JobCodes ).filter(
 			JobCodes.deleted_at.is_( None ) ).all()
 
-def softDeleteJob( tgtRecord, srcRecords ):
+def softDeleteData( tgtRecord, srcRecords ):
 	"""
 		The list of source records changes as time moves on, the source records
 		removed from the list are not deleted, but flaged removed by the 

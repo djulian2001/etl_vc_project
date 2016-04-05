@@ -1,7 +1,7 @@
+from bioLookupTables import BioLookupTables
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class EtlRun( object ):
 	"""
@@ -34,5 +34,26 @@ class EtlRun( object ):
 
 
 	def run( self ):
-		"""The contract of what each process run will consist of."""
-		pass
+		"""
+			The contract of what each process run will.
+			Order Matters:
+
+
+		"""
+		# if first run... do this stuff, else skip.
+		if not self.missingEmplid:
+			logger.info("Processing Lookup Tables: BEGINNING")
+			try:
+				BioLookupTables( self.sesSource, self.sesTarget )
+				logger.info("Processing Lookup Tables: COMPLETED")
+			except Exception as e:
+				raise e
+
+			# logger.info("Processing Lookup Tables, asu departments: BEGINNING")
+			# try:
+			# 	DepartmentProcessing( self.sesSource, self.sesTarget )
+			# 	logger.info("Processing Lookup Tables, asu departments: COMPLETED")
+			# except Exception as e:
+			# 	raise e
+
+		# put all the data that should run at this level.

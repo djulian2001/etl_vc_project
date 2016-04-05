@@ -6,6 +6,8 @@ from configs import ConfigAsuToBio, ConfigLogging
 import logging
 import logging.config
 
+logger = logging.getLogger(__name__)
+
 class LoggingSetup(object):
 	"""
 		Logging Setup class to manage the applications logging stream.
@@ -14,7 +16,6 @@ class LoggingSetup(object):
 		is running.
 	"""
 	def __init__( self ):
-		super(LoggingSetup, self).__init__()
 		self.logConfig = ConfigLogging()
 		
 		logging.config.fileConfig( self.logConfig.getConfigFile(), disable_existing_loggers = False )
@@ -28,9 +29,6 @@ class AppSetup(object):
 		 	- sqlalchemy session factories, creation and closing of the resource
 	 """
 	def __init__( self, appScope ):
-		# how to tie in the logging of the application setup?
-		# logger = logging.getLogger(__name__)
-		
 		self.appScope = appScope
 
 		if self.appScope == 'asutobio':
@@ -43,7 +41,8 @@ class AppSetup(object):
 		"""The returned object will be an sa engine."""
 		engineString = 'oracle+cx_oracle://%s:%s@%s' % ( oracleUser, oraclePw, netServiceName )
 		try:
-			engine = create_engine( engineString, echo=True )
+			# engine = create_engine( engineString, echo=True )
+			engine = create_engine( engineString )
 		except DBAPIError:
 			raise
 		
@@ -85,40 +84,44 @@ class AppSetup(object):
 			self.sshtunnel = SshTunnels()
 
 			self.sshtunnel.createSshTunnel(
-				self.config.localport,
-				self.config.oracleServer,
-				self.config.oraclePort,
-				self.config.sshUser,
-				self.config.proxyServer )
+								self.config.localport,
+								self.config.oracleServer,
+								self.config.oraclePort,
+								self.config.sshUser,
+								self.config.proxyServer )
 
 		except OSError as e:
 			print "Error trying to create the ssh tunnel!"
 			raise e
 		else:
-			from bioetl.models.biopublicmodels import BioPublic
-			from bioetl.models.asudwpsmodels import AsuDwPs
-			
-			self.config.setDbSource()
+			try:
+				from models.biopublicmodels import BioPublic
+				from models.asudwpsmodels import AsuDwPs
+				
+				self.config.setDbSource()
 
-			sourceEngine = self.getOracleEngine(
-				self.config.sourceUser,
-				self.config.sourceUserPw,
-				self.config.sourceNetServiceName )
+				sourceEngine = self.getOracleEngine(
+					self.config.sourceUser,
+					self.config.sourceUserPw,
+					self.config.sourceNetServiceName )
 
-			self.config.setDbTarget()
+				self.config.setDbTarget()
 
-			targetEngine = self.getMysqlEngine(
-				self.config.targetUser,
-				self.config.targetUserPw,
-				self.config.targetDbHost,
-				self.config.targetDbName )
+				targetEngine = self.getMysqlEngine(
+					self.config.targetUser,
+					self.config.targetUserPw,
+					self.config.targetDbHost,
+					self.config.targetDbName )
 
 
-			AsuDwPs.metadata.bind = sourceEngine
-			BioPublic.metadata.bind = targetEngine
+				AsuDwPs.metadata.bind = sourceEngine
+				BioPublic.metadata.bind = targetEngine
 
-			self.SrcSession = scoped_session( sessionmaker( bind=sourceEngine ) )
-			self.TgtSession = scoped_session( sessionmaker( bind=targetEngine ) )
+				self.SrcSession = scoped_session( sessionmaker( bind=sourceEngine ) )
+				self.TgtSession = scoped_session( sessionmaker( bind=targetEngine ) )
+			except Exception as e:
+				self.cleanUp()
+				raise e
 
 			try:
 				# This should get factored out later
