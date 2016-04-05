@@ -141,13 +141,22 @@ class AppSetup(object):
 
 	def cleanUp( self ):
 		"""Close all session, engines, tunnels, etc..."""
-		self.SrcSession.close()
-		self.TgtSession.close()
-		
-		if self.appScope == 'asutobio':
-			try:
-				self.sshtunnel.closeSshTunnels()
-			except OSError:
-				raise
+		errors = []
+
+		try:
+			self.SrcSession.close_all()
+		except Exception as e: 
+			errors.append( e )
+
+		try:
+			self.TgtSession.close_all()
+		except Exception as e: 
+			errors.append( e )
+
+		try:
+			self.sshtunnel.closeSshTunnels()
+		except OSError:
+			errors.append( e )
+			raise errors
 
 

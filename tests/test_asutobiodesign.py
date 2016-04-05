@@ -149,20 +149,24 @@ class bioetlTests( unittest.TestCase ):
 		dbHost = 'dbdev.biodesign.asu.edu'
 		dbName	= 'test_bio_public'
 		engineString = 'mysql+mysqldb://%s:%s@%s/%s' % ( dbUser, dbPw, dbHost, dbName )
-		# engineString = 'sqlite://'
-		# self.engine = create_engine( engineString, echo=True )
 		self.engine = create_engine( engineString )
+		fakeOracleEngineString = 'sqlite://'
+		self.fakeOraEngine = create_engine( fakeOracleEngineString )
 		BioPublic.metadata.bind = self.engine
 		self.Sessions = scoped_session( sessionmaker( bind=self.engine ) )
+		self.FakeOraSessions = scoped_session( sessionmaker( bind=self.fakeOraEngine ) )
 		BioPublic.metadata.create_all( self.engine )
 		self.session = self.Sessions()
+		self.oraSession = self.FakeOraSessions()
 
 	def tearDown( self ):
 		"""These will set up the situation to test the code."""
-		self.session.close()
 		BioPublic.metadata.drop_all( self.engine )
+		self.session.close()
 		self.Sessions.close_all()
-
+		self.oraSession.close()
+		self.FakeOraSessions.close()
+		
 	def recordEqualsTest( self, selectObj, seedObj, BaseObj ):
 		"""
 			DRY... These tests will be run for almost every select object set of tests.

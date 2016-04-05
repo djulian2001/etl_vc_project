@@ -1,29 +1,39 @@
-from sharedProcesses import resetUpdatedFlag
+# from sharedProcesses import resetUpdatedFlag
+# from sqlalchemy.orm.exc import NoResultFound
+import sys
+import logging
+
 from app.appsetup import AppSetup, LoggingSetup
-
-from sqlalchemy.orm.exc import NoResultFound
-
+from etlProcess import EtlProcess
 
 def main():
-	# import logging
-	# LoggingSetup()
-	# logger = logging.getLogger(__name__)
-
-	logger.info("Begin bioetl application setup")
+	"""
+		The main method that starts the application, the logging should be initiated at this point
+		From this point the application will set up a class of AppSetup that will manage the setup
+		of the database connections, ssh tunnel, the session factories, 
+	"""
+	logger.info( "Application setup, bioetl: BEGINNING" )
 	try:
-		bioetlAppRun = AppSetup("asutobio")
+		etlSetup = AppSetup("asutobio")
 	except Exception as e:
-		logger.warning( 'Application Failed to setup correctly:', exc_info=True )
+		logger.error( 'Application Failed to setup correctly:', exc_info=True )
 		cleanUp(e)
 
-	logger.info("Completed bioetl application setup")
+	logger.info( "Application setup, bioetl: COMPLETED" )
 
-	sesSource = bioetlAppRun.getSourceSession()
-	sesTarget = bioetlAppRun.getTargetSession()
+	# from etlProcess import EtlProcess
+	logger.info( "Application ETL Process, bioetl: BEGINNING")
+	try:
+		etl = EtlProcess( etlSetup )
+		etl.runProcesses()
+		logger.info( "Application ETL Process, bioetl: COMPLETED")
 
-	runStuff()
+	except Exception as e:
+		cleanUp( etlSetup, e )
+	else:
+		cleanUp( etlSetup, None )
 
-def cleanUp(e):
+def cleanUp(appSetup, e):
 	"""
 		Try/Catch...  As errors pop up, use the Exception passed by python and or sqlalchemy
 		as how to handle the error.  Wrap the code block as specific as possible to either 
@@ -31,23 +41,12 @@ def cleanUp(e):
 		@False: application failed to run, an Exception was raised
 		@True: the application ran, no Exception was raised
 	"""
-	import sys
 	errors = []
-
-	try:
-		sesTarget.close()
-	except Exception as eTarget:
-		errors.append( eTarget )
-
-	try:
-		sesSource.close()
-	except Exception as eTarget:
-		errors.append( eTarget )
 	
 	try:
-		bioetlAppRun.cleanUp()
+		appSetup.cleanUp()
 	except Exception as eTarget:
-		errors.apppend( eTarget )
+		errors.append( eTarget )
 
 	for i in errors:
 		"""
@@ -59,10 +58,10 @@ def cleanUp(e):
 		logger.error( i, exc_info=True )
 	else:
 		if e:
-			logger.error( 'BIOETL application terminated prematurely.', exc_info=True )
+			logger.error( 'Application shutdown, bioetl - FAILURE: terminated prematurely.', exc_info=True )
 			sys.exit(1)
 		else:
-			logger.info( "BIOETL application process - completed cleanly" )
+			logger.info( "Application shutdown, bioetl - COMPLETED: cleanly" )
 			sys.exit(0)
 
 ###############################################################################
@@ -130,8 +129,7 @@ def runStuff():
 	# 		raise e
 		logger.info("End of jobLogProcessing")
 		logger.info("Starting EtlProcess...")
-		from etlProcess import EtlProcess
-		etl = EtlProcess()
+		etl = EtlProcess(sesSource)
 
 #	End of jobLogProcessing
 ###############################################################################
@@ -139,7 +137,6 @@ def runStuff():
 	cleanUp( None )
 
 if __name__=="__main__":
-	import logging
 	LoggingSetup()
 	logger = logging.getLogger(__name__)
 
