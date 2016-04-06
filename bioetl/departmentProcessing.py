@@ -8,7 +8,7 @@ from models.asudwpsmodels import AsuDwPsDepartments
 def getTableName():
 	return Departments.__table__.name
 
-def getSourceData( sesSource ):
+def getSourceData( sesSource, qryList=None ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the Departments table of the source database.

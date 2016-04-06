@@ -1,4 +1,5 @@
 from bioLookupTables import BioLookupTables
+from bioPeopleTables import BioPeopleTables
 import logging
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class EtlRun( object ):
 	
 	def getMissingEmplid( self ):
 		"""Return the emplids stored within the class attribute"""
-		pass
+		return self.missingEmplid
 
 
 	def run( self ):
@@ -42,18 +43,17 @@ class EtlRun( object ):
 		"""
 		# if first run... do this stuff, else skip.
 		if not self.missingEmplid:
-			logger.info("Processing Lookup Tables: BEGINNING")
+			logger.info("Processing Data for Lookup Tables:  BEGINNING")
 			try:
 				BioLookupTables( self.sesSource, self.sesTarget )
-				logger.info("Processing Lookup Tables: COMPLETED")
+				logger.info("Lookup Tables data processing:  COMPLETED")
 			except Exception as e:
 				raise e
 
-			# logger.info("Processing Lookup Tables, asu departments: BEGINNING")
-			# try:
-			# 	DepartmentProcessing( self.sesSource, self.sesTarget )
-			# 	logger.info("Processing Lookup Tables, asu departments: COMPLETED")
-			# except Exception as e:
-			# 	raise e
-
-		# put all the data that should run at this level.
+		logger.info("Processing Personnel Data:  BEGINNING")
+		try:
+			peopleRun = BioPeopleTables( self.sesSource, self.sesTarget, self.missingEmplid )
+			peopleRun.runMe()
+			logger.info("Personnel data processing:  COMPLETED")
+		except Exception, e:
+			raise e

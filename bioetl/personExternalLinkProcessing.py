@@ -3,10 +3,11 @@ import datetime
 from sharedProcesses import hashThisList
 from models.biopublicmodels import PersonExternalLinks, People
 
-#template mapping... plural PersonExternalLinks    singularCaped PersonExternalLink   singularLower personExternalLink 
 
-# change value to the singular
-def processPersonExternalLink( srcPersonExternalLink, sesTarget ):
+def getTableName():
+	return PersonExternalLinks.__table__.name
+
+def processData( srcPersonExternalLink, sesTarget ):
 	"""
 		Takes in a source PersonExternalLink object from the asudw as a person record
 		and determines if the object needs to be updated, inserted in the target
@@ -98,7 +99,7 @@ def processPersonExternalLink( srcPersonExternalLink, sesTarget ):
 		return None
 
 
-def getTargetPersonExternalLinks( sesTarget ):
+def getTargetData( sesTarget ):
 	"""
 		Returns a set of PersonExternalLinks objects from the target database where the records are not flagged
 		deleted_at.
@@ -108,7 +109,7 @@ def getTargetPersonExternalLinks( sesTarget ):
 			PersonExternalLinks.deleted_at.is_( None ) ).all()
 
 
-def softDeletePersonExternalLink( tgtRecord, srcRecords ):
+def softDeleteData( tgtRecord, srcRecords ):
 	"""
 		The list of source records changes as time moves on, the source records
 		removed from the list are not deleted, but flaged removed by the 

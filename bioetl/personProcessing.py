@@ -4,21 +4,30 @@ from sharedProcesses import hashThisList
 from models.biopublicmodels import People
 from models.asudwpsmodels import AsuDwPsPerson, AsuPsBioFilters
 
-def getSourcePeople( sesSource ):
+def getTableName():
+	return People.__table__.name
+
+def getSourceData( sesSource, qryList=None ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of person records from the people table of the source database.
 	"""
-	srcFilters = AsuPsBioFilters( sesSource )
 
-	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
+	if not qryList:
+		srcFilters = AsuPsBioFilters( sesSource )
 
-	return sesSource.query( 
-		AsuDwPsPerson ).join(
-			srcEmplidsSubQry, AsuDwPsPerson.emplid==srcEmplidsSubQry.c.emplid ).order_by(
-				AsuDwPsPerson.emplid ).all()
-	
-def processPerson( srcPerson, sesTarget ):
+		srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
+
+		return sesSource.query( 
+			AsuDwPsPerson ).join(
+				srcEmplidsSubQry, AsuDwPsPerson.emplid==srcEmplidsSubQry.c.emplid ).order_by(
+					AsuDwPsPerson.emplid ).all()
+	else:
+		return sesSource.query( 
+			AsuDwPsPerson ).filter(
+                AsuDwPsPerson.emplid.in_( qryList ) )
+
+def processData( srcPerson, sesTarget ):
 	"""
 		Takes in a source person object from the asudw as a AsuDwPsPerson object
 		and determines if the object needs to be updated, inserted in the target
@@ -133,7 +142,7 @@ def processPerson( srcPerson, sesTarget ):
 		
 		return insertPerson
 
-def getTargetPeople( sesTarget ):
+def getTargetData( sesTarget ):
 	"""
 		Returns a set of People object from the target database where the records are not flagged
 		deleted_at.
@@ -143,7 +152,7 @@ def getTargetPeople( sesTarget ):
 				People.deleted_at.is_( None ) ).all()
 
 
-def softDeletePerson( tgtRecord, srcRecords ):
+def softDeleteData( tgtRecord, srcRecords ):
 	"""
 		The list of source records changes as time moves on, the source records
 		removed from the list are not deleted, but flaged removed by the 

@@ -65,19 +65,6 @@ def cleanUp(e , appSetup=None):
 			sys.exit(0)
 
 
-	# ##############################
-	# # I STOPPED HERE.....
-	# ##############################
-
-	# 		try:
-	# 			processedJobLog = jobLogProcessing.processJobLog( srcJobLog, sesTarget )
-	# 		except NoResultFound as e:
-	# 			logger.warning( 'Constraint Failed to match a record from {o.schema}.{o.__tablename__};  Record @ emplid: {o.emplid}, deptid: {o.deptid}, jobcode: {o.jobcode}, effdt: {o.effdt}, action: {o.action}, action_reason: {o.action_reason};'.format(o=srcJobLog) )			
-	# 		except Exception as e:
-	# 			logger.error( 'Code Failure:', exc_info=True )
-	# 			cleanUp(None)
-
-
 if __name__=="__main__":
 	LoggingSetup()
 	logger = logging.getLogger(__name__)

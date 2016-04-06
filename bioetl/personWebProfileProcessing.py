@@ -3,7 +3,10 @@ import datetime
 from sharedProcesses import hashThisList
 from models.biopublicmodels import PersonWebProfile, People
 
-def processPersonWebProfile( srcPersonWebProfile, sesTarget ):
+def getTableName():
+	return PersonWebProfile.__table__.name
+
+def processData( srcPersonWebProfile, sesTarget ):
 	"""
 		Takes in a source PersonWebProfile object from the asudw as a person record 
 		and determines if the object needs to be updated, inserted in the target
@@ -125,7 +128,7 @@ def processPersonWebProfile( srcPersonWebProfile, sesTarget ):
 	else:
 		return None
 
-def getTargetPersonWebProfiles( sesTarget ):
+def getTargetData( sesTarget ):
 	"""
 		Returns a set of PersonWebProfile objects from the target database where the records are not flagged
 		deleted_at.
@@ -134,7 +137,7 @@ def getTargetPersonWebProfiles( sesTarget ):
 		PersonWebProfile ).filter(
 			PersonWebProfile.deleted_at.is_( None ) ).all()
 
-def softDeletePersonWebProfile( tgtRecord, srcRecords ):
+def softDeleteData( tgtRecord, srcRecords ):
 	"""
 		The list of source records changes as time moves on, the source records
 		removed from the list are not deleted, but flaged removed by the 
