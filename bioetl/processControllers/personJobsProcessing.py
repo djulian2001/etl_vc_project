@@ -4,22 +4,30 @@ from sharedProcesses import hashThisList
 from models.biopublicmodels import Jobs, People, Departments
 from models.asudwpsmodels import AsuDwPsJobs, AsuPsBioFilters
 
-def getSourcePersonJobs( sesSource ):
+def getTableName():
+	return Jobs.__table__.name
+
+def getSourceData( sesSource, qryList=None ):
 	"""
 		Selects the data from the data wharehouse for the Jobs model.
 		@returns: the record set
 	"""
-	srcFilters = AsuPsBioFilters( sesSource )
+	if not qryList:
+		srcFilters = AsuPsBioFilters( sesSource )
 
-	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
+		srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
 
-	return sesSource.query(
-		AsuDwPsJobs ).join(
-			srcEmplidsSubQry, AsuDwPsJobs.emplid==srcEmplidsSubQry.c.emplid ).order_by(
-				AsuDwPsJobs.emplid ).all()
+		return sesSource.query(
+			AsuDwPsJobs ).join(
+				srcEmplidsSubQry, AsuDwPsJobs.emplid==srcEmplidsSubQry.c.emplid ).order_by(
+					AsuDwPsJobs.emplid ).all()
+	else:
+		return sesSource.query(
+			AsuDwPsJobs ).filter(
+				AsuDwPsJobs.emplid.in_( qryList ) ).all()
 
-# change value to the singular
-def processPersonJob( srcJob, sesTarget ):
+
+def processData( srcJob, sesTarget ):
 	"""
 		Takes in a source Job object from biopsmodels (mysql.bio_ps.Jobs)
 		and determines if the object needs to be updated, inserted in the target
@@ -145,7 +153,7 @@ def processPersonJob( srcJob, sesTarget ):
 		return insertJob
 
 
-def getTargetPersonJobs( sesTarget ):
+def getTargetData( sesTarget ):
 	"""
 		Returns a set of Jobs objects from the target database where the records are not flagged
 		deleted_at.
@@ -155,7 +163,7 @@ def getTargetPersonJobs( sesTarget ):
 			Jobs.deleted_at.is_( None ) ).all()
 
 
-def softDeletePersonJob( tgtRecord, srcRecords ):
+def softDeleteData( tgtRecord, srcRecords ):
 	"""
 		The list of source records changes as time moves on, the source records
 		removed from the list are not deleted, but flaged removed by the 

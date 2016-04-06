@@ -1,8 +1,8 @@
 from moduleProcessController import ModuleProcessController
 
-import subAffiliationProcessing
-import departmentProcessing
-import jobProcessing
+from processControllers import subAffiliationProcessing
+from processControllers import departmentProcessing
+from processControllers import jobProcessing
 
 class BioLookupTables( object ):
 	"""

@@ -25,7 +25,7 @@ def getSourceData( sesSource, qryList=None ):
 	else:
 		return sesSource.query( 
 			AsuDwPsPerson ).filter(
-                AsuDwPsPerson.emplid.in_( qryList ) )
+                AsuDwPsPerson.emplid.in_( qryList ) ).all()
 
 def processData( srcPerson, sesTarget ):
 	"""
@@ -173,9 +173,3 @@ def softDeleteData( tgtRecord, srcRecords ):
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	# else:
-	# 	return None
-
-
-
-

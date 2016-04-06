@@ -19,17 +19,17 @@ class ModuleProcessController( object ):
 		self.cacheSource = None
 		self.overrideSource = None
 		self.queryByList = None
-		self.tablename = None
+		self.tablename = self.module.getTableName()
+		self.missingIds = None
 
 	def processSource( self ):
 		"""
 			Might be that there is no need for this method, just to move this process
 			into the init method, but it seems wiser to trigger the events, or not we
 	  	"""
-		self.tablename = self.module.getTableName()
-
 		resetUpdatedFlag( self.sesTarget, self.tablename )
-	
+		self.commitThis()
+
 		if not self.overrideSource:
 			srcDataResults = self.module.getSourceData( self.sesSource, self.queryByList if self.queryByList else None ) 
 		else:
@@ -40,22 +40,34 @@ class ModuleProcessController( object ):
 		
 		iRecords = 1
 		for srcData in srcDataResults:
-			processedSrcData = self.module.processData( srcData, self.sesTarget )
+			try:
+				processedSrcData = self.module.processData( srcData, self.sesTarget )
+			except NoResultFound as e:
+				logger.warning( 'Constraint Failed to match a record from {schema}.{tblename};  Record identified as : {recId};'
+								 .format(	schema=srcData.schema,
+								 			tblename=srcData.__tablename__,
+								 			recId=srcData.emplid if srcData.emplid else 'Not a personnel record.' ) )
+				if srcData.emplid:
+					"""Source of the missing ids, cache all missing values for handling later"""
+					self.appendMissingEmplid( srcData.emplid )
+				pass
+			except Exception as e:
+				logger.error( 'Code Failure:', exc_info=True )
+				raise e
+
 			if processedSrcData:
 				self.sesTarget.add( processedSrcData )
-
 				if iRecords % 1000 == 0:
-					try:
-						self.sesTarget.flush()
-					except sqlalchemy.exc.IntegrityError as e:
-						self.sesTarget.rollback()
-						raise e
+					self.flushThis()
 				iRecords += 1
 
 		self.commitThis()
 		resetUpdatedFlag( self.sesTarget, self.tablename )
 		self.commitThis()
-		logger.info("{} source records processed: {} of {} records.".format( self.tablename, iRecords-1, len( srcDataResults ) ) )
+		logger.info("{tblname} source records processed: {actions} of {totals} records."
+					.format(	tblname=self.tablename,
+							 	actions=iRecords-1,
+							 	totals=len( srcDataResults ) ) )
 
 	def cleanTarget( self ):
 		"""Soft delete the data thats no longer found int the source db"""
@@ -63,21 +75,16 @@ class ModuleProcessController( object ):
 		iRecords = 1
 		for dataRemoval in tgtDataRemovals:
 			processedDataRemoval = self.module.softDeleteData( dataRemoval, self.cacheSource )
-
 			if processedDataRemoval:
 				self.sesTarget.add( processedDataRemoval )
-
 				if iRecords % 1000 == 0:
-					try:
-						self.sesTarget.flush()
-					except sqlalchemy.exc.IntegrityError as e:
-						self.sesTarget.rollback()
-						raise e
+					self.flushThis()
 				iRecords += 1
-
 		self.commitThis()
-
-		logger.info("{} target records removed: {} of {} records".format( self.tablename, iRecords-1, len( tgtDataRemovals ) ) )
+		logger.info("{tblname} target records removed: {actions} of {totals} records"
+					.format(	tblname=self.tablename,
+								actions=iRecords-1,
+								totals=len( tgtDataRemovals ) ) )
 
 
 	def commitThis( self ):
@@ -86,19 +93,23 @@ class ModuleProcessController( object ):
 		except sqlalchemy.exc.IntegrityError as e:
 			self.sesTarget.rollback()
 			raise e
-		
-	# ##############################
-	# # I STOPPED HERE.....
-	# ##############################
+	
+	def flushThis( self ):
+		try:
+			self.sesTarget.flush()
+		except sqlalchemy.exc.IntegrityError as e:
+			self.sesTarget.rollback()
+			raise e
 
-	# 		try:
-	# 			processedJobLog = jobLogProcessing.processJobLog( srcJobLog, sesTarget )
-	# 		except NoResultFound as e:
-	# 			logger.warning( 'Constraint Failed to match a record from {o.schema}.{o.__tablename__};  Record @ emplid: {o.emplid}, deptid: {o.deptid}, jobcode: {o.jobcode}, effdt: {o.effdt}, action: {o.action}, action_reason: {o.action_reason};'.format(o=srcJobLog) )			
-	# 		except Exception as e:
-	# 			logger.error( 'Code Failure:', exc_info=True )
-	# 			cleanUp(None)
-
+	def appendMissingEmplid( self, missingIds ):
+		"""Add an emplid to the list of missing ids found during the modules processing"""
+		try:
+			if type(missingIds) is int:
+				self.missingIds.append( missingIds )
+		except TypeError:
+			logger.warning( "Method appendMissingEmplid, passed wrong data type: {} is not an int.".format( missingIds ) )
+			pass
+			
 	# I have a list of missing id's... now what
 
 	def getSourceCache( self ):
@@ -107,5 +118,5 @@ class ModuleProcessController( object ):
 	def setOverrideSource( self, overrideValue ):
 		self.overrideSource = overrideValue
 
-	def setQryByList( self, missingIds ):
-		self.queryByList = missingIds
+	def setQryByList( self, runTheseIds ):
+		self.queryByList = runTheseIds

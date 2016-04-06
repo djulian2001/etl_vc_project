@@ -1,7 +1,8 @@
 from sharedProcesses import resetUpdatedFlag
-from app.connectdb import EtlConnections
-
 from sqlalchemy.orm.exc import NoResultFound
+
+
+from app.connectdb import EtlConnections
 
 bioetlAppRun = EtlConnections("asutobio")
 
@@ -33,66 +34,66 @@ def cleanUp(e):
 #		to the people data, and must be loaded prior to the 
 #   File Import:  subAffiliationProcessing
 
-import subAffiliationProcessing
+# import subAffiliationProcessing
 
-if True:
-	resetUpdatedFlag( sesTarget, "subaffiliations" )
+# if True:
+# 	resetUpdatedFlag( sesTarget, "subaffiliations" )
 	
-	srcSubAffiliations = subAffiliationProcessing.getSourceSubAffiliations()
+# 	srcSubAffiliations = subAffiliationProcessing.getSourceSubAffiliations()
 
-	iSubAffiliation = 1
-	for srcSubAffiliation in srcSubAffiliations:
-		processedsubAffiliation = subAffiliationProcessing.processSubAffiliation( srcSubAffiliation, sesTarget )
+# 	iSubAffiliation = 1
+# 	for srcSubAffiliation in srcSubAffiliations:
+# 		processedsubAffiliation = subAffiliationProcessing.processSubAffiliation( srcSubAffiliation, sesTarget )
 
-		sesTarget.add( processedsubAffiliation )
+# 		sesTarget.add( processedsubAffiliation )
 
-		if iSubAffiliation % 1000 == 0:
-			try:
-				sesTarget.flush()
-			except sqlalchemy.exc.IntegrityError as e:
-				sesTarget.rollback()
-				raise e
-		iSubAffiliation += 1
+# 		if iSubAffiliation % 1000 == 0:
+# 			try:
+# 				sesTarget.flush()
+# 			except sqlalchemy.exc.IntegrityError as e:
+# 				sesTarget.rollback()
+# 				raise e
+# 		iSubAffiliation += 1
 
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingSubAffiliations = subAffiliationProcessing.getTargetSubAffiliations( sesTarget )
+# 	tgtMissingSubAffiliations = subAffiliationProcessing.getTargetSubAffiliations( sesTarget )
 
-	iRemoveSubAffiliation = 1
-	for tgtMissingSubAffiliation in tgtMissingSubAffiliations:
-		removeSubAffiliation = subAffiliationProcessing.softDeleteSubAffiliation( tgtMissingSubAffiliation, srcSubAffiliations )
+# 	iRemoveSubAffiliation = 1
+# 	for tgtMissingSubAffiliation in tgtMissingSubAffiliations:
+# 		removeSubAffiliation = subAffiliationProcessing.softDeleteSubAffiliation( tgtMissingSubAffiliation, srcSubAffiliations )
 
-		if removeSubAffiliation:
-			sesTarget.add( removeSubAffiliation )
+# 		if removeSubAffiliation:
+# 			sesTarget.add( removeSubAffiliation )
 
-			if iRemoveSubAffiliation % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveSubAffiliation += 1
+# 			if iRemoveSubAffiliation % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveSubAffiliation += 1
 
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	resetUpdatedFlag( sesTarget, "subaffiliations" )
+# 	resetUpdatedFlag( sesTarget, "subaffiliations" )
 
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-#	End of subAffiliationProcessing
-###############################################################################
+# #	End of subAffiliationProcessing
+# ###############################################################################
 
 
 
@@ -661,507 +662,507 @@ if True:
 # 
 #   File Import:  farEvaluationProcessing.py
 
-import farEvaluationProcessing
+# import farEvaluationProcessing
 
-if True:	
-	srcFarEvaluations = farEvaluationProcessing.getSourceFarEvaluations( sesSource )
+# if True:	
+# 	srcFarEvaluations = farEvaluationProcessing.getSourceFarEvaluations( sesSource )
 
-	iFarEvaluation = 1
-	for srcFarEvaluation in srcFarEvaluations:
-		processedfarEvaluation = farEvaluationProcessing.processFarEvaluation( srcFarEvaluation, sesTarget )
-		if processedfarEvaluation:
-			sesTarget.add( processedfarEvaluation )
-			if iFarEvaluation % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iFarEvaluation += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iFarEvaluation = 1
+# 	for srcFarEvaluation in srcFarEvaluations:
+# 		processedfarEvaluation = farEvaluationProcessing.processFarEvaluation( srcFarEvaluation, sesTarget )
+# 		if processedfarEvaluation:
+# 			sesTarget.add( processedfarEvaluation )
+# 			if iFarEvaluation % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iFarEvaluation += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingFarEvaluations = farEvaluationProcessing.getTargetFarEvaluations( sesTarget )
+# 	tgtMissingFarEvaluations = farEvaluationProcessing.getTargetFarEvaluations( sesTarget )
 
-	iRemoveFarEvaluation = 1
-	for tgtMissingFarEvaluation in tgtMissingFarEvaluations:
-		removeFarEvaluation = farEvaluationProcessing.softDeleteFarEvaluation( tgtMissingFarEvaluation, srcFarEvaluations )
-		if removeFarEvaluation:
-			sesTarget.add( removeFarEvaluation )
-			if iRemoveFarEvaluation % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveFarEvaluation += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iRemoveFarEvaluation = 1
+# 	for tgtMissingFarEvaluation in tgtMissingFarEvaluations:
+# 		removeFarEvaluation = farEvaluationProcessing.softDeleteFarEvaluation( tgtMissingFarEvaluation, srcFarEvaluations )
+# 		if removeFarEvaluation:
+# 			sesTarget.add( removeFarEvaluation )
+# 			if iRemoveFarEvaluation % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveFarEvaluation += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-#	End of farEvaluationProcessing
-###############################################################################
-
-###############################################################################
-# 
-#   File Import:  farConferenceProceedingProcessing
-
-import farConferenceProceedingProcessing
-
-if True:
-	srcFarConferenceProceedings = farConferenceProceedingProcessing.getSourceFarConferenceProceedings( sesSource )
-
-	iFarConferenceProceeding = 1
-	for srcFarConferenceProceeding in srcFarConferenceProceedings:
-		processedfarConferenceProceeding = farConferenceProceedingProcessing.processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget )
-		if processedfarConferenceProceeding:
-			sesTarget.add( processedfarConferenceProceeding )
-			if iFarConferenceProceeding % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iFarConferenceProceeding += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-	tgtMissingFarConferenceProceedings = farConferenceProceedingProcessing.getTargetFarConferenceProceedings( sesTarget )
-
-	iRemoveFarConferenceProceeding = 1
-	for tgtMissingFarConferenceProceeding in tgtMissingFarConferenceProceedings:
-		removeFarConferenceProceeding = farConferenceProceedingProcessing.softDeleteFarConferenceProceeding( tgtMissingFarConferenceProceeding, srcFarConferenceProceedings )
-		if removeFarConferenceProceeding:
-			sesTarget.add( removeFarConferenceProceeding )
-			if iRemoveFarConferenceProceeding % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveFarConferenceProceeding += 1
-
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-#	End of farConferenceProceedingProcessing
-###############################################################################
-
-###############################################################################
-# 
-#   File Import:  farAuthoredBookProcessing
-
-import farAuthoredBookProcessing
-
-if True:
-	srcFarAuthoredBooks = farAuthoredBookProcessing.getSourceFarAuthoredBooks( sesSource )
-
-	iFarAuthoredBook = 1
-	for srcFarAuthoredBook in srcFarAuthoredBooks:
-		processedfarAuthoredBook = farAuthoredBookProcessing.processFarAuthoredBook( srcFarAuthoredBook, sesTarget )
-		if processedfarAuthoredBook:
-			sesTarget.add( processedfarAuthoredBook )
-			if iFarAuthoredBook % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iFarAuthoredBook += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-	tgtMissingFarAuthoredBooks = farAuthoredBookProcessing.getTargetFarAuthoredBooks( sesTarget )
-
-	iRemoveFarAuthoredBook = 1
-	for tgtMissingFarAuthoredBook in tgtMissingFarAuthoredBooks:
-		removeFarAuthoredBook = farAuthoredBookProcessing.softDeleteFarAuthoredBook( tgtMissingFarAuthoredBook, srcFarAuthoredBooks )
-		if removeFarAuthoredBook:
-			sesTarget.add( removeFarAuthoredBook )
-			if iRemoveFarAuthoredBook % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveFarAuthoredBook += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-#	End of farAuthoredBookProcessing
+# #	End of farEvaluationProcessing
 # ###############################################################################
 
-###############################################################################
-# 
-#   File Import:  farRefereedarticleProcessing
+# ###############################################################################
+# # 
+# #   File Import:  farConferenceProceedingProcessing
 
-import farRefereedarticleProcessing
+# import farConferenceProceedingProcessing
 
-if True:
-	srcFarRefereedarticles = farRefereedarticleProcessing.getSourceFarRefereedarticles( sesSource )
+# if True:
+# 	srcFarConferenceProceedings = farConferenceProceedingProcessing.getSourceFarConferenceProceedings( sesSource )
 
-	iFarRefereedarticle = 1
-	for srcFarRefereedarticle in srcFarRefereedarticles:
-		processedfarRefereedarticle = farRefereedarticleProcessing.processFarRefereedarticle( srcFarRefereedarticle, sesTarget )
-		if processedfarRefereedarticle:
-			sesTarget.add( processedfarRefereedarticle )
-			if iFarRefereedarticle % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iFarRefereedarticle += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iFarConferenceProceeding = 1
+# 	for srcFarConferenceProceeding in srcFarConferenceProceedings:
+# 		processedfarConferenceProceeding = farConferenceProceedingProcessing.processFarConferenceProceeding( srcFarConferenceProceeding, sesTarget )
+# 		if processedfarConferenceProceeding:
+# 			sesTarget.add( processedfarConferenceProceeding )
+# 			if iFarConferenceProceeding % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iFarConferenceProceeding += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingFarRefereedarticles = farRefereedarticleProcessing.getTargetFarRefereedarticles( sesTarget )
+# 	tgtMissingFarConferenceProceedings = farConferenceProceedingProcessing.getTargetFarConferenceProceedings( sesTarget )
 
-	iRemoveFarRefereedarticle = 1
-	for tgtMissingFarRefereedarticle in tgtMissingFarRefereedarticles:
-		removeFarRefereedarticle = farRefereedarticleProcessing.softDeleteFarRefereedarticle( tgtMissingFarRefereedarticle, srcFarRefereedarticles )
-		if removeFarRefereedarticle:
-			sesTarget.add( removeFarRefereedarticle )
-			if iRemoveFarRefereedarticle % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveFarRefereedarticle += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iRemoveFarConferenceProceeding = 1
+# 	for tgtMissingFarConferenceProceeding in tgtMissingFarConferenceProceedings:
+# 		removeFarConferenceProceeding = farConferenceProceedingProcessing.softDeleteFarConferenceProceeding( tgtMissingFarConferenceProceeding, srcFarConferenceProceedings )
+# 		if removeFarConferenceProceeding:
+# 			sesTarget.add( removeFarConferenceProceeding )
+# 			if iRemoveFarConferenceProceeding % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveFarConferenceProceeding += 1
 
-#	End of farRefereedarticleProcessing
-###############################################################################
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-###############################################################################
-# 
-#   File Import:  farNonrefereedarticleProcessing
+# #	End of farConferenceProceedingProcessing
+# ###############################################################################
 
-import farNonrefereedarticleProcessing
+# ###############################################################################
+# # 
+# #   File Import:  farAuthoredBookProcessing
 
-if True:
-	srcFarNonrefereedarticles = farNonrefereedarticleProcessing.getSourceFarNonrefereedarticles( sesSource )
+# import farAuthoredBookProcessing
 
-	iFarNonrefereedarticle = 1
-	for srcFarNonrefereedarticle in srcFarNonrefereedarticles:
-		processedfarNonrefereedarticle = farNonrefereedarticleProcessing.processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget )
-		if processedfarNonrefereedarticle:
-			sesTarget.add( processedfarNonrefereedarticle )
-			if iFarNonrefereedarticle % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iFarNonrefereedarticle += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# if True:
+# 	srcFarAuthoredBooks = farAuthoredBookProcessing.getSourceFarAuthoredBooks( sesSource )
 
-	tgtMissingFarNonrefereedarticles = farNonrefereedarticleProcessing.getTargetFarNonrefereedarticles( sesTarget )
+# 	iFarAuthoredBook = 1
+# 	for srcFarAuthoredBook in srcFarAuthoredBooks:
+# 		processedfarAuthoredBook = farAuthoredBookProcessing.processFarAuthoredBook( srcFarAuthoredBook, sesTarget )
+# 		if processedfarAuthoredBook:
+# 			sesTarget.add( processedfarAuthoredBook )
+# 			if iFarAuthoredBook % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iFarAuthoredBook += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	iRemoveFarNonrefereedarticle = 1
-	for tgtMissingFarNonrefereedarticle in tgtMissingFarNonrefereedarticles:
-		removeFarNonrefereedarticle = farNonrefereedarticleProcessing.softDeleteFarNonrefereedarticle( tgtMissingFarNonrefereedarticle, srcFarNonrefereedarticles )
-		if removeFarNonrefereedarticle:
-			sesTarget.add( removeFarNonrefereedarticle )
-			if iRemoveFarNonrefereedarticle % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveFarNonrefereedarticle += 1
+# 	tgtMissingFarAuthoredBooks = farAuthoredBookProcessing.getTargetFarAuthoredBooks( sesTarget )
 
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iRemoveFarAuthoredBook = 1
+# 	for tgtMissingFarAuthoredBook in tgtMissingFarAuthoredBooks:
+# 		removeFarAuthoredBook = farAuthoredBookProcessing.softDeleteFarAuthoredBook( tgtMissingFarAuthoredBook, srcFarAuthoredBooks )
+# 		if removeFarAuthoredBook:
+# 			sesTarget.add( removeFarAuthoredBook )
+# 			if iRemoveFarAuthoredBook % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveFarAuthoredBook += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-#	End of farNonrefereedarticleProcessing
-###############################################################################
+# #	End of farAuthoredBookProcessing
+# # ###############################################################################
 
-###############################################################################
-# 
-#   File Import:  farEditedbookProcessing
+# ###############################################################################
+# # 
+# #   File Import:  farRefereedarticleProcessing
 
-import farEditedbookProcessing
+# import farRefereedarticleProcessing
 
-if True:
-	srcFarEditedbooks = farEditedbookProcessing.getSourceFarEditedbooks( sesSource )
+# if True:
+# 	srcFarRefereedarticles = farRefereedarticleProcessing.getSourceFarRefereedarticles( sesSource )
 
-	iFarEditedbook = 1
-	for srcFarEditedbook in srcFarEditedbooks:
-		processedfarEditedbook = farEditedbookProcessing.processFarEditedbook( srcFarEditedbook, sesTarget )
-		if processedfarEditedbook:
-			sesTarget.add( processedfarEditedbook )
-			if iFarEditedbook % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iFarEditedbook += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iFarRefereedarticle = 1
+# 	for srcFarRefereedarticle in srcFarRefereedarticles:
+# 		processedfarRefereedarticle = farRefereedarticleProcessing.processFarRefereedarticle( srcFarRefereedarticle, sesTarget )
+# 		if processedfarRefereedarticle:
+# 			sesTarget.add( processedfarRefereedarticle )
+# 			if iFarRefereedarticle % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iFarRefereedarticle += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingFarEditedbooks = farEditedbookProcessing.getTargetFarEditedbooks( sesTarget )
+# 	tgtMissingFarRefereedarticles = farRefereedarticleProcessing.getTargetFarRefereedarticles( sesTarget )
 
-	iRemoveFarEditedbook = 1
-	for tgtMissingFarEditedbook in tgtMissingFarEditedbooks:
-		removeFarEditedbook = farEditedbookProcessing.softDeleteFarEditedbook( tgtMissingFarEditedbook, srcFarEditedbooks )
-		if removeFarEditedbook:
-			sesTarget.add( removeFarEditedbook )
-			if iRemoveFarEditedbook % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveFarEditedbook += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iRemoveFarRefereedarticle = 1
+# 	for tgtMissingFarRefereedarticle in tgtMissingFarRefereedarticles:
+# 		removeFarRefereedarticle = farRefereedarticleProcessing.softDeleteFarRefereedarticle( tgtMissingFarRefereedarticle, srcFarRefereedarticles )
+# 		if removeFarRefereedarticle:
+# 			sesTarget.add( removeFarRefereedarticle )
+# 			if iRemoveFarRefereedarticle % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveFarRefereedarticle += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-#	End of farEditedbookProcessing
-###############################################################################
+# #	End of farRefereedarticleProcessing
+# ###############################################################################
+
+# ###############################################################################
+# # 
+# #   File Import:  farNonrefereedarticleProcessing
+
+# import farNonrefereedarticleProcessing
+
+# if True:
+# 	srcFarNonrefereedarticles = farNonrefereedarticleProcessing.getSourceFarNonrefereedarticles( sesSource )
+
+# 	iFarNonrefereedarticle = 1
+# 	for srcFarNonrefereedarticle in srcFarNonrefereedarticles:
+# 		processedfarNonrefereedarticle = farNonrefereedarticleProcessing.processFarNonrefereedarticle( srcFarNonrefereedarticle, sesTarget )
+# 		if processedfarNonrefereedarticle:
+# 			sesTarget.add( processedfarNonrefereedarticle )
+# 			if iFarNonrefereedarticle % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iFarNonrefereedarticle += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
+
+# 	tgtMissingFarNonrefereedarticles = farNonrefereedarticleProcessing.getTargetFarNonrefereedarticles( sesTarget )
+
+# 	iRemoveFarNonrefereedarticle = 1
+# 	for tgtMissingFarNonrefereedarticle in tgtMissingFarNonrefereedarticles:
+# 		removeFarNonrefereedarticle = farNonrefereedarticleProcessing.softDeleteFarNonrefereedarticle( tgtMissingFarNonrefereedarticle, srcFarNonrefereedarticles )
+# 		if removeFarNonrefereedarticle:
+# 			sesTarget.add( removeFarNonrefereedarticle )
+# 			if iRemoveFarNonrefereedarticle % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveFarNonrefereedarticle += 1
+
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
+
+# #	End of farNonrefereedarticleProcessing
+# ###############################################################################
+
+# ###############################################################################
+# # 
+# #   File Import:  farEditedbookProcessing
+
+# import farEditedbookProcessing
+
+# if True:
+# 	srcFarEditedbooks = farEditedbookProcessing.getSourceFarEditedbooks( sesSource )
+
+# 	iFarEditedbook = 1
+# 	for srcFarEditedbook in srcFarEditedbooks:
+# 		processedfarEditedbook = farEditedbookProcessing.processFarEditedbook( srcFarEditedbook, sesTarget )
+# 		if processedfarEditedbook:
+# 			sesTarget.add( processedfarEditedbook )
+# 			if iFarEditedbook % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iFarEditedbook += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
+
+# 	tgtMissingFarEditedbooks = farEditedbookProcessing.getTargetFarEditedbooks( sesTarget )
+
+# 	iRemoveFarEditedbook = 1
+# 	for tgtMissingFarEditedbook in tgtMissingFarEditedbooks:
+# 		removeFarEditedbook = farEditedbookProcessing.softDeleteFarEditedbook( tgtMissingFarEditedbook, srcFarEditedbooks )
+# 		if removeFarEditedbook:
+# 			sesTarget.add( removeFarEditedbook )
+# 			if iRemoveFarEditedbook % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveFarEditedbook += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
+
+# #	End of farEditedbookProcessing
+# ###############################################################################
 
 
-###############################################################################
-# 
-#   File Import:  farBookChapterProcessing
+# ###############################################################################
+# # 
+# #   File Import:  farBookChapterProcessing
 
-import farBookChapterProcessing
+# import farBookChapterProcessing
 
-if True:
-	srcFarBookChapters = farBookChapterProcessing.getSourceFarBookChapters( sesSource )
+# if True:
+# 	srcFarBookChapters = farBookChapterProcessing.getSourceFarBookChapters( sesSource )
 
-	iFarBookChapter = 1
-	for srcFarBookChapter in srcFarBookChapters:
-		processedfarBookChapter = farBookChapterProcessing.processFarBookChapter( srcFarBookChapter, sesTarget )
-		if processedfarBookChapter:
-			sesTarget.add( processedfarBookChapter )
-			if iFarBookChapter % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iFarBookChapter += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iFarBookChapter = 1
+# 	for srcFarBookChapter in srcFarBookChapters:
+# 		processedfarBookChapter = farBookChapterProcessing.processFarBookChapter( srcFarBookChapter, sesTarget )
+# 		if processedfarBookChapter:
+# 			sesTarget.add( processedfarBookChapter )
+# 			if iFarBookChapter % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iFarBookChapter += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingFarBookChapters = farBookChapterProcessing.getTargetFarBookChapters( sesTarget )
+# 	tgtMissingFarBookChapters = farBookChapterProcessing.getTargetFarBookChapters( sesTarget )
 
-	iRemoveFarBookChapter = 1
-	for tgtMissingFarBookChapter in tgtMissingFarBookChapters:
-		removeFarBookChapter = farBookChapterProcessing.softDeleteFarBookChapter( tgtMissingFarBookChapter, srcFarBookChapters )
-		if removeFarBookChapter:
-			sesTarget.add( removeFarBookChapter )
-			if iRemoveFarBookChapter % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveFarBookChapter += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iRemoveFarBookChapter = 1
+# 	for tgtMissingFarBookChapter in tgtMissingFarBookChapters:
+# 		removeFarBookChapter = farBookChapterProcessing.softDeleteFarBookChapter( tgtMissingFarBookChapter, srcFarBookChapters )
+# 		if removeFarBookChapter:
+# 			sesTarget.add( removeFarBookChapter )
+# 			if iRemoveFarBookChapter % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveFarBookChapter += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-#	End of farBookChapterProcessing
-###############################################################################
+# #	End of farBookChapterProcessing
+# ###############################################################################
 
-###############################################################################
-# 
-#   File Import:  farBookReviewProcessing
+# ###############################################################################
+# # 
+# #   File Import:  farBookReviewProcessing
 
-import farBookReviewProcessing
+# import farBookReviewProcessing
 
-if True:
-	srcFarBookReviews = farBookReviewProcessing.getSourceFarBookReviews( sesSource )
+# if True:
+# 	srcFarBookReviews = farBookReviewProcessing.getSourceFarBookReviews( sesSource )
 
-	iFarBookReview = 1
-	for srcFarBookReview in srcFarBookReviews:
-		processedFarBookReview = farBookReviewProcessing.processFarBookReview( srcFarBookReview, sesTarget )
-		if processedFarBookReview:
-			sesTarget.add( processedFarBookReview )
-			if iFarBookReview % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iFarBookReview += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iFarBookReview = 1
+# 	for srcFarBookReview in srcFarBookReviews:
+# 		processedFarBookReview = farBookReviewProcessing.processFarBookReview( srcFarBookReview, sesTarget )
+# 		if processedFarBookReview:
+# 			sesTarget.add( processedFarBookReview )
+# 			if iFarBookReview % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iFarBookReview += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingFarBookReviews = farBookReviewProcessing.getTargetFarBookReviews( sesTarget )
+# 	tgtMissingFarBookReviews = farBookReviewProcessing.getTargetFarBookReviews( sesTarget )
 
-	iRemoveFarBookReview = 1
-	for tgtMissingFarBookReview in tgtMissingFarBookReviews:
-		removeFarBookReview = farBookReviewProcessing.softDeleteFarBookReview( tgtMissingFarBookReview, srcFarBookReviews )
-		if removeFarBookReview:
-			sesTarget.add( removeFarBookReview )
-			if iRemoveFarBookReview % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveFarBookReview += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iRemoveFarBookReview = 1
+# 	for tgtMissingFarBookReview in tgtMissingFarBookReviews:
+# 		removeFarBookReview = farBookReviewProcessing.softDeleteFarBookReview( tgtMissingFarBookReview, srcFarBookReviews )
+# 		if removeFarBookReview:
+# 			sesTarget.add( removeFarBookReview )
+# 			if iRemoveFarBookReview % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveFarBookReview += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-#	End of farBookReviewProcessing
-###############################################################################
+# #	End of farBookReviewProcessing
+# ###############################################################################
 
-###############################################################################
-# 
-#   File Import:  farEncyclopediaarticleProcessing
+# ###############################################################################
+# # 
+# #   File Import:  farEncyclopediaarticleProcessing
 
-import farEncyclopediaarticleProcessing
+# import farEncyclopediaarticleProcessing
 
-if True:
-	srcFarEncyclopediaarticles = farEncyclopediaarticleProcessing.getSourceFarEncyclopediaarticles( sesSource )
+# if True:
+# 	srcFarEncyclopediaarticles = farEncyclopediaarticleProcessing.getSourceFarEncyclopediaarticles( sesSource )
 
-	iFarEncyclopediaarticle = 1
-	for srcFarEncyclopediaarticle in srcFarEncyclopediaarticles:
-		processedFarEncyclopediaarticle = farEncyclopediaarticleProcessing.processFarEncyclopediaarticle( srcFarEncyclopediaarticle, sesTarget )
-		if processedFarEncyclopediaarticle:
-			sesTarget.add( processedFarEncyclopediaarticle )
-			if iFarEncyclopediaarticle % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iFarEncyclopediaarticle += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iFarEncyclopediaarticle = 1
+# 	for srcFarEncyclopediaarticle in srcFarEncyclopediaarticles:
+# 		processedFarEncyclopediaarticle = farEncyclopediaarticleProcessing.processFarEncyclopediaarticle( srcFarEncyclopediaarticle, sesTarget )
+# 		if processedFarEncyclopediaarticle:
+# 			sesTarget.add( processedFarEncyclopediaarticle )
+# 			if iFarEncyclopediaarticle % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iFarEncyclopediaarticle += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingFarEncyclopediaarticles = farEncyclopediaarticleProcessing.getTargetFarEncyclopediaarticles( sesTarget )
+# 	tgtMissingFarEncyclopediaarticles = farEncyclopediaarticleProcessing.getTargetFarEncyclopediaarticles( sesTarget )
 
-	iRemoveFarEncyclopediaarticle = 1
-	for tgtMissingFarEncyclopediaarticle in tgtMissingFarEncyclopediaarticles:
-		removeFarEncyclopediaarticle = farEncyclopediaarticleProcessing.softDeleteFarEncyclopediaarticle( tgtMissingFarEncyclopediaarticle, srcFarEncyclopediaarticles )
-		if removeFarEncyclopediaarticle:
-			sesTarget.add( removeFarEncyclopediaarticle )
-			if iRemoveFarEncyclopediaarticle % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveFarEncyclopediaarticle += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iRemoveFarEncyclopediaarticle = 1
+# 	for tgtMissingFarEncyclopediaarticle in tgtMissingFarEncyclopediaarticles:
+# 		removeFarEncyclopediaarticle = farEncyclopediaarticleProcessing.softDeleteFarEncyclopediaarticle( tgtMissingFarEncyclopediaarticle, srcFarEncyclopediaarticles )
+# 		if removeFarEncyclopediaarticle:
+# 			sesTarget.add( removeFarEncyclopediaarticle )
+# 			if iRemoveFarEncyclopediaarticle % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveFarEncyclopediaarticle += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-#	End of farEncyclopediaarticleProcessing
-###############################################################################
+# #	End of farEncyclopediaarticleProcessing
+# ###############################################################################
 
-###############################################################################
-# 
-#   File Import:  farShortstoriesProcessing
+# ###############################################################################
+# # 
+# #   File Import:  farShortstoriesProcessing
 
-import farShortstoriesProcessing
+# import farShortstoriesProcessing
 
-if True:
-	srcFarShortstories = farShortstoriesProcessing.getSourceFarShortstories( sesSource )
+# if True:
+# 	srcFarShortstories = farShortstoriesProcessing.getSourceFarShortstories( sesSource )
 
-	iFarShortstorie = 1
-	for srcFarShortstorie in srcFarShortstories:
-		processedFarShortstories = farShortstoriesProcessing.processFarShortstorie( srcFarShortstorie, sesTarget )
-		if processedFarShortstories:
-			sesTarget.add( processedFarShortstories )
-			if iFarShortstorie % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iFarShortstorie += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iFarShortstorie = 1
+# 	for srcFarShortstorie in srcFarShortstories:
+# 		processedFarShortstories = farShortstoriesProcessing.processFarShortstorie( srcFarShortstorie, sesTarget )
+# 		if processedFarShortstories:
+# 			sesTarget.add( processedFarShortstories )
+# 			if iFarShortstorie % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iFarShortstorie += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingFarShortstories = farShortstoriesProcessing.getTargetFarShortstories( sesTarget )
+# 	tgtMissingFarShortstories = farShortstoriesProcessing.getTargetFarShortstories( sesTarget )
 
-	iRemoveFarShortstorie = 1
-	for tgtMissingFarShortstorie in tgtMissingFarShortstories:
-		removeFarShortstorie = farShortstoriesProcessing.softDeleteFarShortstorie( tgtMissingFarShortstorie, srcFarShortstories )
-		if removeFarShortstorie:
-			sesTarget.add( removeFarShortstorie )
-			if iRemoveFarShortstorie % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveFarShortstorie += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iRemoveFarShortstorie = 1
+# 	for tgtMissingFarShortstorie in tgtMissingFarShortstories:
+# 		removeFarShortstorie = farShortstoriesProcessing.softDeleteFarShortstorie( tgtMissingFarShortstorie, srcFarShortstories )
+# 		if removeFarShortstorie:
+# 			sesTarget.add( removeFarShortstorie )
+# 			if iRemoveFarShortstorie % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveFarShortstorie += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-#	End of farShortstoriesProcessing
-###############################################################################
+# #	End of farShortstoriesProcessing
+# ###############################################################################
 
-cleanUp( None )
+# cleanUp( None )
 
-#
-# 	End of the BIOETL scripts...
-###############################################################################
+# #
+# # 	End of the BIOETL scripts...
+# ###############################################################################

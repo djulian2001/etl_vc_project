@@ -12,7 +12,6 @@ class EtlProcess( object ):
 
 	"""
 	def __init__( self, appSetup ):
-		# super( EtlProcess,self ).__init__()
 		self.sesSource = appSetup.getSourceSession()
 		self.sesTarget = appSetup.getTargetSession()
 

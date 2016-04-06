@@ -4,19 +4,28 @@ from sharedProcesses import hashThisList
 from models.biopublicmodels import People, Addresses
 from models.asudwpsmodels import AsuDwPsAddresses, AsuPsBioFilters
 
-def getSourceAddresses( sesSource ):
+def getTableName():
+	return Addresses.__table__.name
+
+
+def getSourceData( sesSource, qryList=None ):
 	"""Get and return the source database records for the persons address data."""
-	srcFilters = AsuPsBioFilters( sesSource )
+	if not qryList:
+		srcFilters = AsuPsBioFilters( sesSource )
 
-	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
+		srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
 
-	return sesSource.query(
-		AsuDwPsAddresses ).join(
-			srcEmplidsSubQry, AsuDwPsAddresses.emplid==srcEmplidsSubQry.c.emplid ).filter(
-				AsuDwPsAddresses.address_type=='CLOC' ).order_by(
-					AsuDwPsAddresses.emplid ).all()
+		return sesSource.query(
+			AsuDwPsAddresses ).join(
+				srcEmplidsSubQry, AsuDwPsAddresses.emplid==srcEmplidsSubQry.c.emplid ).filter(
+					AsuDwPsAddresses.address_type=='CLOC' ).order_by(
+						AsuDwPsAddresses.emplid ).all()
+	else:
+		return sesSource.query(
+			AsuDwPsAddresses ).filter(
+				AsuDwPsAddresses.emplid.in_( qryList ) ).all()
 
-def processAddress( srcPersonAddress, sesTarget ):
+def processData( srcPersonAddress, sesTarget ):
 	"""
 		Determine what processing action is required for a person address record selected
 		from the source database.  Using the target database as the test, a record will be
@@ -127,14 +136,14 @@ def processAddress( srcPersonAddress, sesTarget ):
 
 		return insertPersonAddress
 
-def getTargetAddresses( sesTarget ):
+def getTargetData( sesTarget ):
 	"""Get a set of person addresses from the target database"""
 	return sesTarget.query(
 		Addresses ).filter( 
 			Addresses.updated_flag == False ).filter(
 			Addresses.deleted_at.is_( None ) ).all()
 
-def cleanupSourceAddresses( tgtRecord, srcRecords ):
+def softDeleteData( tgtRecord, srcRecords ):
 	"""
 		The list of source records changes as time moves on, the source records
 		removed from the list are not deleted, but flaged removed by the 

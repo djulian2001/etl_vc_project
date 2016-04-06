@@ -123,9 +123,5 @@ def softDeleteData( tgtMissingSubAffiliation, srcList ):
 
 	if dataMissing():
 		tgtMissingSubAffiliation.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-		
 		return tgtMissingSubAffiliation
-	
-	else:
-		return None
 

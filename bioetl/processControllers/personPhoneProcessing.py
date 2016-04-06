@@ -4,20 +4,27 @@ from sharedProcesses import hashThisList
 from models.biopublicmodels import People, Phones
 from models.asudwpsmodels import AsuDwPsPhones, AsuPsBioFilters
 
+def getTableName():
+	return Phones.__table__.name
 
-def getSourcePhones( sesSource ):
+def getSourceData( sesSource, qryList=None ):
 	"""Returns a collection of phone records from the source database"""
-	srcFilters = AsuPsBioFilters( sesSource )
+	if not qryList:
+		srcFilters = AsuPsBioFilters( sesSource )
 
-	srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
+		srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
 
-	return sesSource.query( 
-		AsuDwPsPhones ).join(
-			srcEmplidsSubQry, AsuDwPsPhones.emplid==srcEmplidsSubQry.c.emplid ).filter(
+		return sesSource.query( 
+			AsuDwPsPhones ).join(
+				srcEmplidsSubQry, AsuDwPsPhones.emplid==srcEmplidsSubQry.c.emplid ).filter(
+					AsuDwPsPhones.phone_type.in_( ('WORK','CELL') ) ).all()
+	else:
+		return sesSource.query(
+			AsuDwPsPhones ).filter(
+				AsuDwPsPhones.emplid.in_( qryList ) ).filter(
 				AsuDwPsPhones.phone_type.in_( ('WORK','CELL') ) ).all()
 
-
-def processPhone( srcPersonPhone, sesTarget ):
+def processData( srcPersonPhone, sesTarget ):
 	"""
 		Takes in a source AsuDwPsPhone object from the asudw database
 		and determines if the object needs to be updated, inserted in the target
@@ -100,14 +107,14 @@ def processPhone( srcPersonPhone, sesTarget ):
 		return insertPhone
 
 
-def getTargetPhones( sesTarget ):
+def getTargetData( sesTarget ):
 	"""pass"""
 	return sesTarget.query(
 		Phones ).filter( 
 			Phones.updated_flag == False ).filter(
 			Phones.deleted_at.is_( None ) ).all()
 
-def cleanupSourcePhones( tgtRecord, srcRecords ):
+def softDeleteData( tgtRecord, srcRecords ):
 	"""
 		The list of source records changes as time moves on, the source records
 		removed from the list are not deleted, but flaged removed by the 
@@ -131,7 +138,3 @@ def cleanupSourcePhones( tgtRecord, srcRecords ):
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		return tgtRecord
-	else:
-		raise TypeError('source target record still exists and requires no soft delete!')
-
-
