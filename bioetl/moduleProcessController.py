@@ -1,3 +1,4 @@
+from sqlalchemy.orm.exc import NoResultFound
 from sharedProcesses import resetUpdatedFlag
 
 import logging
@@ -20,7 +21,7 @@ class ModuleProcessController( object ):
 		self.overrideSource = None
 		self.queryByList = None
 		self.tablename = self.module.getTableName()
-		self.missingIds = None
+		self.missingIds = []
 
 	def processSource( self ):
 		"""
@@ -38,36 +39,45 @@ class ModuleProcessController( object ):
 		if not self.queryByList:
 			self.cacheSource = srcDataResults
 		
-		iRecords = 1
-		for srcData in srcDataResults:
-			try:
-				processedSrcData = self.module.processData( srcData, self.sesTarget )
-			except NoResultFound as e:
-				logger.warning( 'Constraint Failed to match a record from {schema}.{tblename};  Record identified as : {recId};'
-								 .format(	schema=srcData.schema,
-								 			tblename=srcData.__tablename__,
-								 			recId=srcData.emplid if srcData.emplid else 'Not a personnel record.' ) )
-				if srcData.emplid:
-					"""Source of the missing ids, cache all missing values for handling later"""
-					self.appendMissingEmplid( srcData.emplid )
-				pass
-			except Exception as e:
-				logger.error( 'Code Failure:', exc_info=True )
-				raise e
+		try:
+			iRecords = 1
+			for srcData in srcDataResults:
+				try:
+					processedSrcData = self.module.processData( srcData, self.sesTarget )
+				except NoResultFound as e:
+					logger.warning( 'Constraint Failed to match a record from {schema}.{tblename};  Record identified as : {recId};'
+									 .format(	schema=srcData.schema,
+									 			tblename=srcData.__tablename__,
+									 			recId=srcData.emplid if srcData.emplid else 'Not a personnel record.' ) )
+					if srcData.emplid:
+						"""Source of the missing ids, cache all missing values for handling later"""
+						self.appendMissingEmplid( srcData.emplid )
+					iRecords += 1
+					break
+				except Exception as e:
+					logger.error( 'Code Failure:', exc_info=True )
+					raise e
 
-			if processedSrcData:
-				self.sesTarget.add( processedSrcData )
-				if iRecords % 1000 == 0:
-					self.flushThis()
-				iRecords += 1
+				if processedSrcData:
+					self.sesTarget.add( processedSrcData )
+					if iRecords % 1000 == 0:
+						self.flushThis()
+					iRecords += 1
 
-		self.commitThis()
-		resetUpdatedFlag( self.sesTarget, self.tablename )
-		self.commitThis()
-		logger.info("{tblname} source records processed: {actions} of {totals} records."
-					.format(	tblname=self.tablename,
-							 	actions=iRecords-1,
-							 	totals=len( srcDataResults ) ) )
+			self.commitThis()
+			resetUpdatedFlag( self.sesTarget, self.tablename )
+			self.commitThis()
+			logger.info("{tblname} source records processed: {actions} of {totals} records."
+						.format(	tblname=self.tablename,
+								 	actions=iRecords-1,
+								 	totals=len( srcDataResults ) ) )
+		
+		except TypeError as e:
+			logger.warning(" {tblname} data source returned no values in {srcData}"
+							.format(	tblname=self.tablename,
+										srcData="list data set {}".format( self.queryByList ) if self.queryByList else "tables data set" ),
+							 )
+		# print __name__, self.missingIds
 
 	def cleanTarget( self ):
 		"""Soft delete the data thats no longer found int the source db"""
@@ -101,13 +111,13 @@ class ModuleProcessController( object ):
 			self.sesTarget.rollback()
 			raise e
 
-	def appendMissingEmplid( self, missingIds ):
+	def appendMissingEmplid( self, missedId ):
 		"""Add an emplid to the list of missing ids found during the modules processing"""
 		try:
-			if type(missingIds) is int:
-				self.missingIds.append( missingIds )
+			if type( missedId ) is int:
+				self.missingIds.append( missedId )
 		except TypeError:
-			logger.warning( "Method appendMissingEmplid, passed wrong data type: {} is not an int.".format( missingIds ) )
+			logger.warning( "Method appendMissingEmplid, passed wrong data type: {} is not an int.".format( missedId ) )
 			pass
 			
 	# I have a list of missing id's... now what

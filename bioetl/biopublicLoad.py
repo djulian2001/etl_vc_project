@@ -1,13 +1,15 @@
 from sharedProcesses import resetUpdatedFlag
 from sqlalchemy.orm.exc import NoResultFound
 
+from sqlalchemy import func
 
-from app.connectdb import EtlConnections
 
-bioetlAppRun = EtlConnections("asutobio")
 
-sesSource = bioetlAppRun.getSourceSession()
-sesTarget = bioetlAppRun.getTargetSession()
+from app.appsetup import AppSetup
+
+appSetup = AppSetup("asutobio")
+
+sesSource = appSetup.getSourceSession()
 
 def cleanUp(e):
 	"""
@@ -19,14 +21,45 @@ def cleanUp(e):
 	"""
 	import sys
 
-	sesTarget.close()
 	sesSource.close()
-	bioetlAppRun.cleanUp()
+	appSetup.cleanUp()
 	if e:
 		print type(e), e
 		sys.exit(1)
 	else:
 		sys.exit(0)
+
+
+# my_list = [ 1000091891, 1211305092]
+my_list = ['1211305092']
+from models.asudwpsmodels import AsuDwPsJobsLog, AsuDwPsPerson
+
+try:
+	# x = sesSource.query(
+ #                AsuDwPsJobsLog.emplid, 
+ #                AsuDwPsJobsLog.deptid, 
+ #                AsuDwPsJobsLog.effdt, 
+ #                AsuDwPsJobsLog.action,
+ #                func.row_number().over(
+ #                    partition_by=[AsuDwPsJobsLog.emplid, AsuDwPsJobsLog.main_appt_num_jpn],
+ #                    order_by=AsuDwPsJobsLog.effdt.desc()
+ #                    ).label('rn') ).filter(
+	# 		AsuDwPsJobsLog.emplid==1211305092 ).all()
+	# x = sesSource.query(
+ #                AsuDwPsJobsLog ).filter(
+	# 		AsuDwPsJobsLog.emplid.in_( my_list ) ).all()
+
+	x = sesSource.query( 
+			AsuDwPsPerson ).filter(
+                AsuDwPsPerson.emplid.in_( my_list ) ).all()
+
+	for i in x:
+		print i.__dict__
+
+except Exception as e:
+	cleanUp(e)
+finally:
+	cleanUp(None)
 
 ###############################################################################
 # 	The Biodesign Defined subaffiliations.  There is BI aspects of this data
@@ -97,562 +130,562 @@ def cleanUp(e):
 
 
 
-###############################################################################
-# Load the asu data warehouse people table in into the final destination:
-#	mysql:
-#		bio_public.people to bio_public.people
-# 
+# ###############################################################################
+# # Load the asu data warehouse people table in into the final destination:
+# #	mysql:
+# #		bio_public.people to bio_public.people
+# # 
 
-import personProcessing
-import personWebProfileProcessing
-import personExternalLinkProcessing
+# import personProcessing
+# import personWebProfileProcessing
+# import personExternalLinkProcessing
 
-if True:
-	resetUpdatedFlag( sesTarget, "people" )
-	resetUpdatedFlag( sesTarget, "person_externallinks" )
-	resetUpdatedFlag( sesTarget, "person_webprofile" )
+# if True:
+# 	resetUpdatedFlag( sesTarget, "people" )
+# 	resetUpdatedFlag( sesTarget, "person_externallinks" )
+# 	resetUpdatedFlag( sesTarget, "person_webprofile" )
 
-	srcPeople = personProcessing.getSourcePeople( sesSource )
+# 	srcPeople = personProcessing.getSourcePeople( sesSource )
 
-	iPerson = 1
-	for srcPerson in srcPeople:
-		# try:
-		personStatus = personProcessing.processPerson( srcPerson, sesTarget )
-		# except TypeError as e:
-			# print 1,e  # replace this with 'continue'
-		# else:
-		sesTarget.add( personStatus )
-		sesTarget.flush()
+# 	iPerson = 1
+# 	for srcPerson in srcPeople:
+# 		# try:
+# 		personStatus = personProcessing.processPerson( srcPerson, sesTarget )
+# 		# except TypeError as e:
+# 			# print 1,e  # replace this with 'continue'
+# 		# else:
+# 		sesTarget.add( personStatus )
+# 		sesTarget.flush()
 
-		processedpersonWebProfile = personWebProfileProcessing.processPersonWebProfile( srcPerson, sesTarget )
-		if processedpersonWebProfile:
-			sesTarget.add( processedpersonWebProfile )
+# 		processedpersonWebProfile = personWebProfileProcessing.processPersonWebProfile( srcPerson, sesTarget )
+# 		if processedpersonWebProfile:
+# 			sesTarget.add( processedpersonWebProfile )
 
-		processedpersonExternalLink = personExternalLinkProcessing.processPersonExternalLink( srcPerson, sesTarget )
-		if processedpersonExternalLink:
-			sesTarget.add( processedpersonExternalLink )
+# 		processedpersonExternalLink = personExternalLinkProcessing.processPersonExternalLink( srcPerson, sesTarget )
+# 		if processedpersonExternalLink:
+# 			sesTarget.add( processedpersonExternalLink )
 
-		if iPerson % 1000 == 0:
-			try:
-				sesTarget.flush()
-			except sqlalchemy.exc.IntegrityError as e:
-				sesTarget.rollback()
-				raise e
-			except RuntimeError as e:
-				raise e
-		iPerson += 1
+# 		if iPerson % 1000 == 0:
+# 			try:
+# 				sesTarget.flush()
+# 			except sqlalchemy.exc.IntegrityError as e:
+# 				sesTarget.rollback()
+# 				raise e
+# 			except RuntimeError as e:
+# 				raise e
+# 		iPerson += 1
 	
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingPeople = personProcessing.getTargetPeople( sesTarget )
+# 	tgtMissingPeople = personProcessing.getTargetPeople( sesTarget )
 
-	iMissingPerson = 1
-	for tgtMissingPerson in tgtMissingPeople:
-		personMissing = personProcessing.softDeletePerson( tgtMissingPerson, srcPeople )
-		if personMissing:
-			sesTarget.add( personMissing )
-			if iMissingPerson % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iMissingPerson += 1
+# 	iMissingPerson = 1
+# 	for tgtMissingPerson in tgtMissingPeople:
+# 		personMissing = personProcessing.softDeletePerson( tgtMissingPerson, srcPeople )
+# 		if personMissing:
+# 			sesTarget.add( personMissing )
+# 			if iMissingPerson % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iMissingPerson += 1
 	
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	###############################################################################
-	# 
-	#   personWebProfileProcessing
+# 	###############################################################################
+# 	# 
+# 	#   personWebProfileProcessing
 
-	tgtMissingPersonWebProfiles = personWebProfileProcessing.getTargetPersonWebProfiles( sesTarget )
+# 	tgtMissingPersonWebProfiles = personWebProfileProcessing.getTargetPersonWebProfiles( sesTarget )
 
-	iMissingPersonWebProfile = 1
-	for tgtMissingPersonWebProfile in tgtMissingPersonWebProfiles:
-		removePersonWebProfile = personWebProfileProcessing.softDeletePersonWebProfile( tgtMissingPersonWebProfile, srcPeople )
-		if removePersonWebProfile:
-			sesTarget.add( removePersonWebProfile )
-			if iMissingPersonWebProfile % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iMissingPersonWebProfile += 1
+# 	iMissingPersonWebProfile = 1
+# 	for tgtMissingPersonWebProfile in tgtMissingPersonWebProfiles:
+# 		removePersonWebProfile = personWebProfileProcessing.softDeletePersonWebProfile( tgtMissingPersonWebProfile, srcPeople )
+# 		if removePersonWebProfile:
+# 			sesTarget.add( removePersonWebProfile )
+# 			if iMissingPersonWebProfile % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iMissingPersonWebProfile += 1
 
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	# 	End of personWebProfileProcessing
-	###############################################################################
+# 	# 	End of personWebProfileProcessing
+# 	###############################################################################
 
-	###############################################################################
-	# 
-	#   File Import:  personExternalLinkProcessing
+# 	###############################################################################
+# 	# 
+# 	#   File Import:  personExternalLinkProcessing
 
-	tgtMissingPersonExternalLinks = personExternalLinkProcessing.getTargetPersonExternalLinks( sesTarget )
+# 	tgtMissingPersonExternalLinks = personExternalLinkProcessing.getTargetPersonExternalLinks( sesTarget )
 
-	iRemovePersonExternalLink = 1
-	for tgtMissingPersonExternalLink in tgtMissingPersonExternalLinks:
-		removePersonExternalLink = personExternalLinkProcessing.softDeletePersonExternalLink( tgtMissingPersonExternalLink, srcPeople )
-		if removePersonExternalLink:
-			sesTarget.add( removePersonExternalLink )
-			if iRemovePersonExternalLink % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemovePersonExternalLink += 1
+# 	iRemovePersonExternalLink = 1
+# 	for tgtMissingPersonExternalLink in tgtMissingPersonExternalLinks:
+# 		removePersonExternalLink = personExternalLinkProcessing.softDeletePersonExternalLink( tgtMissingPersonExternalLink, srcPeople )
+# 		if removePersonExternalLink:
+# 			sesTarget.add( removePersonExternalLink )
+# 			if iRemovePersonExternalLink % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemovePersonExternalLink += 1
 
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	#	End of personExternalLinkProcessing
-	###############################################################################
+# 	#	End of personExternalLinkProcessing
+# 	###############################################################################
 
-	resetUpdatedFlag( sesTarget, "people" )
-	resetUpdatedFlag( sesTarget, "person_externallinks" )
-	resetUpdatedFlag( sesTarget, "person_webprofile" )
+# 	resetUpdatedFlag( sesTarget, "people" )
+# 	resetUpdatedFlag( sesTarget, "person_externallinks" )
+# 	resetUpdatedFlag( sesTarget, "person_webprofile" )
 
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-# End of the process for the source person data (1 table into 3 tables)
-###############################################################################
-
-
-###############################################################################
-# Load the asu data warehouse people data table in into the final destination:
-#	mysql:
-#		bio_public.person_phones to bio_public.person_phones
-# 	
-# Using Group By on the source to limit likely duplicates.
-
-import personPhoneProcessing
-
-if True:
-	resetUpdatedFlag( sesTarget, "person_phones" )
-
-	srcPersonPhones = personPhoneProcessing.getSourcePhones( sesSource )
-
-	iPersonPhone = 1
-	for srcPersonPhone in srcPersonPhones:
-		processedPhone = personPhoneProcessing.processPhone( srcPersonPhone, sesTarget )
-		sesTarget.add( processedPhone )
-		if iPersonPhone % 1000 == 0:
-			try:
-				sesTarget.flush()
-			except sqlalchemy.exc.IntegrityError as e:
-				sesTarget.rollback()
-				raise e
-		iPersonPhone += 1
-
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-	tgtMissingPersonPhones = personPhoneProcessing.getTargetPhones( sesTarget )
-
-	iRemovePhone = 1
-	for tgtMissingPersonPhone in tgtMissingPersonPhones:
-		removePhone = personPhoneProcessing.cleanupSourcePhones( tgtMissingPersonPhone, srcPersonPhones )
-		sesTarget.add( removePhone )
-		if iRemovePhone % 1000 == 0:
-			try:
-				sesTarget.flush()
-			except sqlalchemy.exc.IntegrityError as e:
-				sesTarget.rollback()
-				raise e
-		iRemovePhone += 1
-
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-	resetUpdatedFlag( sesTarget, "person_phones" )
-
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-#	End of personPhoneProcessing
-###############################################################################
-
-###############################################################################
-# Load the asu data warehouse people data table in into the final destination:
-#	mysql:
-#		bio_public.person_addresses to bio_public.person_addresses
-
-import personAddressProcessing
-
-if True:
-	resetUpdatedFlag( sesTarget, "person_addresses" )
-	srcPersonAddresses = personAddressProcessing.getSourceAddresses( sesSource )
-
-	iPersonAddresses = 1
-	for srcPersonAddress in srcPersonAddresses:
-		processedAddress = personAddressProcessing.processAddress( srcPersonAddress, sesTarget )
-		sesTarget.add( processedAddress )
-		if iPersonAddresses % 1000 == 0:
-			try:
-				sesTarget.flush()
-			except sqlalchemy.exc.IntegrityError as e:
-				sesTarget.rollback()
-				raise e
-		iPersonAddresses += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-	# REMOVE the data no longer found in the source database...
-	tgtMissingPersonAddresses = personAddressProcessing.getTargetAddresses( sesTarget )
-
-	iRemoveAddresses = 1
-	for tgtMissingPersonAddress in tgtMissingPersonAddresses:
-		removePersonAddress = personAddressProcessing.cleanupSourceAddresses( tgtMissingPersonAddress, srcPersonAddresses )
-		if removePersonAddress:
-			sesTarget.add( removePersonAddress )
-			if iRemoveAddresses % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveAddresses += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-	resetUpdatedFlag( sesTarget, "person_addresses" )
-
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
-
-#	End of personAddressProcessing
-###############################################################################
+# # End of the process for the source person data (1 table into 3 tables)
+# ###############################################################################
 
 
+# ###############################################################################
+# # Load the asu data warehouse people data table in into the final destination:
+# #	mysql:
+# #		bio_public.person_phones to bio_public.person_phones
+# # 	
+# # Using Group By on the source to limit likely duplicates.
 
-###############################################################################
-# 
-#	File Import: departmentProcessing
-# 	pull over all of the data warehouse department codes.
+# import personPhoneProcessing
 
-import departmentProcessing
+# if True:
+# 	resetUpdatedFlag( sesTarget, "person_phones" )
 
-if True:
-	srcDepartments = departmentProcessing.getSourceDepartments( sesSource )
+# 	srcPersonPhones = personPhoneProcessing.getSourcePhones( sesSource )
 
-	iDepartment = 1
-	for srcDepartment in srcDepartments:
-		processedDepartment = departmentProcessing.processDepartment( srcDepartment, sesTarget )
-		if processedDepartment:
-			sesTarget.add( processedDepartment )
-			if iDepartment % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iDepartment += 1
+# 	iPersonPhone = 1
+# 	for srcPersonPhone in srcPersonPhones:
+# 		processedPhone = personPhoneProcessing.processPhone( srcPersonPhone, sesTarget )
+# 		sesTarget.add( processedPhone )
+# 		if iPersonPhone % 1000 == 0:
+# 			try:
+# 				sesTarget.flush()
+# 			except sqlalchemy.exc.IntegrityError as e:
+# 				sesTarget.rollback()
+# 				raise e
+# 		iPersonPhone += 1
 
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingDepartments = departmentProcessing.getTargetDepartments( sesTarget )
+# 	tgtMissingPersonPhones = personPhoneProcessing.getTargetPhones( sesTarget )
 
-	iRemoveDepartment = 1
-	for tgtMissingDepartment in tgtMissingDepartments:
-		removeDepartment = departmentProcessing.softDeleteDepartment( tgtMissingDepartment, srcDepartments )
-		if removeDepartment:
-			sesTarget.add( removeDepartment )
-			if iRemoveDepartment % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveDepartment += 1
+# 	iRemovePhone = 1
+# 	for tgtMissingPersonPhone in tgtMissingPersonPhones:
+# 		removePhone = personPhoneProcessing.cleanupSourcePhones( tgtMissingPersonPhone, srcPersonPhones )
+# 		sesTarget.add( removePhone )
+# 		if iRemovePhone % 1000 == 0:
+# 			try:
+# 				sesTarget.flush()
+# 			except sqlalchemy.exc.IntegrityError as e:
+# 				sesTarget.rollback()
+# 				raise e
+# 		iRemovePhone += 1
 
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-# end of for tgtMissingDepartments
-###############################################################################
+# 	resetUpdatedFlag( sesTarget, "person_phones" )
 
-###############################################################################
-# 
-#   File Import:  jobProcessing
-# 	pull over all of the data warehouse job codes.
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-import jobProcessing
+# #	End of personPhoneProcessing
+# ###############################################################################
 
-if True:
-	srcJobCodes = jobProcessing.getSourceJobCodes( sesSource )
+# ###############################################################################
+# # Load the asu data warehouse people data table in into the final destination:
+# #	mysql:
+# #		bio_public.person_addresses to bio_public.person_addresses
 
-	iJob = 1
-	for srcJob in srcJobCodes:
-		processedjob = jobProcessing.processJob( srcJob, sesTarget )
-		if processedjob:
-			sesTarget.add( processedjob )
-			if iJob % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iJob += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# import personAddressProcessing
 
-	tgtMissingJobCodes = jobProcessing.getTargetJobCodes( sesTarget )
+# if True:
+# 	resetUpdatedFlag( sesTarget, "person_addresses" )
+# 	srcPersonAddresses = personAddressProcessing.getSourceAddresses( sesSource )
 
-	iRemoveJob = 1
-	for tgtMissingJob in tgtMissingJobCodes:
-		removeJob = jobProcessing.softDeleteJob( tgtMissingJob, srcJobCodes )
-		if removeJob:
-			sesTarget.add( removeJob )
-			if iRemoveJob % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveJob += 1
+# 	iPersonAddresses = 1
+# 	for srcPersonAddress in srcPersonAddresses:
+# 		processedAddress = personAddressProcessing.processAddress( srcPersonAddress, sesTarget )
+# 		sesTarget.add( processedAddress )
+# 		if iPersonAddresses % 1000 == 0:
+# 			try:
+# 				sesTarget.flush()
+# 			except sqlalchemy.exc.IntegrityError as e:
+# 				sesTarget.rollback()
+# 				raise e
+# 		iPersonAddresses += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	# REMOVE the data no longer found in the source database...
+# 	tgtMissingPersonAddresses = personAddressProcessing.getTargetAddresses( sesTarget )
 
-#	End of jobProcessing
-###############################################################################
+# 	iRemoveAddresses = 1
+# 	for tgtMissingPersonAddress in tgtMissingPersonAddresses:
+# 		removePersonAddress = personAddressProcessing.cleanupSourceAddresses( tgtMissingPersonAddress, srcPersonAddresses )
+# 		if removePersonAddress:
+# 			sesTarget.add( removePersonAddress )
+# 			if iRemoveAddresses % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveAddresses += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-###############################################################################
-# 
-#   File Import:  jobLogProcessing
+# 	resetUpdatedFlag( sesTarget, "person_addresses" )
 
-import jobLogProcessing
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-if True:
-	srcJobsLog = jobLogProcessing.getSourceJobsLog( sesSource )
+# #	End of personAddressProcessing
+# ###############################################################################
 
-	iJobLog = 1
-	for srcJobLog in srcJobsLog:
 
-##############################
-# I STOPPED HERE.....
-##############################
 
-		try:
-			processedJobLog = jobLogProcessing.processJobLog( srcJobLog, sesTarget )
-		except NoResultFound as e:
-			print(e)
-			for x in srcJobLog:
-				print(x)
-			break
+# ###############################################################################
+# # 
+# #	File Import: departmentProcessing
+# # 	pull over all of the data warehouse department codes.
+
+# import departmentProcessing
+
+# if True:
+# 	srcDepartments = departmentProcessing.getSourceDepartments( sesSource )
+
+# 	iDepartment = 1
+# 	for srcDepartment in srcDepartments:
+# 		processedDepartment = departmentProcessing.processDepartment( srcDepartment, sesTarget )
+# 		if processedDepartment:
+# 			sesTarget.add( processedDepartment )
+# 			if iDepartment % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iDepartment += 1
+
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
+
+# 	tgtMissingDepartments = departmentProcessing.getTargetDepartments( sesTarget )
+
+# 	iRemoveDepartment = 1
+# 	for tgtMissingDepartment in tgtMissingDepartments:
+# 		removeDepartment = departmentProcessing.softDeleteDepartment( tgtMissingDepartment, srcDepartments )
+# 		if removeDepartment:
+# 			sesTarget.add( removeDepartment )
+# 			if iRemoveDepartment % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveDepartment += 1
+
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
+
+# # end of for tgtMissingDepartments
+# ###############################################################################
+
+# ###############################################################################
+# # 
+# #   File Import:  jobProcessing
+# # 	pull over all of the data warehouse job codes.
+
+# import jobProcessing
+
+# if True:
+# 	srcJobCodes = jobProcessing.getSourceJobCodes( sesSource )
+
+# 	iJob = 1
+# 	for srcJob in srcJobCodes:
+# 		processedjob = jobProcessing.processJob( srcJob, sesTarget )
+# 		if processedjob:
+# 			sesTarget.add( processedjob )
+# 			if iJob % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iJob += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
+
+# 	tgtMissingJobCodes = jobProcessing.getTargetJobCodes( sesTarget )
+
+# 	iRemoveJob = 1
+# 	for tgtMissingJob in tgtMissingJobCodes:
+# 		removeJob = jobProcessing.softDeleteJob( tgtMissingJob, srcJobCodes )
+# 		if removeJob:
+# 			sesTarget.add( removeJob )
+# 			if iRemoveJob % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveJob += 1
+
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
+
+# #	End of jobProcessing
+# ###############################################################################
+
+# ###############################################################################
+# # 
+# #   File Import:  jobLogProcessing
+
+# import jobLogProcessing
+
+# if True:
+# 	srcJobsLog = jobLogProcessing.getSourceJobsLog( sesSource )
+
+# 	iJobLog = 1
+# 	for srcJobLog in srcJobsLog:
+
+# ##############################
+# # I STOPPED HERE.....
+# ##############################
+
+# 		try:
+# 			processedJobLog = jobLogProcessing.processJobLog( srcJobLog, sesTarget )
+# 		except NoResultFound as e:
+# 			print(e)
+# 			for x in srcJobLog:
+# 				print(x)
+# 			break
 		
 
 
-		if processedJobLog:
-			sesTarget.add( processedJobLog )
-			if iJobLog % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iJobLog += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 		if processedJobLog:
+# 			sesTarget.add( processedJobLog )
+# 			if iJobLog % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iJobLog += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingJobsLog = jobLogProcessing.getTargetJobsLog( sesTarget )
+# 	tgtMissingJobsLog = jobLogProcessing.getTargetJobsLog( sesTarget )
 
-	iRemoveJobLog = 1
-	for tgtMissingJobLog in tgtMissingJobsLog:
-		removeJobLog = jobLogProcessing.softDeleteJobLog( tgtMissingJobLog, srcJobsLog )
-		if removeJobLog:
-			sesTarget.add( removeJobLog )
-			if iRemoveJobLog % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemoveJobLog += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iRemoveJobLog = 1
+# 	for tgtMissingJobLog in tgtMissingJobsLog:
+# 		removeJobLog = jobLogProcessing.softDeleteJobLog( tgtMissingJobLog, srcJobsLog )
+# 		if removeJobLog:
+# 			sesTarget.add( removeJobLog )
+# 			if iRemoveJobLog % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemoveJobLog += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-#	End of jobLogProcessing
-###############################################################################
+# #	End of jobLogProcessing
+# ###############################################################################
 
 
-###############################################################################
-# 
-#	File Import: personJobsProcessing.py
-#	The person_jobs data, is a many to many requiring an updated_flag, need it
-# 	this to be set to false prior to the data pull...  will dub our data otherwise.
-#
-import personJobsProcessing
+# ###############################################################################
+# # 
+# #	File Import: personJobsProcessing.py
+# #	The person_jobs data, is a many to many requiring an updated_flag, need it
+# # 	this to be set to false prior to the data pull...  will dub our data otherwise.
+# #
+# import personJobsProcessing
 
-if True:
-	resetUpdatedFlag( sesTarget, "person_jobs" )
-	srcPersonJobs = personJobsProcessing.getSourcePersonJobs( sesSource )
+# if True:
+# 	resetUpdatedFlag( sesTarget, "person_jobs" )
+# 	srcPersonJobs = personJobsProcessing.getSourcePersonJobs( sesSource )
 
-	iPersonJob = 1
-	for srcPersonJob in srcPersonJobs:
-		processedPersonJob = personJobsProcessing.processPersonJob( srcPersonJob, sesTarget )
-		if processedPersonJob:
-			sesTarget.add( processedPersonJob )
-			if iPersonJob % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iPersonJob += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iPersonJob = 1
+# 	for srcPersonJob in srcPersonJobs:
+# 		processedPersonJob = personJobsProcessing.processPersonJob( srcPersonJob, sesTarget )
+# 		if processedPersonJob:
+# 			sesTarget.add( processedPersonJob )
+# 			if iPersonJob % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iPersonJob += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingPersonJobs = personJobsProcessing.getTargetPersonJobs( sesTarget )
+# 	tgtMissingPersonJobs = personJobsProcessing.getTargetPersonJobs( sesTarget )
 
-	iRemovePersonJob = 1
-	for tgtMissingPersonJob in tgtMissingPersonJobs:
-		removePersonJob = personJobsProcessing.softDeletePersonJob( tgtMissingPersonJob, srcPersonJobs )
-		if removePersonJob:
-			sesTarget.add( removePersonJob )
-			if iRemovePersonJob % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemovePersonJob += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iRemovePersonJob = 1
+# 	for tgtMissingPersonJob in tgtMissingPersonJobs:
+# 		removePersonJob = personJobsProcessing.softDeletePersonJob( tgtMissingPersonJob, srcPersonJobs )
+# 		if removePersonJob:
+# 			sesTarget.add( removePersonJob )
+# 			if iRemovePersonJob % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemovePersonJob += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	resetUpdatedFlag( sesTarget, "person_jobs" )
+# 	resetUpdatedFlag( sesTarget, "person_jobs" )
 
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-# end of for tgtMissingPersonJobs
-###############################################################################
+# # end of for tgtMissingPersonJobs
+# ###############################################################################
 	
-###############################################################################
-# 
-#   File Import:  personSubAffiliationProcessing.py
-#	The person_department_subaffiliations data, is a many to many requiring an 
-#	updated_flag, need it this to be set to false prior to the data pull...  
-#	will dub our data otherwise.
-#
+# ###############################################################################
+# # 
+# #   File Import:  personSubAffiliationProcessing.py
+# #	The person_department_subaffiliations data, is a many to many requiring an 
+# #	updated_flag, need it this to be set to false prior to the data pull...  
+# #	will dub our data otherwise.
+# #
 
-import personSubAffiliationProcessing
+# import personSubAffiliationProcessing
 
-if True:
-	resetUpdatedFlag( sesTarget, "person_department_subaffiliations" )
-	srcPersonSubAffiliations = personSubAffiliationProcessing.getSourcePersonSubAffiliations( sesSource )
+# if True:
+# 	resetUpdatedFlag( sesTarget, "person_department_subaffiliations" )
+# 	srcPersonSubAffiliations = personSubAffiliationProcessing.getSourcePersonSubAffiliations( sesSource )
 
-	iPersonSubAffiliation = 1
-	for srcPersonSubAffiliation in srcPersonSubAffiliations:
-		processedpersonSubAffiliation = personSubAffiliationProcessing.processPersonSubAffiliation( srcPersonSubAffiliation, sesTarget )
-		if processedpersonSubAffiliation:
-			sesTarget.add( processedpersonSubAffiliation )
-			if iPersonSubAffiliation % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iPersonSubAffiliation += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iPersonSubAffiliation = 1
+# 	for srcPersonSubAffiliation in srcPersonSubAffiliations:
+# 		processedpersonSubAffiliation = personSubAffiliationProcessing.processPersonSubAffiliation( srcPersonSubAffiliation, sesTarget )
+# 		if processedpersonSubAffiliation:
+# 			sesTarget.add( processedpersonSubAffiliation )
+# 			if iPersonSubAffiliation % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iPersonSubAffiliation += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	tgtMissingPersonSubAffiliations = personSubAffiliationProcessing.getTargetPersonSubAffiliations( sesTarget )
+# 	tgtMissingPersonSubAffiliations = personSubAffiliationProcessing.getTargetPersonSubAffiliations( sesTarget )
 
-	iRemovePersonSubAffiliation = 1
-	for tgtMissingPersonSubAffiliation in tgtMissingPersonSubAffiliations:
-		removePersonSubAffiliation = personSubAffiliationProcessing.softDeletePersonSubAffiliation( tgtMissingPersonSubAffiliation, srcPersonSubAffiliations )
-		if removePersonSubAffiliation:
-			sesTarget.add( removePersonSubAffiliation )
-			if iRemovePersonSubAffiliation % 1000 == 0:
-				try:
-					sesTarget.flush()
-				except sqlalchemy.exc.IntegrityError as e:
-					sesTarget.rollback()
-					raise e
-			iRemovePersonSubAffiliation += 1
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	iRemovePersonSubAffiliation = 1
+# 	for tgtMissingPersonSubAffiliation in tgtMissingPersonSubAffiliations:
+# 		removePersonSubAffiliation = personSubAffiliationProcessing.softDeletePersonSubAffiliation( tgtMissingPersonSubAffiliation, srcPersonSubAffiliations )
+# 		if removePersonSubAffiliation:
+# 			sesTarget.add( removePersonSubAffiliation )
+# 			if iRemovePersonSubAffiliation % 1000 == 0:
+# 				try:
+# 					sesTarget.flush()
+# 				except sqlalchemy.exc.IntegrityError as e:
+# 					sesTarget.rollback()
+# 					raise e
+# 			iRemovePersonSubAffiliation += 1
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
-	resetUpdatedFlag( sesTarget, "person_department_subaffiliations" )
-	try:
-		sesTarget.commit()
-	except sqlalchemy.exc.IntegrityError as e:
-		sesTarget.rollback()
-		raise e
+# 	resetUpdatedFlag( sesTarget, "person_department_subaffiliations" )
+# 	try:
+# 		sesTarget.commit()
+# 	except sqlalchemy.exc.IntegrityError as e:
+# 		sesTarget.rollback()
+# 		raise e
 
 
 #	End of personSubAffiliationProcessing

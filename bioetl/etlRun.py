@@ -24,36 +24,52 @@ class EtlRun( object ):
 			logging
 			"""
 	def __init__( self, sesSource, sesTarget, emplids=[] ):
+		"""
+			The class takes in 3 attributes, 2 are required sqlalchemy sessions, 1 is a
+			list of emplid ids, which sets the state of the process run, that will be 
+			passed into the child process classes, part of the mode the application is
+			running in.
+			The object peopleRun will always be a part of every run, but the lookup
+			tables will only be apart of a specific run (subquery mode)
+			The mode is 'flagged' by the truthiness of the class attribute qryByIds value.
+		"""
 		self.sesSource = sesSource
 		self.sesTarget = sesTarget
-		self.missingEmplid = emplids
+		self.qryByIds = emplids
+		
+		self.peopleRun = BioPeopleTables( self.sesSource, self.sesTarget, self.qryByIds )
 		
 	
 	def getMissingEmplid( self ):
 		"""Return the emplids stored within the class attribute"""
-		return self.missingEmplid
+		return self.peopleRun.getUniqueFoundMissingIds()
 
 
-	def run( self ):
+	def runMe( self ):
 		"""
-			The contract of what each process run will.
-			Order Matters:
-
-
+			Each run can be triggered as a subquery run or a list run, the qryByIds is what
+			determines which stat the run will be processed as.  Order matters...
+			subquery mode --
+				bio lookup tables
+					-> people data
+			list mode --
+				-> people data ( subset of )
 		"""
 		# if first run... do this stuff, else skip.
-		if not self.missingEmplid:
+		if not self.qryByIds:
 			logger.info("Processing Data for Lookup Tables:  BEGINNING")
 			try:
-				BioLookupTables( self.sesSource, self.sesTarget )
+				bioLookupTables = BioLookupTables( self.sesSource, self.sesTarget )
+				bioLookupTables.runMe()
 				logger.info("Lookup Tables data processing:  COMPLETED")
 			except Exception as e:
 				raise e
 
 		logger.info("Processing Personnel Data:  BEGINNING")
 		try:
-			peopleRun = BioPeopleTables( self.sesSource, self.sesTarget, self.missingEmplid )
-			peopleRun.runMe()
+			
+			self.peopleRun.runMe()
+
 			logger.info("Personnel data processing:  COMPLETED")
-		except Exception, e:
+		except Exception as e:
 			raise e

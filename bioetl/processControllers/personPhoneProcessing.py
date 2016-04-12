@@ -24,6 +24,11 @@ def getSourceData( sesSource, qryList=None ):
 				AsuDwPsPhones.emplid.in_( qryList ) ).filter(
 				AsuDwPsPhones.phone_type.in_( ('WORK','CELL') ) ).all()
 
+def cleanPhoneNumber( phone ):
+	""""this will clean up the phone numbers."""
+	return re.sub( "[^0-9\+]", "", phone )
+
+
 def processData( srcPersonPhone, sesTarget ):
 	"""
 		Takes in a source AsuDwPsPhone object from the asudw database
@@ -32,9 +37,6 @@ def processData( srcPersonPhone, sesTarget ):
 		source record will have an action in the target database via the
 		updated_flag.
 	"""	
-	def cleanPhoneNumber():
-		""""this will clean up the phone numbers."""
-		return re.sub( "[^0-9\+]", "", srcPersonPhone.phone )
 
 	def getTargetRecords():
 		"""Returns a record set from the target database."""
@@ -84,7 +86,7 @@ def processData( srcPersonPhone, sesTarget ):
 
 			tgtRecord.source_hash = srcHash
 			tgtRecord.updated_flag = True
-			tgtRecord.phone = cleanPhoneNumber()
+			tgtRecord.phone = cleanPhoneNumber( srcPersonPhone.phone )
 			tgtRecord.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			tgtRecord.deleted_at = None
 
@@ -101,7 +103,7 @@ def processData( srcPersonPhone, sesTarget ):
 			source_hash = srcHash,
 			emplid = srcPersonPhone.emplid,
 			phone_type = srcPersonPhone.phone_type,
-			phone = cleanPhoneNumber(),
+			phone = cleanPhoneNumber( srcPersonPhone.phone ),
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
 
 		return insertPhone
@@ -129,10 +131,11 @@ def softDeleteData( tgtRecord, srcRecords ):
 			@True: Means update the records deleted_at column
 			@False: Do nothing
 		"""
+
 		return not any( 
 			srcRecord.emplid == tgtRecord.emplid 
 			and srcRecord.phone_type == tgtRecord.phone_type 
-			and srcRecord.phone == tgtRecord.phone for srcRecord in srcRecords )
+			and cleanPhoneNumber( srcRecord.phone ) == tgtRecord.phone for srcRecord in srcRecords )
 
 
 	if dataMissing():

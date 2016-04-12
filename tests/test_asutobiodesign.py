@@ -6,8 +6,8 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from datetime import datetime, date
 
-from bioetl.models.biopublicmodels import BioPublic, People, PersonWebProfile, Phones, Departments, Jobs, JobCodes, JobsLog, SubAffiliations, PersonSubAffiliations
-from bioetl.models.asudwpsmodels import AsuDwPsPerson, AsuDwPsPhones, AsuDwPsJobs, AsuDwPsJobsLog, AsuDwPsSubAffiliations
+from models.biopublicmodels import BioPublic, People, PersonWebProfile, Phones, Departments, Jobs, JobCodes, JobsLog, SubAffiliations, PersonSubAffiliations
+from models.asudwpsmodels import AsuDwPsPerson, AsuDwPsPhones, AsuDwPsJobs, AsuDwPsJobsLog, AsuDwPsSubAffiliations
 from bioetl.sharedProcesses import hashThisList
 from asutobiodesign_seeds import *
 

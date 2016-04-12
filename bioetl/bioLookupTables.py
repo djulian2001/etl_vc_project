@@ -11,14 +11,19 @@ class BioLookupTables( object ):
 		processed prior to walking through the personnel data.  A contract.
 	"""
 	def __init__( self, sesSource, sesTarget ):
-		subAffiliations = ModuleProcessController( subAffiliationProcessing, sesTarget )
+		self.sesTarget = sesTarget
+		self.sesSource = sesSource
+
+	def runMe( self ):
+		"""Run the processes against the bio lookup tables"""
+		subAffiliations = ModuleProcessController( subAffiliationProcessing, self.sesTarget )
 		subAffiliations.processSource()
 		subAffiliations.cleanTarget()
 
-		departments = ModuleProcessController( departmentProcessing, sesTarget, sesSource )
+		departments = ModuleProcessController( departmentProcessing, self.sesTarget, self.sesSource )
 		departments.processSource()
 		departments.cleanTarget()
 
-		jobCodes = ModuleProcessController( jobProcessing, sesTarget, sesSource )
+		jobCodes = ModuleProcessController( jobProcessing, self.sesTarget, self.sesSource )
 		jobCodes.processSource()
 		jobCodes.cleanTarget()
