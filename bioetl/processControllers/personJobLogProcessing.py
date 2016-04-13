@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy.orm.exc import NoResultFound
 
-from sharedProcesses import hashThisList
+from bioetl.sharedProcesses import hashThisList
 from models.biopublicmodels import JobsLog, People, Departments, JobCodes
 from models.asudwpsmodels import AsuDwPsJobsLog, AsuPsBioFilters
 

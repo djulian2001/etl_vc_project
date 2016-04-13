@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy import exists, literal, func
 
-from sharedProcesses import hashThisList
+from bioetl.sharedProcesses import hashThisList
 from models.biopublicmodels import JobCodes
 from models.asudwpsmodels import AsuDwPsJobCodes
 

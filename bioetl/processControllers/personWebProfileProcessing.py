@@ -1,6 +1,6 @@
 import datetime
 
-from sharedProcesses import hashThisList
+from bioetl.sharedProcesses import hashThisList
 from models.biopublicmodels import PersonWebProfile, People
 
 def getTableName():

@@ -1,6 +1,6 @@
 import datetime, re
 
-from sharedProcesses import hashThisList
+from bioetl.sharedProcesses import hashThisList
 from models.biopublicmodels import People, Phones
 from models.asudwpsmodels import AsuDwPsPhones, AsuPsBioFilters
 

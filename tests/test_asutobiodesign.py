@@ -11,8 +11,52 @@ from models.asudwpsmodels import AsuDwPsPerson, AsuDwPsPhones, AsuDwPsJobs, AsuD
 from bioetl.sharedProcesses import hashThisList
 from asutobiodesign_seeds import *
 
+class AppSetupTest( object ):
+	def __init__( self ):
+		dbUser = 'app_tester'
+		dbPw = 'tannersNeedLove2Plz'
+		dbHost = 'localhost'
+		dbName	= 'test_bio_public'
+		engineString = 'mysql+mysqldb://%s:%s@%s/%s' % ( dbUser, dbPw, dbHost, dbName )
+
+		self.engine = create_engine( engineString )
+		BioPublic.metadata.bind = self.engine
+		self.Sessions = scoped_session( sessionmaker( bind=self.engine ) )
+		BioPublic.metadata.create_all( self.engine )
+		
+		dbOracleName = 'test_fake_oracle'
+		engineFakeString = 'mysql+mysqldb://%s:%s@%s/%s' % ( dbUser, dbPw, dbHost, dbOracleName )
+		self.engineFakeOracle = create_engine( engineFakeString )
+		self.OraSessions = scoped_session( sessionmaker( bind=self.engineFakeOracle ) )
+
+	def getSourceSession( self ):
+		ses = self.OraSessions()
+		return ses
+
+	def getTargetSession( self ):
+		ses = self.Sessions()
+		return ses
+
+	def cleanUp( self ):
+		self.Sessions.close_all()
+		BioPublic.metadata.drop_all( self.engine )
+		self.OraSessions.close_all()
+
+
 class bioetlTests( unittest.TestCase ):
 	"""Tests for subAffiliationProcessing.py """
+
+	def setUp( self ):
+		"""Need some way of setting up the target database."""
+		self.appSetup = AppSetupTest()
+
+		self.session = self.appSetup.getTargetSession()
+		self.sessionOra = self.appSetup.getSourceSession()		
+
+	def tearDown( self ):
+		"""These will set up the situation to test the code."""
+		self.appSetup.cleanUp()	
+
 	def seedPeople( self ):
 		setPeopleSeeds = copy.deepcopy( peopleSeed )
 		for personSeed in setPeopleSeeds:
@@ -107,7 +151,7 @@ class bioetlTests( unittest.TestCase ):
 
 	def seedSubAffiliation( self ):
 		"""The Sub Affiliation seed process..."""
-		from bioetl.models.asudwpsmodels import BiodesignSubAffiliations
+		from bioetl.processControllers.models.asudwpsmodels import BiodesignSubAffiliations
 		for subAffDict in BiodesignSubAffiliations.seedMe():
 			srcHash = hashThisList( subAffDict.values() )
 			addObj = SubAffiliations( **subAffDict )
@@ -142,32 +186,6 @@ class bioetlTests( unittest.TestCase ):
 				addNewObj = addThis( addSeed )
 				self.session.add( addNewObj )
 
-	def setUp( self ):
-		"""Need some way of setting up the target database."""
-		dbUser = 'app_tester'
-		dbPw = 'tannersNeedLove2Plz'
-		dbHost = 'dbdev.biodesign.asu.edu'
-		dbName	= 'test_bio_public'
-		engineString = 'mysql+mysqldb://%s:%s@%s/%s' % ( dbUser, dbPw, dbHost, dbName )
-		self.engine = create_engine( engineString )
-		BioPublic.metadata.bind = self.engine
-		self.Sessions = scoped_session( sessionmaker( bind=self.engine ) )
-		BioPublic.metadata.create_all( self.engine )
-		self.session = self.Sessions()
-
-		# fakeOracleEngineString = 'sqlite://'
-		# self.fakeOraEngine = create_engine( fakeOracleEngineString )
-		# self.FakeOraSessions = scoped_session( sessionmaker( bind=self.fakeOraEngine ) )	
-		# self.oraSession = self.FakeOraSessions()
-
-	def tearDown( self ):
-		"""These will set up the situation to test the code."""
-		BioPublic.metadata.drop_all( self.engine )
-		self.session.close()
-		self.Sessions.close_all()
-		self.oraSession.close()
-		self.FakeOraSessions.close()
-
 	def recordEqualsTest( self, selectObj, seedObj, BaseObj ):
 		"""
 			DRY... These tests will be run for almost every select object set of tests.
@@ -197,9 +215,9 @@ class bioetlTests( unittest.TestCase ):
 		
 		self.recordEqualsTest( records[0], testPeopleSeed[0], People )
 
-	def test_softDeletePerson( self ):
+	def test_softDeleteData( self ):
 		"""lets test that we can soft delete a person record"""
-		from bioetl.personProcessing import softDeletePerson
+		from bioetl.processControllers.personProcessing import softDeleteData
 		self.seedPeople()
 		testPeopleSeed = copy.deepcopy( peopleSeed )
 		tgtRecords = self.session.query( People ).filter( People.emplid == testPeopleSeed[0]['emplid'] ).all()
@@ -209,7 +227,7 @@ class bioetlTests( unittest.TestCase ):
 		for newSrcObj in testPeopleSeed:
 			srcObjList.append( AsuDwPsPerson( **newSrcObj ) )
 
-		removedRec = softDeletePerson( tgtRecords[0], srcObjList )
+		removedRec = softDeleteData( tgtRecords[0], srcObjList )
 		self.assertTrue( removedRec.deleted_at )
 		self.assertFalse( removedRec.deleted_at is None )
 		self.assertIsInstance( removedRec, People )
@@ -217,7 +235,7 @@ class bioetlTests( unittest.TestCase ):
 
 	def test_updatePerson( self ):
 		"""The update process for a person"""
-		from bioetl.personProcessing import processPerson
+		from bioetl.processControllers.personProcessing import processData
 		self.seedPeople()
 		testPeopleSeed = copy.deepcopy( peopleSeed )
 		newEmail = 'primusdj@asu.edu'
@@ -230,7 +248,7 @@ class bioetlTests( unittest.TestCase ):
 		oldDisplayName = testPeopleSeed[0]['display_name']
 		testPeopleSeed[0]['display_name'] = newDisplayName
 		srcPersonObj = AsuDwPsPerson( **testPeopleSeed[0] )
-		record = processPerson( srcPersonObj, self.session )
+		record = processData( srcPersonObj, self.session )
 		self.assertNotEquals( newEmail, oldEmail )
 		self.assertNotEquals( newFerpa, oldFerpa )
 		self.assertNotEquals( newDisplayName, oldDisplayName )
@@ -288,15 +306,14 @@ class bioetlTests( unittest.TestCase ):
 
 	def test_insertPerson( self ):
 		"""Testing that the script will insert a person object."""
-		from bioetl.personProcessing import processPerson
+		from bioetl.processControllers.personProcessing import processData
 		testNewPerson = copy.deepcopy( newPersonSeed )
 		
 		newPersonObj = AsuDwPsPerson( **testNewPerson )
 		records = self.session.query( People ).all()
 		self.assertListEqual( records, [] )
-		record = processPerson( newPersonObj, self.session )
+		record = processData( newPersonObj, self.session )
 		self.session.add( record )
-		self.session.commit()
 		self.assertIsInstance( record, People )
 		newRecords = self.session.query( People ).filter( People.emplid == testNewPerson['emplid'] ).all()
 		newRecords = self.session.query( People ).all()
@@ -316,13 +333,13 @@ class bioetlTests( unittest.TestCase ):
 		self.assertEquals( newRecords[0].email_address, testNewPerson['email_address'] )
 		self.assertEquals( newRecords[0].eid, testNewPerson['eid'] )
 
-		self.assertIsInstance( newRecords[0].birthdate, date )
-		self.assertIsInstance( newRecords[0].created_at, datetime )
+		# self.assertIsInstance( newRecords[0].birthdate, date )
+		# self.assertIsInstance( newRecords[0].created_at, datetime )
 		with self.assertRaises( ValueError ):
 			badSeed = testNewPerson
 			badPersonObj = AsuDwPsPerson( **badSeed )
 			badPersonObj.emplid = 2147483647L
-			processPerson( badPersonObj, self.session )
+			processData( badPersonObj, self.session )
 
 	def test_selectPersonWebProfile( self ):
 		"""The person web profile 1 to 1 data."""
@@ -337,20 +354,20 @@ class bioetlTests( unittest.TestCase ):
 
 	def test_insertPersonWebProfile( self ):
 		"""Test of inserting the person web profiles not all of the records should be added"""
-		from bioetl.personWebProfileProcessing import processPersonWebProfile
+		from bioetl.processControllers.personWebProfileProcessing import processData
 		self.seedPeople()
 
 		testPeopleSeed = copy.deepcopy( peopleSeed )
 
 		noWebProfile = AsuDwPsPerson( **testPeopleSeed[0] )
-		sessionAction = processPersonWebProfile( noWebProfile, self.session )
+		sessionAction = processData( noWebProfile, self.session )
 		self.assertFalse( sessionAction )
 		person = self.session.query( People.id ).filter( People.emplid==testPeopleSeed[0]['emplid'] ).one()
 		webProfile = self.session.query( PersonWebProfile ).filter( PersonWebProfile.person_id==person.id ).all()
 		self.assertFalse( webProfile )
 
 		yesWebProfile = AsuDwPsPerson( **testPeopleSeed[1] )
-		sessionAction = processPersonWebProfile( yesWebProfile, self.session )
+		sessionAction = processData( yesWebProfile, self.session )
 		self.session.add( sessionAction )
 		person = self.session.query( People.id ).filter( People.emplid==testPeopleSeed[1]['emplid'] ).one()
 		webProfile = self.session.query( PersonWebProfile ).filter( PersonWebProfile.person_id==person.id ).all()
@@ -359,7 +376,7 @@ class bioetlTests( unittest.TestCase ):
 		self.recordEqualsTest( webProfile[0], testPeopleSeed[1], PersonWebProfile )
 
 		yesWebProfile = AsuDwPsPerson( **testPeopleSeed[2] )
-		sessionAction = processPersonWebProfile( yesWebProfile, self.session )
+		sessionAction = processData( yesWebProfile, self.session )
 		self.session.add( sessionAction )
 		person = self.session.query( People.id ).filter( People.emplid==testPeopleSeed[2]['emplid'] ).one()
 		webProfile = self.session.query( PersonWebProfile ).filter( PersonWebProfile.person_id==person.id ).all()
@@ -368,14 +385,14 @@ class bioetlTests( unittest.TestCase ):
 		self.recordEqualsTest( webProfile[0], testPeopleSeed[2], PersonWebProfile )
 
 	def test_updatePersonWebProfile( self ):
-		from bioetl.personWebProfileProcessing import processPersonWebProfile
+		from bioetl.processControllers.personWebProfileProcessing import processData
 		self.seedPersonWeb()
 		testPeopleSeed = copy.deepcopy( peopleSeed )
 		newBio = 'blah blah blah blah... im sooo great! blah blah blah'
 		oldBio = testPeopleSeed[1]['bio']
 		testPeopleSeed[1]['bio'] = newBio
 		dwWebProfile = AsuDwPsPerson( **testPeopleSeed[1] )
-		sessionAction = processPersonWebProfile( dwWebProfile, self.session )
+		sessionAction = processData( dwWebProfile, self.session )
 		self.assertIsInstance( sessionAction, PersonWebProfile )
 		self.session.add( sessionAction )
 		person = self.session.query( People.id ).filter( People.emplid==testPeopleSeed[1]['emplid'] ).one()
@@ -386,8 +403,8 @@ class bioetlTests( unittest.TestCase ):
 		self.assertNotEquals( webProfile[0].bio, oldBio )
 		self.assertEquals( webProfile[0].bio, newBio )
 
-	def test_softDeletePersonWebProfile( self ):
-		from bioetl.personWebProfileProcessing import softDeletePersonWebProfile
+	def test_softDeleteDataWebProfile( self ):
+		from bioetl.processControllers.personWebProfileProcessing import softDeleteData
 		self.seedPersonWeb()
 		testPeopleSeed = copy.deepcopy( peopleSeed )
 		person = self.session.query( People.id ).filter( People.emplid == testPeopleSeed[0]['emplid'] ).all()
@@ -399,7 +416,7 @@ class bioetlTests( unittest.TestCase ):
 		for newSrcObj in testPeopleSeed:
 			srcObjList.append( AsuDwPsPerson( **newSrcObj ) )
 
-		removedRec = softDeletePersonWebProfile( tgtRecords[0], srcObjList )
+		removedRec = softDeleteData( tgtRecords[0], srcObjList )
 		self.assertTrue( removedRec.deleted_at )
 		self.assertFalse( removedRec.deleted_at is None )
 		self.assertIsInstance( removedRec, PersonWebProfile )
@@ -423,14 +440,14 @@ class bioetlTests( unittest.TestCase ):
 			The phone updates represent a core logic of the application.  This tests that the update of
 			one phone number will be caught and the change made.
 		"""
-		from bioetl.personPhoneProcessing import processPhone
+		from bioetl.processControllers.personPhoneProcessing import processData
 		self.seedPhones()
 		testPhones = copy.deepcopy( phonesSeed )
 		oldPhone = testPhones[0]['phone']
 		newPhone = '3334445555'
 		testPhones[0]['phone'] = newPhone
 		testObj = AsuDwPsPhones( **testPhones[0] )
-		testResult = processPhone( testObj, self.session )
+		testResult = processData( testObj, self.session )
 		getMeBack = self.session.query( Phones ).filter( Phones.emplid==testObj.emplid ).filter( Phones.phone==testObj.phone ).filter( Phones.phone_type==testObj.phone_type ).all()
 		self.assertIs( getMeBack[0], testResult )
 		self.assertIsInstance( testResult, Phones )
@@ -444,7 +461,7 @@ class bioetlTests( unittest.TestCase ):
 			This test looks into the applications handling of many records associated to a person record
 			where differing between unique records would be difficult
 		"""
-		from bioetl.personPhoneProcessing import processPhone
+		from bioetl.processControllers.personPhoneProcessing import processData
 		self.seedPhones()
 		testPhones = copy.deepcopy( phonesSeed )
 		updateMe = testPhones[4]
@@ -456,7 +473,7 @@ class bioetlTests( unittest.TestCase ):
 		self.assertEquals( updateMe['phone_type'], noChanges['phone_type'] )
 
 		testUpdateObj = AsuDwPsPhones( **updateMe )
-		testUpdateResults = processPhone( testUpdateObj, self.session )
+		testUpdateResults = processData( testUpdateObj, self.session )
 
 		getMeBack = self.session.query( Phones ).filter( Phones.emplid==testUpdateObj.emplid ).filter( Phones.phone==testUpdateObj.phone ).filter( Phones.phone_type==testUpdateObj.phone_type ).all()
 		self.assertIs( getMeBack[0], testUpdateResults )
@@ -475,7 +492,7 @@ class bioetlTests( unittest.TestCase ):
 		self.assertNotEquals( testThis[0].phone, noChanges['phone'] )
 
 		testNoChangeObj = AsuDwPsPhones( **noChanges )
-		testNoChangeResults = processPhone( testNoChangeObj, self.session )
+		testNoChangeResults = processData( testNoChangeObj, self.session )
 
 		getUpdateBack = self.session.query( Phones ).filter( Phones.emplid==testNoChangeResults.emplid ).filter( Phones.phone==testNoChangeResults.phone ).filter( Phones.phone_type==testNoChangeResults.phone_type ).all()
 		self.assertIs( getUpdateBack[0], testNoChangeResults )
@@ -492,11 +509,11 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the application script to insert a new phone, does just that."""
 		self.seedPeople()
 		testPhones = copy.deepcopy( phonesSeed )
-		from bioetl.personPhoneProcessing import processPhone
+		from bioetl.processControllers.personPhoneProcessing import processData
 
 		for testPhone in testPhones:
 			newPhoneObj = AsuDwPsPhones( **testPhone )
-			phoneResult = processPhone( newPhoneObj, self.session )
+			phoneResult = processData( newPhoneObj, self.session )
 			self.assertIsInstance( phoneResult, Phones )
 			self.assertTrue( phoneResult.updated_flag )
 			self.recordEqualsTest( phoneResult, testPhone, Phones )
@@ -507,7 +524,7 @@ class bioetlTests( unittest.TestCase ):
 
 		newPhone = copy.deepcopy( newPhoneSeed )
 		PhoneObj = AsuDwPsPhones( **newPhone )
-		phoneResult = processPhone( PhoneObj, self.session )
+		phoneResult = processData( PhoneObj, self.session )
 
 		self.assertIsInstance( phoneResult, Phones )
 		self.assertTrue( phoneResult.updated_flag )
@@ -527,7 +544,7 @@ class bioetlTests( unittest.TestCase ):
 
 	def test_updatePersonJobsDepartment( self ):
 		"""When a part of a records uniqueness is changed, the record will look as if it's new"""
-		from bioetl.personJobsProcessing import processPersonJob
+		from bioetl.processControllers.personJobsProcessing import processData
 		self.seedPersonJobs()
 		testJobs = copy.deepcopy( personJobSeed )
 		oldDeptid = testJobs[0]['deptid']
@@ -537,7 +554,7 @@ class bioetlTests( unittest.TestCase ):
 		testJobs[0]['deptid'] = newDeptid
 		self.assertNotEquals( testResult[0].deptid, testJobs[0]['deptid'] )
 		newUpdateObj = AsuDwPsJobs( **testJobs[0] )
-		appAction = processPersonJob( newUpdateObj, self.session )
+		appAction = processData( newUpdateObj, self.session )
 		self.assertIsInstance( appAction, Jobs )
 		self.session.add( appAction )
 		returnRecords = self.session.query( Jobs ).all()
@@ -546,7 +563,7 @@ class bioetlTests( unittest.TestCase ):
 
 	def test_updatePersonJobsTitle( self ):
 		"""When a part of a records uniqueness is changed, the record will look as if it's new"""
-		from bioetl.personJobsProcessing import processPersonJob
+		from bioetl.processControllers.personJobsProcessing import processData
 		self.seedPersonJobs()
 		testJobs = copy.deepcopy( personJobSeed )
 		oldDeptid = testJobs[0]['title']
@@ -556,23 +573,23 @@ class bioetlTests( unittest.TestCase ):
 		testJobs[0]['title'] = newDeptid
 		self.assertNotEquals( testResult[0].title, testJobs[0]['title'] )
 		newUpdateObj = AsuDwPsJobs( **testJobs[0] )
-		appAction = processPersonJob( newUpdateObj, self.session )
+		appAction = processData( newUpdateObj, self.session )
 		self.assertIsInstance( appAction, Jobs )
 		self.session.add( appAction )
 		returnRecords = self.session.query( Jobs ).all()
 		self.assertNotEquals( len( returnRecords ), 3 )
 		self.assertEquals( len( returnRecords ), 4 )
 
-	def test_softDeletePersonJobsAfterUpdate( self ):
+	def test_softDeleteDataJobsAfterUpdate( self ):
 		"""As reflected in other tests of the personJobs processing, updates to the compound keys will
 		require an insert then a softdelete / delete of the old record.  lets make sure that works."""
-		from bioetl.personJobsProcessing import processPersonJob, softDeletePersonJob
+		from bioetl.processControllers.personJobsProcessing import processData, softDeleteData
 		self.seedPersonJobs()
 		testJobs = copy.deepcopy( personJobSeed )
 		newDeptid = 'hehe-haha expert'
 		testJobs[0]['title'] = newDeptid
 		newUpdateObj = AsuDwPsJobs( **testJobs[0] )
-		appAction = processPersonJob( newUpdateObj, self.session )
+		appAction = processData( newUpdateObj, self.session )
 		self.assertIsInstance( appAction, Jobs )
 		self.session.add( appAction )
 		returnRecords = self.session.query( Jobs ).filter( Jobs.deleted_at==None ).all()
@@ -581,7 +598,7 @@ class bioetlTests( unittest.TestCase ):
 		fakeSourceList = [ AsuDwPsJobs( **testJob ) for testJob in testJobs ]
 
 		for tgtRecord in returnRecords:
-			removeMe = softDeletePersonJob( tgtRecord, fakeSourceList )
+			removeMe = softDeleteData( tgtRecord, fakeSourceList )
 			if removeMe:
 				self.session.add( removeMe )
 
@@ -601,13 +618,13 @@ class bioetlTests( unittest.TestCase ):
 
 	def test_insertPersonSubAffiliation( self ):
 		"""Testing that new Sub Affiliations can be added"""
-		from bioetl.personSubAffiliationProcessing import processPersonSubAffiliation
+		from bioetl.processControllers.personSubAffiliationProcessing import processData
 		self.seedPersonSubAffiliation()
 		seeds = copy.deepcopy( newPersonSubAffiliationSeed )
 		
 		for seed in seeds:
 			subAffObj = AsuDwPsSubAffiliations( **seed )
-			appResult = processPersonSubAffiliation( subAffObj, self.session )
+			appResult = processData( subAffObj, self.session )
 			self.session.add( appResult )
 			appResultReturned = self.session.query( PersonSubAffiliations ).filter( 
 				PersonSubAffiliations.emplid == seed['emplid'] ).filter(
@@ -618,20 +635,20 @@ class bioetlTests( unittest.TestCase ):
 
 	def test_updatePersonSubAffiliation( self ):
 		"""Testing that the person sub affiliations can be updated, single record person sub affiliation"""
-		from bioetl.personSubAffiliationProcessing import processPersonSubAffiliation
+		from bioetl.processControllers.personSubAffiliationProcessing import processData
 		self.seedPersonSubAffiliation()
 		mySeed = copy.deepcopy( personSubAffiliationSeed[2] )
 		oldTitle = mySeed['title']
 		newTitle = 'Do we have to?'
 		mySeed['title'] = newTitle
-		result = processPersonSubAffiliation( AsuDwPsSubAffiliations( **mySeed ), self.session )
+		result = processData( AsuDwPsSubAffiliations( **mySeed ), self.session )
 		self.assertIsInstance( result, PersonSubAffiliations )
 		self.recordEqualsTest( result, mySeed, PersonSubAffiliations )
 		self.assertNotEquals( result.title, oldTitle )
 
 	def test_insertDuplicatesPersonSubAffiliation( self ):
 		"""Testing the person sub affiliations, can duplicates be added"""
-		from bioetl.personSubAffiliationProcessing import processPersonSubAffiliation
+		from bioetl.processControllers.personSubAffiliationProcessing import processData
 		def getAllRecords():
 			return self.session.query( PersonSubAffiliations ).all()
 
@@ -643,7 +660,7 @@ class bioetlTests( unittest.TestCase ):
 
 		for addSeed in addSeeds:
 			aSeedObj = AsuDwPsSubAffiliations( **addSeed )
-			anAction = processPersonSubAffiliation( aSeedObj, self.session )
+			anAction = processData( aSeedObj, self.session )
 			self.session.add( anAction )
 			recCount += 1
 
@@ -653,7 +670,7 @@ class bioetlTests( unittest.TestCase ):
 
 	def test_updateManyToManyPersonSubAffiliation( self ):
 		"""Testing the person sub affiliations, updates to a person object with many sub affiliations"""
-		from bioetl.personSubAffiliationProcessing import processPersonSubAffiliation
+		from bioetl.processControllers.personSubAffiliationProcessing import processData
 		self.seedPersonSubAffiliation( True )
 		
 		editSeeds = copy.deepcopy( newPersonSubAffiliationSeed )
@@ -668,7 +685,7 @@ class bioetlTests( unittest.TestCase ):
 
 		self.assertEquals( len( preValues ), 3 )
 
-		anAction = processPersonSubAffiliation( updateObj, self.session )
+		anAction = processData( updateObj, self.session )
 		self.session.add(anAction)
 		self.assertIsInstance( anAction, PersonSubAffiliations )
 		resultsTest1 = self.session.query( 
@@ -690,7 +707,7 @@ class bioetlTests( unittest.TestCase ):
 		newTitle2 = 'Bring him back...'
 		updateObj2 = AsuDwPsSubAffiliations( **editSeeds2[2] )
 		updateObj2.title = newTitle2
-		anAction2 = processPersonSubAffiliation( updateObj2, self.session )
+		anAction2 = processData( updateObj2, self.session )
 		self.session.add(anAction2)
 		self.assertIsInstance( anAction2, PersonSubAffiliations )
 		resultsTest3 = self.session.query( 
@@ -715,7 +732,7 @@ class bioetlTests( unittest.TestCase ):
 		self.assertEquals( newTitle2, update2Found[0].title )
 
 	def test_updatePersonJobsLog( self ):
-		from bioetl.jobLogProcessing import processJobLog
+		from bioetl.processControllers.personJobLogProcessing import processData
 		self.seedPersonJobLog()
 		mySeed = copy.deepcopy( personJobsLogSeed[3] )
 		oldEffdt = mySeed['effdt']
@@ -724,7 +741,7 @@ class bioetlTests( unittest.TestCase ):
 
 		preCount = self.session.query( JobsLog ).filter( JobsLog.emplid == mySeed['emplid'] ).all()
 
-		result = processJobLog( AsuDwPsJobsLog( **mySeed ), self.session )
+		result = processData( AsuDwPsJobsLog( **mySeed ), self.session )
 		self.assertIsInstance( result, JobsLog )
 		self.recordEqualsTest( result, mySeed, JobsLog )
 		self.assertNotEquals( result.effdt, oldEffdt )
@@ -733,13 +750,13 @@ class bioetlTests( unittest.TestCase ):
 		self.assertEquals( len(preCount), len(postCount) )
 
 	def test_insertPersonJobsLog( self ):
-		from bioetl.jobLogProcessing import processJobLog
+		from bioetl.processControllers.personJobLogProcessing import processData
 		self.seedPersonJobLog()
 		newSeed = copy.deepcopy( newPersonJobsLogSeed )
 		
 		preCount = self.session.query( JobsLog ).all()
 
-		newResult = processJobLog( AsuDwPsJobsLog( **newSeed ), self.session )
+		newResult = processData( AsuDwPsJobsLog( **newSeed ), self.session )
 		self.assertIsInstance( newResult, JobsLog )
 		self.recordEqualsTest( newResult, newSeed, JobsLog )
 		self.session.add( newResult )
@@ -748,13 +765,13 @@ class bioetlTests( unittest.TestCase ):
 		self.assertNotEquals( len( preCount ),len( postCount ) )
 
 	def test_insertDubPersonJobsLog( self ):
-		from bioetl.jobLogProcessing import processJobLog
+		from bioetl.processControllers.personJobLogProcessing import processData
 		self.seedPersonJobLog()
 		newSeed = copy.deepcopy( dubPersonJobsLogSeed )
 		
 		preCount = self.session.query( JobsLog ).all()
 
-		newResult = processJobLog( AsuDwPsJobsLog( **newSeed ), self.session )
+		newResult = processData( AsuDwPsJobsLog( **newSeed ), self.session )
 		self.assertIsInstance( newResult, JobsLog )
 		self.recordEqualsTest( newResult, newSeed, JobsLog )
 		self.session.add( newResult )
@@ -763,32 +780,19 @@ class bioetlTests( unittest.TestCase ):
 		self.assertEquals( len( preCount ),len( postCount ) )
 
 	def test_noPersonMatchForJobsLog( self ):
-		from bioetl.jobLogProcessing import processJobLog
+		from bioetl.processControllers.personJobLogProcessing import processData
 		self.seedPersonJobLog()
 		noneSeed = copy.deepcopy( nonePersonJobsLogSeed )
 		with self.assertRaises( NoResultFound ):
 			noneJobLogObj = AsuDwPsJobsLog( **noneSeed )
-			noneResult = processJobLog( noneJobLogObj, self.session )
+			noneResult = processData( noneJobLogObj, self.session )
 
 	def test_initOfEtlProcess( self ):
-		"""Test that an etl process can be intaintiated, 
-			args:
-				sessions -> @src & @tgt
-				
-				logging? -> pass in name of log?
-				missing data (emplid)? -> just initiated...
-				scoped method runs, factory? (admin, publications, etc...)?
-
-
-		"""
+		"""Test that an etl process can be intaintiated"""
 		from bioetl.etlProcess import EtlProcess
-		# model the def __main__():
-		etl = EtlProcess()
-		
+		etl = EtlProcess( self.appSetup )
+
 		self.assertIsInstance( etl, EtlProcess )
-		self.assertIsInstance( etl.missingemplid, list )
-		self.assertIsNotNone( etl.missingemplid )
-		self.assertFalse( etl.missingemplid )
 		
 
 
