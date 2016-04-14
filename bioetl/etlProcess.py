@@ -29,13 +29,6 @@ class EtlProcess( object ):
 		except Exception as e:
 			raise e
 		
-
-
-
-		# if runSubQ_mode.getMissingEmplid():
-		# 	checkDataWarehouse = ValidateSourceDataEmplids( self.sesSource, runSubQ_mode.getMissingEmplid() )
-
-
 		if runSubQ_mode.getMissingEmplid():
 
 			logger.info('SUBQUERY mode:  Discovered {} missing emplids.'.format( len( runSubQ_mode.getMissingEmplid() ) ) )

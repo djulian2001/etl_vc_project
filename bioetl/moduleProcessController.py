@@ -118,10 +118,8 @@ class ModuleProcessController( object ):
 				self.missingIds.append( missedId )
 		except TypeError:
 			logger.warning( "Method appendMissingEmplid, passed wrong data type: {} is not an int.".format( missedId ) )
-			pass
 			
-	# I have a list of missing id's... now what
-
+			
 	def getSourceCache( self ):
 		return self.cacheSource
 

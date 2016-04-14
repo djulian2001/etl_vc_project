@@ -794,8 +794,144 @@ class bioetlTests( unittest.TestCase ):
 
 		self.assertIsInstance( etl, EtlProcess )
 		
+	def test_initOfRunEtlClassNoMissingEmpids( self ):
+		"""The EtlRun class has a state, or scope of run, list or subquery. Test the subquery scope"""
+		from bioetl.etlRun import EtlRun
+		from bioetl.bioPeopleTables import BioPeopleTables
+
+		aRun = EtlRun(self.sessionOra, self.session)
+
+		self.assertIsInstance( aRun, EtlRun )
+		self.assertIsInstance( aRun.peopleRun, BioPeopleTables )
+		self.assertFalse( aRun.peopleRun.runIds )
+		self.assertIsInstance( aRun.peopleRun.runIds, list )
+		self.assertFalse( aRun.peopleRun.foundMissingIds )
+		self.assertIsInstance( aRun.peopleRun.foundMissingIds, list )
+
+	def test_initOfRunEtlClassWithMissingEmpids( self ):
+		"""The EtlRun class Missing Emplids true"""
+		from bioetl.etlRun import EtlRun
+		from bioetl.bioPeopleTables import BioPeopleTables
+
+		aList = [1,2,3,4,5]
+
+		aRun = EtlRun(self.sessionOra, self.session)
+		aRun.peopleRun.appendMissingIds( aList )
 
 
+		self.assertIsInstance( aRun, EtlRun )
+		self.assertIsInstance( aRun.peopleRun, BioPeopleTables )
+		self.assertFalse( aRun.peopleRun.runIds )
+		self.assertIsInstance( aRun.peopleRun.runIds, list )
+		self.assertTrue( aRun.peopleRun.foundMissingIds )
+		self.assertEquals( aList, aRun.peopleRun.foundMissingIds )
+		self.assertIsInstance( aRun.peopleRun.foundMissingIds, list )
+
+	def test_initOfRunEtlClassWithQueryByList( self ):
+		"""The EtlRun class Missing Emplids true"""
+		from bioetl.etlRun import EtlRun
+		from bioetl.bioPeopleTables import BioPeopleTables
+
+		aList = [1,2,3,4,5]
+
+		aRun = EtlRun(self.sessionOra, self.session, aList)
+		# aRun.peopleRun.appendMissingIds( aList )
+
+
+		self.assertIsInstance( aRun, EtlRun )
+		self.assertIsInstance( aRun.peopleRun, BioPeopleTables )
+		self.assertTrue( aRun.peopleRun.runIds )
+		self.assertEquals( aList, aRun.peopleRun.runIds )
+		self.assertIsInstance( aRun.peopleRun.runIds, list )
+
+		self.assertFalse( aRun.peopleRun.foundMissingIds )
+		self.assertIsInstance( aRun.peopleRun.foundMissingIds, list )
+
+	def test_initOfModuleProcessController( self ):
+		"""Test that the ModuleProcessController can be init, min default settings"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		import fakeTestingEtlModule
+
+		name = fakeTestingEtlModule.getTableName()
+
+		mpc = ModuleProcessController( fakeTestingEtlModule, self.session )
+
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertFalse( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertEquals( name, mpc.tablename )
+
+		self.assertTrue( mpc.module.getTableName )
+		self.assertTrue( mpc.module.getSourceData )
+		self.assertTrue( mpc.module.processData )
+		self.assertTrue( mpc.module.getTargetData )
+		self.assertTrue( mpc.module.softDeleteData )
+
+	def test_initOfModuleProcessControllerWithSource( self ):
+		"""Test that the ModuleProcessController can be init, min default settings"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		import fakeTestingEtlModule
+
+		name = fakeTestingEtlModule.getTableName()
+
+		mpc = ModuleProcessController( fakeTestingEtlModule, self.session, self.sessionOra )
+
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertEquals( name, mpc.tablename )
+
+		self.assertTrue( mpc.module.getTableName )
+		self.assertTrue( mpc.module.getSourceData )
+		self.assertTrue( mpc.module.processData )
+		self.assertTrue( mpc.module.getTargetData )
+		self.assertTrue( mpc.module.softDeleteData )
+
+	def test_initOfModuleProcessControllerMethods( self ):
+		"""Test that the ModuleProcessController can be init, min default settings"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		import fakeTestingEtlModule
+
+		aList = [1,2,3,4]
+		name = fakeTestingEtlModule.getTableName()
+
+		mpc = ModuleProcessController( fakeTestingEtlModule, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertFalse( mpc.queryByList )
+		self.assertEquals( name, mpc.tablename )
+
+		for i in aList:
+			mpc.appendMissingEmplid( i )
+
+		self.assertTrue( mpc.missingIds )
+		self.assertEquals( aList, mpc.missingIds )
+
+		mpc.cacheSource = aList
+		self.assertEquals( aList, mpc.getSourceCache() )
+
+		mpc.setOverrideSource( aList )
+		self.assertEquals( aList, mpc.overrideSource )
+
+		mpc.setQryByList( aList )
+		self.assertTrue( mpc.queryByList )
+		self.assertEquals( aList, mpc.queryByList )
+
+		aNonIntValue = 'a'
+		mpc.appendMissingEmplid( aNonIntValue )
+
+		self.assertEquals( aList, mpc.missingIds )
 
 if __name__ == '__main__':
 	unittest.main()
