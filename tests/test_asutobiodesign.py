@@ -933,5 +933,36 @@ class bioetlTests( unittest.TestCase ):
 
 		self.assertEquals( aList, mpc.missingIds )
 
+	def seedProcessManager( self ):
+		from models.biopublicmodels import EtlProcessManager
+		pass
+
+
+	def test_selectIntoProcessManager( self ):
+		"""Test that the process_manager table can have select records"""
+		from models.biopublicmodels import EtlProcessManager
+		from bioetl.processManager import ProcessManager
+
+		self.seedProcessManager()
+
+		aRun = ProcessManager()
+
+
+
+	# def test_insertIntoEtlProcessManager( self ):
+	# 	"""Test that the process_manager table can have insert records"""
+	# 	from models.biopublicmodels import EtlProcessManager
+
+
+	# def test_updateIntoEtlProcessManager( self ):
+	# 	"""Test that the process_manager table can have update records"""
+	# 	from models.biopublicmodels import EtlProcessManager
+
+
+	# def test_deleteIntoEtlProcessManager( self ):
+	# 	"""Test that the process_manager table can have delete records"""
+	# 	from models.biopublicmodels import EtlProcessManager
+
+
 if __name__ == '__main__':
 	unittest.main()

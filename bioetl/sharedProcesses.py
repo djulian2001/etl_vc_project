@@ -39,4 +39,3 @@ def hashThisList( theList ):
 # 		thisString += str( myObject[myArg] )
 		
 # 	return hashlib.sha256(thisString).hexdigest()
-

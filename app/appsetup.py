@@ -29,11 +29,15 @@ class AppSetup(object):
 		 	- sqlalchemy session factories, creation and closing of the resource
 	 """
 	def __init__( self, appScope ):
-		self.appScope = appScope
-
-		if self.appScope == 'asutobio':
-			self.config = ConfigAsuToBio()
+		"""
+			The app setup class has state, once the server configurations are all set, the first
+			use of this class will be used to initate the database, there after it will be used
+			just for the etl process.
+		"""
+		if appScope == 'asutobio':
 			self.setupAsuToBio()
+		elif appScope == 'DbInit':
+			self.setupDbInit()
 		else:
 			raise TypeError('Applications scope not correctly defined, no connections setup!')
 	
@@ -64,6 +68,21 @@ class AppSetup(object):
 
 		return engine
 
+	def setupDbInit( self ):
+		"""
+			The database initalization will construct the current database the application is
+			sourced too, from that point on the database will be up or down versioned using
+			the alembic migration DB and code workflow.
+		"""
+		config = ConfigAsuToBio()
+		config.setDbTarget()
+
+		self.targetEngine = self.getMysqlEngine(
+												config.targetUser,
+												config.targetUserPw,
+												config.targetDbHost,
+												config.targetDbName )
+
 	def setupAsuToBio( self ):
 		"""
 			When the application scope is set appropriately we then setup the object accordingly
@@ -74,9 +93,10 @@ class AppSetup(object):
 			reach the source database.  The sub process is run seperate from the python script,
 			so there could be issues cleaning up the tunnel(s)... Expand as required...
 
-		"""
+		"""		
+		config = ConfigAsuToBio()
 
-		self.config.setSshTunnel()
+		config.setSshTunnel()
 
 		try:
 			from app.sshtunnels import SshTunnels
@@ -84,11 +104,11 @@ class AppSetup(object):
 			self.sshtunnel = SshTunnels()
 
 			self.sshtunnel.createSshTunnel(
-								self.config.localport,
-								self.config.oracleServer,
-								self.config.oraclePort,
-								self.config.sshUser,
-								self.config.proxyServer )
+								config.localport,
+								config.oracleServer,
+								config.oraclePort,
+								config.sshUser,
+								config.proxyServer )
 
 		except OSError as e:
 			print "Error trying to create the ssh tunnel!"
@@ -98,20 +118,20 @@ class AppSetup(object):
 				from models.biopublicmodels import BioPublic
 				from models.asudwpsmodels import AsuDwPs
 				
-				self.config.setDbSource()
+				config.setDbSource()
 
 				sourceEngine = self.getOracleEngine(
-					self.config.sourceUser,
-					self.config.sourceUserPw,
-					self.config.sourceNetServiceName )
+					config.sourceUser,
+					config.sourceUserPw,
+					config.sourceNetServiceName )
 
-				self.config.setDbTarget()
+				config.setDbTarget()
 
 				targetEngine = self.getMysqlEngine(
-					self.config.targetUser,
-					self.config.targetUserPw,
-					self.config.targetDbHost,
-					self.config.targetDbName )
+					config.targetUser,
+					config.targetUserPw,
+					config.targetDbHost,
+					config.targetDbName )
 
 
 				AsuDwPs.metadata.bind = sourceEngine
@@ -123,14 +143,14 @@ class AppSetup(object):
 				self.cleanUp()
 				raise e
 
-			try:
-				# This should get factored out later
-				# BioPublic.metadata.drop_all( targetEngine )
-				BioPublic.metadata.create_all( targetEngine )
+			# try:
+			# 	# This should get factored out later
+			# 	# BioPublic.metadata.drop_all( targetEngine )
+			# 	BioPublic.metadata.create_all( targetEngine )
 
-			except Exception as e:
-				self.cleanUp()
-				raise e
+			# except Exception as e:
+			# 	self.cleanUp()
+			# 	raise e
 
 	def getTargetSession( self ):
 		"""This method returns a configured session scoped as a target database"""
