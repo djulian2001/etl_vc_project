@@ -37,7 +37,7 @@ class EtlProcessManager( BioPublic ):
         The ProcessManager keeps track of the process each run.
     """
     __tablename__ = "etl_process_manager"
-    run_status = Column(String(15), default='run in progress',nullable=False)
+    run_status = Column(String(63), default='ETL process starting',nullable=False)
     started_at = Column( DateTime, nullable=False )
     ended_at = Column( DateTime, nullable=True )
     ending_status = Column( Boolean(), default=False, nullable=False)
