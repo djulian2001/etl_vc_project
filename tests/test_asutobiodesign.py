@@ -938,14 +938,82 @@ class bioetlTests( unittest.TestCase ):
 		pass
 
 
-	def test_selectIntoProcessManager( self ):
+	def test_processManagerMethods( self ):
 		"""Test that the process_manager table can have select records"""
 		from models.biopublicmodels import EtlProcessManager
 		from bioetl.processManager import ProcessManager
 
 		self.seedProcessManager()
 
-		aRun = ProcessManager()
+		aRun = ProcessManager( self.session )
+
+		self.assertIsInstance( aRun.runManager, EtlProcessManager)
+		
+		aResult = self.session.query( 
+						EtlProcessManager ).filter(
+							EtlProcessManager.id == aRun.runManager.id ).all()
+		
+		self.assertEquals( 1, len(aResult) )
+		self.assertIsInstance( aResult[0], EtlProcessManager )
+
+		testValue = 'Testing ETL process run'
+		aRun.updateRunStatus( testValue )
+
+		testUpdate = self.session.query( 
+						EtlProcessManager ).filter(
+							EtlProcessManager.id == aRun.runManager.id ).all()
+
+		self.assertEquals( 1, len( testUpdate ) )
+		self.assertEquals( testUpdate[0].run_status, testValue )
+		self.assertEquals( testUpdate[0].run_status, aRun.runManager.run_status )
+
+		aRun.badRun()
+
+		badUpdate = self.session.query(
+						EtlProcessManager ).filter(
+							EtlProcessManager.id == aRun.runManager.id ).all()
+
+		self.assertEquals( 1, len( badUpdate ) )
+		self.assertIsNotNone( badUpdate[0].updated_at )
+		self.assertIsNotNone( badUpdate[0].ended_at )
+		self.assertIsNotNone( badUpdate[0].ending_status )
+		self.assertFalse( badUpdate[0].ending_status )
+
+		bRun = ProcessManager( self.session )
+
+		bRun.goodRun()
+
+		goodUpdate = self.session.query(
+						EtlProcessManager ).filter(
+							EtlProcessManager.id == bRun.runManager.id ).all()
+
+		self.assertNotEquals( aRun.runManager.id, bRun.runManager.id )
+
+		self.assertEquals( 1, len( goodUpdate ) )
+		self.assertIsNotNone( goodUpdate[0].updated_at )
+		self.assertIsNotNone( goodUpdate[0].ended_at )
+		self.assertIsNotNone( goodUpdate[0].ending_status )
+		self.assertTrue( goodUpdate[0].ending_status )
+
+		cRun = ProcessManager( self.session )
+		aList = [12,13,14]
+		
+		cRun.goodRun( " ".join( map(str, aList ) ) )
+
+		goodUpdateC = self.session.query(
+						EtlProcessManager ).filter(
+							EtlProcessManager.id == cRun.runManager.id ).all()
+
+		self.assertNotEquals( aRun.runManager.id, cRun.runManager.id )
+
+		self.assertEquals( 1, len( goodUpdateC ) )
+		self.assertIsNotNone( goodUpdateC[0].updated_at )
+		self.assertIsNotNone( goodUpdateC[0].ended_at )
+		self.assertIsNotNone( goodUpdateC[0].ending_status )
+		self.assertTrue( goodUpdateC[0].ending_status )
+		self.assertIsNotNone( goodUpdateC[0].emplids_not_processed )
+
+
 
 
 
