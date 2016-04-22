@@ -1014,23 +1014,8 @@ class bioetlTests( unittest.TestCase ):
 		self.assertIsNotNone( goodUpdateC[0].emplids_not_processed )
 
 
-
-
-
-	# def test_insertIntoEtlProcessManager( self ):
-	# 	"""Test that the process_manager table can have insert records"""
-	# 	from models.biopublicmodels import EtlProcessManager
-
-
-	# def test_updateIntoEtlProcessManager( self ):
-	# 	"""Test that the process_manager table can have update records"""
-	# 	from models.biopublicmodels import EtlProcessManager
-
-
-	# def test_deleteIntoEtlProcessManager( self ):
-	# 	"""Test that the process_manager table can have delete records"""
-	# 	from models.biopublicmodels import EtlProcessManager
-
+def test_BIprocessSortOrder( self ):
+	"""Test the class or process that applies the bi layer to the existing data."""
 
 if __name__ == '__main__':
 	unittest.main()

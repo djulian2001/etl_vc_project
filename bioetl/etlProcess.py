@@ -48,7 +48,7 @@ class EtlProcess( object ):
 				logger.info('ETL process run in LIST mode: COMPLETED')
 
 			except Exception as e:
-				self.manager.badRun( " ".join( runSubQ_mode.getMissingEmplid() ) )
+				self.manager.badRun( ", ".join( runSubQ_mode.getMissingEmplid() ) )
 				raise e
 			
 			for emplid in runList_mode.getMissingEmplid():
@@ -66,9 +66,9 @@ class EtlProcess( object ):
 			logger.info('BI process run: COMPLETED')
 
 		except Exception as e:
-			self.manager.badRun( " ".join( runSubQ_mode.getMissingEmplid() ) )
+			self.manager.badRun( ", ".join( runSubQ_mode.getMissingEmplid() ) )
 			raise e
 
-		self.manager.goodRun( " ".join( runSubQ_mode.getMissingEmplid() ) )
+		self.manager.goodRun( ", ".join( runSubQ_mode.getMissingEmplid() ) )
 
 
