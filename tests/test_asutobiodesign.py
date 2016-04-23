@@ -1016,6 +1016,8 @@ class bioetlTests( unittest.TestCase ):
 
 def test_BIprocessSortOrder( self ):
 	"""Test the class or process that applies the bi layer to the existing data."""
+	pass
 
+	
 if __name__ == '__main__':
 	unittest.main()
