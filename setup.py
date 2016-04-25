@@ -13,7 +13,7 @@ config = {
     'author_email': 'david.julian@asu.edu',
     'version': '0.1',
     'install_requires': [],
-    'packages': ['bioetl','asutobio',],
+    'packages': ['bioetl',],
     'scripts': [],
     'name': 'asuToBiodesign'
 }
