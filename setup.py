@@ -12,8 +12,13 @@ config = {
     'download_url': 'https://git.biodesign.asu.edu/primusdj/asuToBiodesign.git',
     'author_email': 'david.julian@asu.edu',
     'version': '0.1',
-    'install_requires': [],
-    'packages': ['bioetl',],
+    'install_requires': [
+        "sqlalchemy",
+        "alembic",
+        "cx_oracle",
+        "MySQL-python",
+    ],
+    'packages': ["bioetl","models","app","alembic"],
     'scripts': [],
     'name': 'asuToBiodesign'
 }
