@@ -29,17 +29,45 @@ def processData( srcSubAffiliation, sesTarget ):
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
 
-	# This change here drops a whole database... lets hope..
-	srcHash = hashThisList( srcSubAffiliation.values() )
+
+################################################
+# I'm running into an issue when in dict land and sqlalchemy object land
+# LOOK at casting all of the dict objects into BiodesignSubAffiliations for db
+# initial seeding in the getSourceData()
+#	we have to get srcRecord["column"] into srcRecord.column
+#
+#
+
+#
+	if isinstance( srcSubAffiliation, SubAffiliations ):
+		subAffiliationList = [
+			srcSubAffiliation.code,
+			srcSubAffiliation.title,
+			srcSubAffiliation.description,
+			srcSubAffiliation.proximity_scope,
+			srcSubAffiliation.service_access,
+			srcSubAffiliation.distribution_lists ]
+
+		srcHash = hashThisList( subAffiliationList )
+		srcSubAffiliationCode = srcSubAffiliation.code
+	else:
+		srcHash = hashThisList( srcSubAffiliation.values() )
+		srcSubAffiliationCode = srcSubAffiliation["code"]
+
+
+
 
 	def getTargetRecords():
 		"""Returns a record set from the target database"""
 		ret = sesTarget.query(
 			SubAffiliations ).filter(
-				SubAffiliations.code == srcSubAffiliation["code"] ).filter(
+				SubAffiliations.code == srcSubAffiliationCode ).filter(
 				SubAffiliations.updated_flag == False ).all()
 
 		return ret
+
+# fix code above and below to match sqlalchemy orm class object...
+################################################
 
 	tgtRecords = getTargetRecords()
 

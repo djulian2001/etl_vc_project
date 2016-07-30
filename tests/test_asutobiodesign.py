@@ -44,7 +44,7 @@ class AppSetupTest( object ):
 
 
 class bioetlTests( unittest.TestCase ):
-	"""Tests for subAffiliationProcessing.py """
+	"""Tests for bioetl"""
 
 	def setUp( self ):
 		"""Need some way of setting up the target database."""
@@ -158,6 +158,14 @@ class bioetlTests( unittest.TestCase ):
 			addObj.source_hash = srcHash
 			addObj.created_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			self.session.add( addObj )
+
+	def seedSubAffiliationDeployed( self ):
+		"""The Sub Affiliation seed process..."""
+		subAffSeeds = copy.deepcopy( subAffiliationsCodesSeed )
+		for subAffDict in subAffSeeds:
+			addObj = SubAffiliations( **subAffDict )
+			self.session.add( addObj )
+
 
 	def seedPersonSubAffiliation( self, addNew=False ):
 		"""The person Sub Affiliation seed process..."""
@@ -606,6 +614,33 @@ class bioetlTests( unittest.TestCase ):
 		self.assertNotEquals( len( myReturnRecords ), 4 )
 		self.assertEquals( len( myReturnRecords ), 3 )
 		
+
+	def test_deployedSubAffiliationRecordSelect( self ):
+		"""We are testing subAffiliationProcessing """
+		self.seedSubAffiliationDeployed()
+		
+		seeds = copy.deepcopy( subAffiliationsCodesSeed )
+
+		subAffCodeObjs = self.session.query( SubAffiliations ).filter( SubAffiliations.code == seeds[0]['code'] ).all()
+		for subAffCodeObj in subAffCodeObjs:
+			self.recordEqualsTest( subAffCodeObj, seeds[0], SubAffiliations )
+
+	def test_deployedSubAffiliationRecordUpdateNew( self ):
+		"""We are testing subAffiliationProcessing """
+		from bioetl.processControllers.subAffiliationProcessing import processData
+		self.seedSubAffiliationDeployed()
+		
+		seeds = copy.deepcopy( subAffiliationsCodesSeed )
+		subAffCodeObjs = self.session.query( SubAffiliations ).filter( SubAffiliations.code == seeds[3]['code'] ).all()
+		for subAffCodeObj in subAffCodeObjs:
+			self.recordEqualsTest( subAffCodeObj, seeds[3], SubAffiliations )
+		self.assertEquals(seeds[3]["source_hash"],"NEW")
+
+		appResults = processData( subAffCodeObjs[0], self.session )
+		self.assertEquals ( appResults[0], subAffCodeObjs[0] )
+
+
+
 	def test_selectPersonSubAffiliation( self ):
 		"""The Sub Affiliations are an important part of biodesign."""
 		self.seedPersonSubAffiliation()
