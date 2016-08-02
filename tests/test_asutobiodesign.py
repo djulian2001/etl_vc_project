@@ -7,7 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from datetime import datetime, date
 
 from models.biopublicmodels import BioPublic, People, PersonWebProfile, Phones, Departments, Jobs, JobCodes, JobsLog, SubAffiliations, PersonSubAffiliations
-from models.asudwpsmodels import AsuDwPsPerson, AsuDwPsPhones, AsuDwPsJobs, AsuDwPsJobsLog, AsuDwPsSubAffiliations
+from models.asudwpsmodels import AsuDwPsPerson, AsuDwPsPhones, AsuDwPsJobs, AsuDwPsJobsLog, AsuDwPsSubAffiliations, BiodesignSubAffiliations
 from bioetl.sharedProcesses import hashThisList
 from asutobiodesign_seeds import *
 
@@ -151,7 +151,6 @@ class bioetlTests( unittest.TestCase ):
 
 	def seedSubAffiliation( self ):
 		"""The Sub Affiliation seed process..."""
-		from bioetl.processControllers.models.asudwpsmodels import BiodesignSubAffiliations
 		for subAffDict in BiodesignSubAffiliations.seedMe():
 			srcHash = hashThisList( subAffDict.values() )
 			addObj = SubAffiliations( **subAffDict )
@@ -625,20 +624,40 @@ class bioetlTests( unittest.TestCase ):
 		for subAffCodeObj in subAffCodeObjs:
 			self.recordEqualsTest( subAffCodeObj, seeds[0], SubAffiliations )
 
-	def test_deployedSubAffiliationRecordUpdateNew( self ):
-		"""We are testing subAffiliationProcessing """
-		from bioetl.processControllers.subAffiliationProcessing import processData
-		self.seedSubAffiliationDeployed()
+	# def test_deployedSubAffiliationRecordUpdateNew( self ):
+	# 	"""We are testing subAffiliationProcessing """
+	# 	from bioetl.processControllers.subAffiliationProcessing import processData
+	# 	self.seedSubAffiliationDeployed()
 		
-		seeds = copy.deepcopy( subAffiliationsCodesSeed )
-		subAffCodeObjs = self.session.query( SubAffiliations ).filter( SubAffiliations.code == seeds[3]['code'] ).all()
-		for subAffCodeObj in subAffCodeObjs:
-			self.recordEqualsTest( subAffCodeObj, seeds[3], SubAffiliations )
-		self.assertEquals(seeds[3]["source_hash"],"NEW")
+	# 	seeds = copy.deepcopy( subAffiliationsCodesSeed )
+	# 	subAffCodeObjs = self.session.query( SubAffiliations ).filter( SubAffiliations.code == seeds[3]['code'] ).all()
+	# 	for subAffCodeObj in subAffCodeObjs:
+	# 		self.recordEqualsTest( subAffCodeObj, seeds[3], SubAffiliations )
+	# 	self.assertEquals( seeds[3]["source_hash"], "NEW" )
 
-		appResults = processData( subAffCodeObjs[0], self.session )
-		self.assertEquals ( appResults[0], subAffCodeObjs[0] )
+	# 	appResults = processData( subAffCodeObjs[0], self.session )
+	# 	self.assertEquals ( appResults[0], subAffCodeObjs[0] )
 
+
+	def test_subAffiliationsGetSourceDataWithNoSourceData( self ):
+		"""Test that the data that is a list of 12 sqlalchemy values when called"""
+		from bioetl.processControllers.subAffiliationProcessing import getSourceData
+
+		appResults = getSourceData( self.session )
+
+		self.assertEquals( len(appResults), 12 )
+		self.assertIsInstance( appResults[0], BiodesignSubAffiliations )
+
+	def test_subAffiliationsGetSourceDataWithSourceData( self ):
+		"""Test that the data that is a list of 12 sqlalchemy values when called"""
+		from bioetl.processControllers.subAffiliationProcessing import getSourceData
+
+		self.seedSubAffiliation()
+		
+		appResults = getSourceData( self.session )
+
+		self.assertEquals( len(appResults), 12 )
+		self.assertIsInstance( appResults[0], SubAffiliations )
 
 
 	def test_selectPersonSubAffiliation( self ):

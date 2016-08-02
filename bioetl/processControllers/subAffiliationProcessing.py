@@ -8,13 +8,33 @@ from models.asudwpsmodels import BiodesignSubAffiliations
 def getTableName():
 	return SubAffiliations.__table__.name
 
-def getSourceData( sesSource=None, qryList=None ):
+def getSourceData( sesTarget=None, qryList=None ):
 	"""
 		Isolate the imports for the ORM records into this file
-		Returns the set of records from the SubAffiliations table of the source database.
+		Returns the set of records from the SubAffiliations table of the source database
+		
+		@sesTarget:
+			is a break in this applications convention.  Normal is sesSource, but in this case
+			the source is the target database, a controlled vocabulary of terms, also a config
+			source for where in values.
+		@qryList:
+			probaly could remove this but there is no reason too.
+
+		Returns:
+			list of sqlalchemy dictionary objects.
 	"""
 
-	return BiodesignSubAffiliations.seedMe()
+	srcSubAffiliations = sesTarget.query( SubAffiliations ).all()
+
+	if srcSubAffiliations:
+		return srcSubAffiliations
+	else:
+		seeds = BiodesignSubAffiliations.seedMe()
+		# srcSubAffiliations = [ BiodesignSubAffiliations( **seed ) for seed in seeds ]
+		srcSubAffiliations = [ BiodesignSubAffiliations( **seed ) for seed in seeds ]
+
+        return srcSubAffiliations
+
 
 # change value to the singular
 def processData( srcSubAffiliation, sesTarget ):

@@ -620,7 +620,9 @@ class AsuDwPsFarShortstories( AsuDwPs ):
     __table_args__ = { "schema" : schema }
 
 
-class BiodesignSubAffiliations():
+bdiControlledVocab = declarative_base()
+
+class BiodesignSubAffiliations( bdiControlledVocab ):
     __tablename__ = 'subaffiliations'
     code = Column( String(7), unique = True, nullable=False )
     title = Column( String(63), nullable=False )
@@ -628,6 +630,8 @@ class BiodesignSubAffiliations():
     proximity_scope = Column( String(15), nullable=False )
     service_access = Column( String(127), nullable=False )
     distribution_lists = Column( String(127), nullable=False )
+
+    __mapper_args__ = { "primary_key" : [ code ] }
 
     @staticmethod
     def seedMe():   
