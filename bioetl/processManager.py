@@ -37,6 +37,8 @@ class ProcessManager( object ):
 
 	def badRun( self, missingIds=None ):
 		"""The run needs to report it was terminated premature, sad face. :("""
+		if not missingIds:
+			missingIds = None
 		self.runManager.updated_at 				= datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		self.runManager.ended_at 			  	= datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		self.runManager.ending_status 			= False
@@ -45,6 +47,8 @@ class ProcessManager( object ):
 		
 	def goodRun( self, missingIds=None ):
 		"""The run completed safely and cleanly, happy face. :)"""
+		if not missingIds:
+			missingIds = None
 		self.runManager.run_status 				= "ETL process ended cleanly"
 		self.runManager.updated_at 				= datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		self.runManager.ended_at 			  	= datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )

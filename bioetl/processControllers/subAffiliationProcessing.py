@@ -23,17 +23,16 @@ def getSourceData( sesTarget=None, qryList=None ):
 		Returns:
 			list of sqlalchemy dictionary objects.
 	"""
-
-	srcSubAffiliations = sesTarget.query( SubAffiliations ).all()
+	srcSubAffiliations = sesTarget.query( SubAffiliations ).filter( SubAffiliations.deleted_at == None ).all()
 
 	if srcSubAffiliations:
+		"""The existing records from the target database"""
 		return srcSubAffiliations
 	else:
+		"""The initial application seeding process."""
 		seeds = BiodesignSubAffiliations.seedMe()
-		# srcSubAffiliations = [ BiodesignSubAffiliations( **seed ) for seed in seeds ]
-		srcSubAffiliations = [ BiodesignSubAffiliations( **seed ) for seed in seeds ]
+		return [ BiodesignSubAffiliations( **seed ) for seed in seeds ]
 
-        return srcSubAffiliations
 
 
 # change value to the singular
@@ -48,46 +47,24 @@ def processData( srcSubAffiliation, sesTarget ):
 		returned will not be truthy/falsey.
 		(http://techspot.zzzeek.org/2008/09/09/selecting-booleans/)
 	"""
+	subAffiliationList = [
+		srcSubAffiliation.code,
+		srcSubAffiliation.title,
+		srcSubAffiliation.description,
+		srcSubAffiliation.proximity_scope,
+		srcSubAffiliation.service_access,
+		srcSubAffiliation.distribution_lists ]
 
-
-################################################
-# I'm running into an issue when in dict land and sqlalchemy object land
-# LOOK at casting all of the dict objects into BiodesignSubAffiliations for db
-# initial seeding in the getSourceData()
-#	we have to get srcRecord["column"] into srcRecord.column
-#
-#
-
-#
-	if isinstance( srcSubAffiliation, SubAffiliations ):
-		subAffiliationList = [
-			srcSubAffiliation.code,
-			srcSubAffiliation.title,
-			srcSubAffiliation.description,
-			srcSubAffiliation.proximity_scope,
-			srcSubAffiliation.service_access,
-			srcSubAffiliation.distribution_lists ]
-
-		srcHash = hashThisList( subAffiliationList )
-		srcSubAffiliationCode = srcSubAffiliation.code
-	else:
-		srcHash = hashThisList( srcSubAffiliation.values() )
-		srcSubAffiliationCode = srcSubAffiliation["code"]
-
-
-
+	srcHash = hashThisList( subAffiliationList )
 
 	def getTargetRecords():
 		"""Returns a record set from the target database"""
 		ret = sesTarget.query(
 			SubAffiliations ).filter(
-				SubAffiliations.code == srcSubAffiliationCode ).filter(
+				SubAffiliations.code == srcSubAffiliation.code ).filter(
 				SubAffiliations.updated_flag == False ).all()
 
 		return ret
-
-# fix code above and below to match sqlalchemy orm class object...
-################################################
 
 	tgtRecords = getTargetRecords()
 
@@ -120,12 +97,12 @@ def processData( srcSubAffiliation, sesTarget ):
 			tgtRecord.updated_flag = True
 			tgtRecord.source_hash = srcHash
 			# list of the fields that will be updated...
-			tgtRecord.code = srcSubAffiliation["code"]
-			tgtRecord.title = srcSubAffiliation["title"]
-			tgtRecord.description = srcSubAffiliation["description"]
-			tgtRecord.proximity_scope = srcSubAffiliation["proximity_scope"]
-			tgtRecord.service_access = srcSubAffiliation["service_access"]
-			tgtRecord.distribution_lists = srcSubAffiliation["distribution_lists"]
+			tgtRecord.code = srcSubAffiliation.code
+			tgtRecord.title = srcSubAffiliation.title
+			tgtRecord.description = srcSubAffiliation.description
+			tgtRecord.proximity_scope = srcSubAffiliation.proximity_scope
+			tgtRecord.service_access = srcSubAffiliation.service_access
+			tgtRecord.distribution_lists = srcSubAffiliation.distribution_lists
 			tgtRecord.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			tgtRecord.deleted_at = None
 
@@ -134,12 +111,12 @@ def processData( srcSubAffiliation, sesTarget ):
 		insertSubAffiliation = SubAffiliations(
 			updated_flag = True,
 			source_hash = srcHash,
-			code = srcSubAffiliation["code"],
-			title = srcSubAffiliation["title"],
-			description = srcSubAffiliation["description"],
-			proximity_scope = srcSubAffiliation["proximity_scope"],
-			service_access = srcSubAffiliation["service_access"],
-			distribution_lists = srcSubAffiliation["distribution_lists"],
+			code = srcSubAffiliation.code,
+			title = srcSubAffiliation.title,
+			description = srcSubAffiliation.description,
+			proximity_scope = srcSubAffiliation.proximity_scope,
+			service_access = srcSubAffiliation.service_access,
+			distribution_lists = srcSubAffiliation.distribution_lists,
 			created_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) )
 
 		return insertSubAffiliation
@@ -153,23 +130,27 @@ def getTargetData( sesTarget ):
 		SubAffiliations ).filter(
 			SubAffiliations.deleted_at.is_( None ) ).all()
 
-def softDeleteData( tgtMissingSubAffiliation, srcList ):
+def softDeleteData( tgtRecord, srcRecords ):
 	"""
+		NOTE: 
+			Because of where this data is currently being pulled from, the target database, there will never
+		be a soft deleted record, at least until the data for the sub affiliations source is truely from 
+		peoplesoft.
+
 		The list of SubAffiliations changes as time moves on, the SubAffiliations removed from the list are not
 		deleted, but flaged removed by the deleted_at field.
 
-		The return of this function returns a sqlalchemy object to update a subAffiliation object.
+		The return of this function returns a sqlalchemy object with updated values.
 	"""
-
 	def dataMissing():
 		"""
 			The origional list of selected data is then used to see if data requires a soft-delete
 			@True: Means update the records deleted_at column
 			@False: Do nothing
 		"""
-		return not any( srcDict["code"] == tgtMissingSubAffiliation.code for srcDict in srcList )
+		return not any( srcRecord.code == tgtRecord.code for srcRecord in srcRecords )
 
 	if dataMissing():
-		tgtMissingSubAffiliation.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-		return tgtMissingSubAffiliation
+		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		return tgtRecord
 

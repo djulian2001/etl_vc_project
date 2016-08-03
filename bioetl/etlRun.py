@@ -65,6 +65,17 @@ class EtlRun( object ):
 			except Exception as e:
 				raise e
 
+			logger.info("Configure External Application State Dependencies: BEGINNING")
+			try:
+				"""This is where gobal variables used by the application are set for data warehouse emplid subquery"""
+				from models.asudwpsmodels import setSubAffiliationCodesList
+
+				setSubAffiliationCodesList( self.sesTarget )
+
+				logger.info("Application State has been configured")
+			except Exception as e:
+				raise e
+
 		logger.info("Processing Personnel Data:  BEGINNING")
 		try:
 			

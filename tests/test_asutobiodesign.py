@@ -617,45 +617,85 @@ class bioetlTests( unittest.TestCase ):
 	def test_deployedSubAffiliationRecordSelect( self ):
 		"""We are testing subAffiliationProcessing """
 		self.seedSubAffiliationDeployed()
-		
 		seeds = copy.deepcopy( subAffiliationsCodesSeed )
-
 		subAffCodeObjs = self.session.query( SubAffiliations ).filter( SubAffiliations.code == seeds[0]['code'] ).all()
 		for subAffCodeObj in subAffCodeObjs:
 			self.recordEqualsTest( subAffCodeObj, seeds[0], SubAffiliations )
 
-	# def test_deployedSubAffiliationRecordUpdateNew( self ):
-	# 	"""We are testing subAffiliationProcessing """
-	# 	from bioetl.processControllers.subAffiliationProcessing import processData
-	# 	self.seedSubAffiliationDeployed()
+	def test_deployedSubAffiliationRecordUpdateNew( self ):
+		"""We are testing subAffiliationProcessing """
+		from bioetl.processControllers.subAffiliationProcessing import processData
+		self.seedSubAffiliationDeployed()
+		seeds = copy.deepcopy( subAffiliationsCodesSeed )
+		subAffCodeObjs = self.session.query( SubAffiliations ).filter( SubAffiliations.code == seeds[3]['code'] ).all()
 		
-	# 	seeds = copy.deepcopy( subAffiliationsCodesSeed )
-	# 	subAffCodeObjs = self.session.query( SubAffiliations ).filter( SubAffiliations.code == seeds[3]['code'] ).all()
-	# 	for subAffCodeObj in subAffCodeObjs:
-	# 		self.recordEqualsTest( subAffCodeObj, seeds[3], SubAffiliations )
-	# 	self.assertEquals( seeds[3]["source_hash"], "NEW" )
+		for subAffCodeObj in subAffCodeObjs:
+			self.recordEqualsTest( subAffCodeObj, seeds[3], SubAffiliations )
 
-	# 	appResults = processData( subAffCodeObjs[0], self.session )
-	# 	self.assertEquals ( appResults[0], subAffCodeObjs[0] )
+		self.assertEquals( seeds[3]["source_hash"], "NEW" )
+		appResults = processData( subAffCodeObjs[0], self.session )
+		testResult = self.session.query( SubAffiliations ).filter( SubAffiliations.code == appResults.code ).all()
+		self.assertEquals( appResults, testResult[0] )
+		self.assertIsInstance( appResults, SubAffiliations )
+		self.assertNotEquals( testResult[0].source_hash, seeds[3]["source_hash"] )
+
+	def test_subAffiliationsSoftDeleteData( self ):
+		"""There really doesn't seem to ba a reason to 'soft delete' these records."""
+		from bioetl.processControllers.subAffiliationProcessing import softDeleteData
+		self.seedSubAffiliation()
+		
+		srcResults = self.session.query( SubAffiliations ).all()
+
+		tgtResults = self.session.query( SubAffiliations ).filter( SubAffiliations.code == srcResults[0].code )
+
+		self.assertIsNotNone( tgtResults )
+
+		appResults = softDeleteData( tgtResults[0], srcResults )
+
+		self.assertFalse( appResults )
+		self.assertIsNone( appResults )
+
+
+
+
+#####################################################################################
+#####################################################################################
+#####################################################################################
+
+
+	def test_setSubaffiliationCodes( self ):
+		"""Test that setting the sub qry initialization works."""
+		from models.asudwpsmodels import setSubAffiliationCodesList, getSubaffiliationCodesList
+		self.seedSubAffiliation()
+		self.assertRaises( AssertionError, getSubaffiliationCodesList )
+
+		setSubAffiliationCodesList( self.session )
+
+		appResults = getSubaffiliationCodesList()
+
+		self.assertEquals( len( appResults ), 12 )
+
+
+#####################################################################################
+#####################################################################################
+#####################################################################################
+
+
 
 
 	def test_subAffiliationsGetSourceDataWithNoSourceData( self ):
 		"""Test that the data that is a list of 12 sqlalchemy values when called"""
 		from bioetl.processControllers.subAffiliationProcessing import getSourceData
-
 		appResults = getSourceData( self.session )
-
 		self.assertEquals( len(appResults), 12 )
 		self.assertIsInstance( appResults[0], BiodesignSubAffiliations )
+
 
 	def test_subAffiliationsGetSourceDataWithSourceData( self ):
 		"""Test that the data that is a list of 12 sqlalchemy values when called"""
 		from bioetl.processControllers.subAffiliationProcessing import getSourceData
-
 		self.seedSubAffiliation()
-		
 		appResults = getSourceData( self.session )
-
 		self.assertEquals( len(appResults), 12 )
 		self.assertIsInstance( appResults[0], SubAffiliations )
 
@@ -663,7 +703,6 @@ class bioetlTests( unittest.TestCase ):
 	def test_selectPersonSubAffiliation( self ):
 		"""The Sub Affiliations are an important part of biodesign."""
 		self.seedPersonSubAffiliation()
-
 		seed = copy.deepcopy( personSubAffiliationSeed )
 		subAffObjs = self.session.query( PersonSubAffiliations ).filter( PersonSubAffiliations.emplid == seed[0]['emplid'] ).all()
 

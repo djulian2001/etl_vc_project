@@ -9,6 +9,21 @@ from sqlalchemy.ext.declarative import declarative_base
 #   soft
 ################################################################################
 
+_SUBAFFILIATIONCODES = None
+def setSubAffiliationCodesList( sesTarget ):
+    """This initializes _SUBAFFILIATIONCODES module attribute."""
+    global _SUBAFFILIATIONCODES
+    from biopublicmodels import SubAffiliations
+    subAffsCodes = sesTarget.query( SubAffiliations.code ).all()
+    _SUBAFFILIATIONCODES = [ subAffCode.code for subAffCode in subAffsCodes ]
+
+def getSubaffiliationCodesList():
+    try:
+        assert _SUBAFFILIATIONCODES is not None, "Applications state dependency not met, set the list for subaffiliations codes"
+        return _SUBAFFILIATIONCODES
+    except AssertionError as e:
+        raise e
+
 
 class AsuPsBioFilters():
     """
@@ -33,7 +48,6 @@ class AsuPsBioFilters():
 
         """
         # biodesignDeptids = []
-
         sub_groups = (
             self.session.query(
                 AsuDwPsDepartments.deptid ).filter(
@@ -62,7 +76,12 @@ class AsuPsBioFilters():
         """
         # The following are the "where in" portion / filters to use, extend this list as needed...
         # sub affiliation codes provided by the 
-        subAffsCodes = ['BDAF','BDRP','BDAS','BDFC','BDAG','BAPD','BVIP','BDAU','BDHV','NCON','BDEC','NVOL']
+        
+#########################################################################################################        
+# THIS NEEDS to be set, by a query against the seed object, or a query from the database
+        # subAffsCodes = ['BDAF','BDRP','BDAS','BDFC','BDAG','BAPD','BVIP','BDAU','BDHV','NCON','BDEC','NVOL']
+        subAffsCodes = getSubaffiliationCodesList()
+
         jobActionExcludeCodes = ['TER','RET']
         
         sub_groups = self.getBiodesignDeptids()

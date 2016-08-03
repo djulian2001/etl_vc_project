@@ -18,7 +18,7 @@ class EtlProcess( object ):
 		
 		sesManager = appSetup.getTargetSession()
 		self.manager = ProcessManager( sesManager )
-
+		
 	def runProcesses(self):
 		"""
 			The controller for the applications processes.
