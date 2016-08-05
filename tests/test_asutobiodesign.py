@@ -8,7 +8,7 @@ from datetime import datetime, date
 
 from models.biopublicmodels import BioPublic, People, PersonWebProfile, Phones, Departments, Jobs, JobCodes, JobsLog, SubAffiliations, PersonSubAffiliations
 from models.asudwpsmodels import AsuDwPsPerson, AsuDwPsPhones, AsuDwPsJobs, AsuDwPsJobsLog, AsuDwPsSubAffiliations, BiodesignSubAffiliations
-from bioetl.sharedProcesses import hashThisList
+from bioetl.sharedProcesses import hashThisList, BiodesignSubAffiliationCodes
 from asutobiodesign_seeds import *
 
 class AppSetupTest( object ):
@@ -55,8 +55,8 @@ class bioetlTests( unittest.TestCase ):
 
 	def tearDown( self ):
 		"""These will set up the situation to test the code."""
-		self.appSetup.cleanUp()	
-
+		self.appSetup.cleanUp()
+		
 	def seedPeople( self ):
 		setPeopleSeeds = copy.deepcopy( peopleSeed )
 		for personSeed in setPeopleSeeds:
@@ -643,44 +643,40 @@ class bioetlTests( unittest.TestCase ):
 		"""There really doesn't seem to ba a reason to 'soft delete' these records."""
 		from bioetl.processControllers.subAffiliationProcessing import softDeleteData
 		self.seedSubAffiliation()
-		
 		srcResults = self.session.query( SubAffiliations ).all()
-
 		tgtResults = self.session.query( SubAffiliations ).filter( SubAffiliations.code == srcResults[0].code )
-
 		self.assertIsNotNone( tgtResults )
-
 		appResults = softDeleteData( tgtResults[0], srcResults )
-
 		self.assertFalse( appResults )
 		self.assertIsNone( appResults )
 
 
-
-
-#####################################################################################
-#####################################################################################
-#####################################################################################
+	def test_asuDwFilterWorks( self ):
+		"""Lets see if we can get a test running to validate the asu filter used all over this app"""
+		from bioetl.sharedProcesses import AsuPsBioFilters, BiodesignSubAffiliationCodes
+		self.seedSubAffiliation()
+		asuBdiSubAffCodes = BiodesignSubAffiliationCodes( self.session )
+		appFilter = AsuPsBioFilters( self.sessionOra, asuBdiSubAffCodes.subAffCodes )
+		sqlDeptNeedle = '"SYSADM"."PS_DEPT_TBL".deptid LIKE :deptid_1 GROUP BY "SYSADM"."PS_DEPT_TBL".deptid'
+		appDeptSubQry = appFilter.getBiodesignDeptids( False )
+		deptMatch = sqlDeptNeedle in str( appDeptSubQry )
+		self.assertTrue( appDeptSubQry )
+		self.assertTrue( deptMatch )
+		appEmplidSubQry = appFilter.getAllBiodesignEmplidList( False )
+		self.assertTrue( appEmplidSubQry )
+		sqlEmplidNeedle='"DIRECTORY"."SUBAFFILIATION".subaffiliation_code IN (:subaffiliation_code_1, :subaffiliation_code_2, :subaffiliation_code_3, :subaffiliation_code_4, :subaffiliation_code_5, :subaffiliation_code_6, :subaffiliation_code_7, :subaffiliation_code_8, :subaffiliation_code_9, :subaffiliation_code_10, :subaffiliation_code_11, :subaffiliation_code_12)'
+		emplidMatch = sqlEmplidNeedle in str( appEmplidSubQry )
+		self.assertTrue( emplidMatch )
 
 
 	def test_setSubaffiliationCodes( self ):
 		"""Test that setting the sub qry initialization works."""
-		from models.asudwpsmodels import setSubAffiliationCodesList, getSubaffiliationCodesList
+		from bioetl.sharedProcesses import BiodesignSubAffiliationCodes
+		# from bioetl.sharedProcesses import setSubAffiliationCodesList, getSubaffiliationCodesList
+		self.assertRaises( AssertionError, asuBdiSubAffCodes = BiodesignSubAffiliationCodes( self.session ) )
 		self.seedSubAffiliation()
-		self.assertRaises( AssertionError, getSubaffiliationCodesList )
-
-		setSubAffiliationCodesList( self.session )
-
-		appResults = getSubaffiliationCodesList()
-
-		self.assertEquals( len( appResults ), 12 )
-
-
-#####################################################################################
-#####################################################################################
-#####################################################################################
-
-
+		asuBdiSubAffCodes = BiodesignSubAffiliationCodes( self.session )
+		self.assertEquals( len( asuBdiSubAffCodes.subAffCodes ), 12 )
 
 
 	def test_subAffiliationsGetSourceDataWithNoSourceData( self ):
@@ -940,15 +936,13 @@ class bioetlTests( unittest.TestCase ):
 		self.assertFalse( aRun.peopleRun.foundMissingIds )
 		self.assertIsInstance( aRun.peopleRun.foundMissingIds, list )
 
-	def test_initOfModuleProcessController( self ):
+	def test_initOfModuleProcessControllerFakeModule( self ):
 		"""Test that the ModuleProcessController can be init, min default settings"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		import fakeTestingEtlModule
 
 		name = fakeTestingEtlModule.getTableName()
-
 		mpc = ModuleProcessController( fakeTestingEtlModule, self.session )
-
 		self.assertIsInstance( mpc, ModuleProcessController )
 		self.assertTrue( mpc.module )
 		self.assertTrue( mpc.sesTarget )
@@ -958,13 +952,558 @@ class bioetlTests( unittest.TestCase ):
 		self.assertFalse( mpc.queryByList )
 		self.assertTrue( mpc.tablename )
 		self.assertFalse( mpc.missingIds )
+		self.assertFalse( mpc._appState )
 		self.assertEquals( name, mpc.tablename )
-
 		self.assertTrue( mpc.module.getTableName )
 		self.assertTrue( mpc.module.getSourceData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getSourceData()
+		with self.assertRaises( TypeError ):
+			mpc.module.getSourceData( mpc.sesSource )
+		self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		subQMatch = mpc.module.getSourceData( mpc.sesSource, mpc.appState )
+		self.assertEquals( subQMatch, "subquery mode")
+		self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList ) )
+		mpc.queryByList = ['test','test']
+		self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList ) )
+		qureyListMatch = mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertEquals( mpc.queryByList, qureyListMatch )
 		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.processData('arg1','arg2') )
 		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		self.assertTrue( mpc.module.getTargetData("arg1") )
 		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+		self.assertTrue( mpc.module.softDeleteData("arg1","arg2") )
+
+
+	def test_initOfModuleProcessControllerWithPersonProcessing( self ):
+		"""Test that the ModuleProcessController can be init, PersonProcessing"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		from bioetl.processControllers import personProcessing
+		from sqlalchemy.exc import ProgrammingError
+
+		name = personProcessing.getTableName()
+		mpc = ModuleProcessController( personProcessing, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertEquals( name, mpc.tablename )
+		
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertTrue( mpc.module.getTableName )
+		self.seedSubAffiliation()
+		mpc._appState = BiodesignSubAffiliationCodes( self.session )
+		self.assertTrue( mpc.module.getSourceData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getSourceData()
+		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource )
+		with self.assertRaises( ProgrammingError ):
+			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		self.seedPeople()
+		self.assertTrue( mpc.module.getTargetData( mpc.sesTarget ) )
+		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+
+
+	def test_initOfModuleProcessControllerWithPersonWebProfileProcessing( self ):
+		"""Test that the ModuleProcessController can be init, PersonWebProfileProcessing"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		from bioetl.processControllers import personWebProfileProcessing
+		from sqlalchemy.exc import ProgrammingError
+
+		name = personWebProfileProcessing.getTableName()
+		mpc = ModuleProcessController( personWebProfileProcessing, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertEquals( name, mpc.tablename )
+		
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertTrue( mpc.module.getTableName )
+		self.seedSubAffiliation()
+		mpc._appState = BiodesignSubAffiliationCodes( self.session )
+		# self.assertTrue( mpc.module.getSourceData )
+		with self.assertRaises( AttributeError ):
+			mpc.module.getSourceData()
+		# with self.assertRaises( TypeError ):
+		# 	mpc.module.getSourceData()
+		# with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
+		# 	mpc.module.getSourceData( mpc.sesSource )
+		# with self.assertRaises( ProgrammingError ):
+		# 	self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		# with self.assertRaises( ProgrammingError ):
+		# 	mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		self.seedPersonWeb()
+		self.assertTrue( mpc.module.getTargetData( mpc.sesTarget ) )
+		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+
+	def test_initOfModuleProcessControllerWithPersonSubAffiliationProcessing( self ):
+		"""Test that the ModuleProcessController can be init, PersonSubAffiliationProcessing"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		from bioetl.processControllers import personSubAffiliationProcessing
+		from sqlalchemy.exc import ProgrammingError
+
+		name = personSubAffiliationProcessing.getTableName()
+		mpc = ModuleProcessController( personSubAffiliationProcessing, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertEquals( name, mpc.tablename )
+		
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertTrue( mpc.module.getTableName )
+		self.seedSubAffiliation()
+		mpc._appState = BiodesignSubAffiliationCodes( self.session )
+		self.assertTrue( mpc.module.getSourceData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getSourceData()
+		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource )
+		with self.assertRaises( ProgrammingError ):
+			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		self.seedPersonSubAffiliation()
+		self.assertTrue( mpc.module.getTargetData( mpc.sesTarget ) )
+		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+
+	def test_initOfModuleProcessControllerWithPersonPhoneProcessing( self ):
+		"""Test that the ModuleProcessController can be init, PersonPhoneProcessing"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		from bioetl.processControllers import personPhoneProcessing
+		from sqlalchemy.exc import ProgrammingError
+
+		name = personPhoneProcessing.getTableName()
+		mpc = ModuleProcessController( personPhoneProcessing, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertEquals( name, mpc.tablename )
+		
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertTrue( mpc.module.getTableName )
+		self.seedSubAffiliation()
+		mpc._appState = BiodesignSubAffiliationCodes( self.session )
+		self.assertTrue( mpc.module.getSourceData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getSourceData()
+		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource )
+		with self.assertRaises( ProgrammingError ):
+			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		self.seedPhones()
+		self.assertTrue( mpc.module.getTargetData( mpc.sesTarget ) )
+		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+
+	def test_initOfModuleProcessControllerWithPersonJobsProcessing( self ):
+		"""Test that the ModuleProcessController can be init, PersonProcessing"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		from bioetl.processControllers import personJobsProcessing
+		from sqlalchemy.exc import ProgrammingError
+
+		name = personJobsProcessing.getTableName()
+		mpc = ModuleProcessController( personJobsProcessing, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertEquals( name, mpc.tablename )
+		
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertTrue( mpc.module.getTableName )
+		self.seedSubAffiliation()
+		mpc._appState = BiodesignSubAffiliationCodes( self.session )
+		self.assertTrue( mpc.module.getSourceData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getSourceData()
+		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource )
+		with self.assertRaises( ProgrammingError ):
+			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		self.seedPersonJobs()
+		self.assertTrue( mpc.module.getTargetData( mpc.sesTarget ) )
+		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+
+	def test_initOfModuleProcessControllerWithPersonJobLogProcessing( self ):
+		"""Test that the ModuleProcessController can be init, PersonProcessing"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		from bioetl.processControllers import personJobLogProcessing
+		from sqlalchemy.exc import ProgrammingError
+
+		name = personJobLogProcessing.getTableName()
+		mpc = ModuleProcessController( personJobLogProcessing, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertEquals( name, mpc.tablename )
+		
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertTrue( mpc.module.getTableName )
+		self.seedSubAffiliation()
+		mpc._appState = BiodesignSubAffiliationCodes( self.session )
+		self.assertTrue( mpc.module.getSourceData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getSourceData()
+		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource )
+		with self.assertRaises( ProgrammingError ):
+			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		self.seedPersonJobLog()
+		self.assertTrue( mpc.module.getTargetData( mpc.sesTarget ) )
+		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+
+	def test_initOfModuleProcessControllerWithPersonExternalLinkProcessing( self ):
+		"""Test that the ModuleProcessController can be init, PersonProcessing"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		from bioetl.processControllers import personExternalLinkProcessing
+		from sqlalchemy.exc import ProgrammingError
+
+		name = personExternalLinkProcessing.getTableName()
+		mpc = ModuleProcessController( personExternalLinkProcessing, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertEquals( name, mpc.tablename )
+		
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertTrue( mpc.module.getTableName )
+		self.seedSubAffiliation()
+		mpc._appState = BiodesignSubAffiliationCodes( self.session )
+		# self.assertFalse( mpc.module.getSourceData )
+		with self.assertRaises( AttributeError ):
+			mpc.module.getSourceData()
+		# with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
+		# 	mpc.module.getSourceData( mpc.sesSource )
+		# with self.assertRaises( ProgrammingError ):
+		# 	self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		# with self.assertRaises( ProgrammingError ):
+		# 	mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		# NOTE: might wasnt to add the seed for the person links...
+		# self.assertTrue( mpc.module.getTargetData( mpc.sesTarget ) )
+		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+
+	def test_initOfModuleProcessControllerWithPersonAddressProcessing( self ):
+		"""Test that the ModuleProcessController can be init, PersonProcessing"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		from bioetl.processControllers import personAddressProcessing
+		from sqlalchemy.exc import ProgrammingError
+
+		name = personAddressProcessing.getTableName()
+		mpc = ModuleProcessController( personAddressProcessing, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertEquals( name, mpc.tablename )
+		
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertTrue( mpc.module.getTableName )
+		self.seedSubAffiliation()
+		mpc._appState = BiodesignSubAffiliationCodes( self.session )
+		self.assertTrue( mpc.module.getSourceData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getSourceData()
+		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource )
+		with self.assertRaises( ProgrammingError ):
+			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		# NOTE for verbose completeness might want to seed person addresses
+		# self.assertTrue( mpc.module.getTargetData( mpc.sesTarget ) )
+		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+
+
+
+	def test_initOfModuleProcessControllerWithDepartmentProcessing( self ):
+		"""Test that the ModuleProcessController can be init, PersonProcessing"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		from bioetl.processControllers import departmentProcessing
+		from sqlalchemy.exc import ProgrammingError
+		name = departmentProcessing.getTableName()
+		mpc = ModuleProcessController( departmentProcessing, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertEquals( name, mpc.tablename )
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertTrue( mpc.module.getTableName )
+		self.seedSubAffiliation()
+		mpc._appState = BiodesignSubAffiliationCodes( self.session )
+		self.assertTrue( mpc.module.getSourceData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getSourceData()
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource )
+		with self.assertRaises( ProgrammingError ):
+			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		self.seedDepartments()
+		self.assertTrue( mpc.module.getTargetData( mpc.sesTarget ) )
+		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+
+
+	def test_initOfModuleProcessControllerWithJobProcessing( self ):
+		"""Test that the ModuleProcessController can be init, PersonProcessing"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		from bioetl.processControllers import jobProcessing
+		from sqlalchemy.exc import ProgrammingError
+		name = jobProcessing.getTableName()
+		mpc = ModuleProcessController( jobProcessing, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertEquals( name, mpc.tablename )
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertTrue( mpc.module.getTableName )
+		self.seedSubAffiliation()
+		mpc._appState = BiodesignSubAffiliationCodes( self.session )
+		self.assertTrue( mpc.module.getSourceData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getSourceData()
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource )
+		with self.assertRaises( ProgrammingError ):
+			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		self.seedJobs()
+		self.assertTrue( mpc.module.getTargetData( mpc.sesTarget ) )
+		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+
+
+	def test_initOfModuleProcessControllerWithSubAffiliationProcessing( self ):
+		"""Test that the ModuleProcessController can be init, PersonProcessing"""
+		from bioetl.moduleProcessController import ModuleProcessController
+		from bioetl.processControllers import subAffiliationProcessing
+		from sqlalchemy.exc import ProgrammingError
+		name = subAffiliationProcessing.getTableName()
+		mpc = ModuleProcessController( subAffiliationProcessing, self.session, self.sessionOra )
+		self.assertIsInstance( mpc, ModuleProcessController )
+		self.assertEquals( name, mpc.tablename )
+		self.assertTrue( mpc.module )
+		self.assertTrue( mpc.sesTarget )
+		self.assertTrue( mpc.sesSource )
+		self.assertFalse( mpc.cacheSource )
+		self.assertFalse( mpc.overrideSource )
+		self.assertFalse( mpc.queryByList )
+		self.assertTrue( mpc.tablename )
+		self.assertFalse( mpc.missingIds )
+		self.assertTrue( mpc.module.getTableName )
+		self.seedSubAffiliation()
+		mpc._appState = BiodesignSubAffiliationCodes( self.session )
+		self.assertTrue( mpc.module.getSourceData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getSourceData()
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource )
+		with self.assertRaises( ProgrammingError ):
+			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		with self.assertRaises( ProgrammingError ):
+			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
+		self.assertTrue( mpc.module.processData )
+		with self.assertRaises( TypeError ):
+			mpc.module.processData()
+		with self.assertRaises( TypeError ):
+			mpc.module.processData('arg1')
+		self.assertTrue( mpc.module.getTargetData )
+		with self.assertRaises( TypeError ):
+			mpc.module.getTargetData()
+		self.assertTrue( mpc.module.getTargetData( mpc.sesTarget ) )
+		self.assertTrue( mpc.module.softDeleteData )
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData()
+		with self.assertRaises( TypeError ):
+			mpc.module.softDeleteData("arg1")
+
+
 
 	def test_initOfModuleProcessControllerWithSource( self ):
 		"""Test that the ModuleProcessController can be init, min default settings"""

@@ -22,6 +22,12 @@ class ModuleProcessController( object ):
 		self.queryByList = None
 		self.tablename = self.module.getTableName()
 		self.missingIds = []
+		self._appState = None
+
+	@property
+	def appState( self ):
+		return self._appState
+	
 
 	def processSource( self ):
 		"""
@@ -32,7 +38,7 @@ class ModuleProcessController( object ):
 		self.commitThis()
 
 		if not self.overrideSource:
-			srcDataResults = self.module.getSourceData( self.sesSource, self.queryByList if self.queryByList else None ) 
+			srcDataResults = self.module.getSourceData( self.sesSource, self.appState, self.queryByList if self.queryByList else None ) 
 		else:
 			srcDataResults = self.overrideSource
 

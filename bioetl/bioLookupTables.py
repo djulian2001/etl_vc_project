@@ -17,6 +17,8 @@ class BioLookupTables( object ):
 	def runMe( self ):
 		"""Run the processes against the bio lookup tables"""
 		subAffiliations = ModuleProcessController( subAffiliationProcessing, self.sesTarget )
+		# Because in this case this instances doesn't have the normal source database
+		subAffiliations.sesSource = self.sesTarget
 		subAffiliations.processSource()
 		subAffiliations.cleanTarget()
 

@@ -8,7 +8,7 @@ from models.asudwpsmodels import BiodesignSubAffiliations
 def getTableName():
 	return SubAffiliations.__table__.name
 
-def getSourceData( sesTarget=None, qryList=None ):
+def getSourceData( sesTarget, appState=None, qryList=None ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the SubAffiliations table of the source database

@@ -1,14 +1,14 @@
 import datetime
 from sqlalchemy.orm.exc import NoResultFound
 
-from bioetl.sharedProcesses import hashThisList
+from bioetl.sharedProcesses import hashThisList, AsuPsBioFilters
 from models.biopublicmodels import JobsLog, People, Departments, JobCodes
-from models.asudwpsmodels import AsuDwPsJobsLog, AsuPsBioFilters
+from models.asudwpsmodels import AsuDwPsJobsLog
 
 def getTableName():
 	return JobsLog.__table__.name
 
-def getSourceData( sesSource, qryList=None ):
+def getSourceData( sesSource, appState=None, qryList=None ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the JobsLog table of the source database.
@@ -17,7 +17,7 @@ def getSourceData( sesSource, qryList=None ):
 			'HIR', 'REH', 'RET', 'TER', 'XFR'
 	"""
 	if not qryList:	
-		srcFilters = AsuPsBioFilters( sesSource )
+		srcFilters = AsuPsBioFilters( sesSource, appState.subAffCodes )
 
 		srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
 

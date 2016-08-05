@@ -8,7 +8,7 @@ from models.asudwpsmodels import AsuDwPsJobCodes
 def getTableName():
 	return JobCodes.__table__.name
 
-def getSourceData( sesSource, qryList=None ):
+def getSourceData( sesSource, appState=None, qryList=None ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the JobCodes table of the source database.

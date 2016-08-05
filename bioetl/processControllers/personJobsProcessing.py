@@ -1,19 +1,19 @@
 import datetime
 
-from bioetl.sharedProcesses import hashThisList
+from bioetl.sharedProcesses import hashThisList, AsuPsBioFilters
 from models.biopublicmodels import Jobs, People, Departments
-from models.asudwpsmodels import AsuDwPsJobs, AsuPsBioFilters
+from models.asudwpsmodels import AsuDwPsJobs
 
 def getTableName():
 	return Jobs.__table__.name
 
-def getSourceData( sesSource, qryList=None ):
+def getSourceData( sesSource, appState=None, qryList=None ):
 	"""
 		Selects the data from the data wharehouse for the Jobs model.
 		@returns: the record set
 	"""
 	if not qryList:
-		srcFilters = AsuPsBioFilters( sesSource )
+		srcFilters = AsuPsBioFilters( sesSource, appState.subAffCodes )
 
 		srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
 

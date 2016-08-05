@@ -1,5 +1,6 @@
 from bioLookupTables import BioLookupTables
 from bioPeopleTables import BioPeopleTables
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -65,14 +66,12 @@ class EtlRun( object ):
 			except Exception as e:
 				raise e
 
-			logger.info("Configure External Application State Dependencies: BEGINNING")
+			logger.info("Configure Application State Dependencies:  BEGINNING")
 			try:
 				"""This is where gobal variables used by the application are set for data warehouse emplid subquery"""
-				from models.asudwpsmodels import setSubAffiliationCodesList
-
-				setSubAffiliationCodesList( self.sesTarget )
-
-				logger.info("Application State has been configured")
+				self.peopleRun.setState()				
+			 	
+				logger.info("Application State has been configured:  COMPLETED")
 			except Exception as e:
 				raise e
 

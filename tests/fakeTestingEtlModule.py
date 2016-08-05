@@ -3,7 +3,7 @@ def getTableName():
 	"""Fake"""
 	return 'fakeTableName'
 
-def getSourceData( sesSource, qryList=None ):
+def getSourceData( sesSource, fakeList, qryList=None ):
 	"""Fake"""
 	if not qryList:
 		return "subquery mode"

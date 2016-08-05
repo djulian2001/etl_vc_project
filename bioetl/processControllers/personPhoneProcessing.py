@@ -1,16 +1,16 @@
 import datetime, re
 
-from bioetl.sharedProcesses import hashThisList
+from bioetl.sharedProcesses import hashThisList, AsuPsBioFilters
 from models.biopublicmodels import People, Phones
-from models.asudwpsmodels import AsuDwPsPhones, AsuPsBioFilters
+from models.asudwpsmodels import AsuDwPsPhones
 
 def getTableName():
 	return Phones.__table__.name
 
-def getSourceData( sesSource, qryList=None ):
+def getSourceData( sesSource, appState=None, qryList=None ):
 	"""Returns a collection of phone records from the source database"""
 	if not qryList:
-		srcFilters = AsuPsBioFilters( sesSource )
+		srcFilters = AsuPsBioFilters( sesSource, appState.subAffCodes )
 
 		srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList(True)
 

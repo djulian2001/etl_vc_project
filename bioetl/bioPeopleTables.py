@@ -9,6 +9,8 @@ from processControllers import personJobsProcessing
 from processControllers import personSubAffiliationProcessing
 from processControllers import personJobLogProcessing
 
+from sharedProcesses import BiodesignSubAffiliationCodes
+
 class BioPeopleTables( object ):
 	"""
 		The contract of how people data will be extracted from the source database and
@@ -27,6 +29,15 @@ class BioPeopleTables( object ):
 		self.sesSource = sesSource
 		self.sesTarget = sesTarget
 		self.foundMissingIds = []
+		self._appState = None
+
+	@property
+	def appState(self):
+		return self._appState 
+	
+	def setState():
+		"""Not my faviorte """
+		self._appState = BiodesignSubAffiliationCodes( self.sesTarget )
 
 	def appendMissingIds( self, idList ):
 		"""Takes in a list and adds it to existing list of missing ids found"""
@@ -71,7 +82,8 @@ class BioPeopleTables( object ):
 		if people.getSourceCache():
 			"""
 				The reason for the other objects dependency is that the data source is
-				the same queried table, we cache to save time, the data warehouse is slow.
+				the same queried table, we cache to save time, the data warehouse is slow,
+				and we already have the data.
 			"""
 			peopleWebProfile = ModuleProcessController( personWebProfileProcessing, self.sesTarget )
 			peopleWebProfile.setOverrideSource( people.getSourceCache() )

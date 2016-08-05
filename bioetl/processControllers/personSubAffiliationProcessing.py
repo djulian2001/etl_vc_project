@@ -1,20 +1,20 @@
 import datetime
 
-from bioetl.sharedProcesses import hashThisList
+from bioetl.sharedProcesses import hashThisList, AsuPsBioFilters
 from models.biopublicmodels import PersonSubAffiliations, Departments, People, SubAffiliations
-from models.asudwpsmodels import AsuDwPsSubAffiliations, AsuPsBioFilters
+from models.asudwpsmodels import AsuDwPsSubAffiliations
 
 def getTableName():
 	return PersonSubAffiliations.__table__.name
 
 
-def getSourceData( sesSource, qryList=None ):
+def getSourceData( sesSource, appState=None, qryList=None ):
 	"""
 		Isolate the imports for the ORM records into this file
 		Returns the set of records from the PersonSubAffiliations table of the source database.
 	"""
 	if not qryList:
-		srcFilters = AsuPsBioFilters( sesSource )
+		srcFilters = AsuPsBioFilters( sesSource, appState.subAffCodes )
 
 		srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
 
