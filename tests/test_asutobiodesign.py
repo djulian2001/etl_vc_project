@@ -5,9 +5,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from datetime import datetime, date
+from sqlalchemy.exc import ProgrammingError, OperationalError
+
 
 from models.biopublicmodels import BioPublic, People, PersonWebProfile, Phones, Departments, Jobs, JobCodes, JobsLog, SubAffiliations, PersonSubAffiliations
-from models.asudwpsmodels import AsuDwPsPerson, AsuDwPsPhones, AsuDwPsJobs, AsuDwPsJobsLog, AsuDwPsSubAffiliations, BiodesignSubAffiliations
+from models.asudwpsmodels import AsuDwPsPerson, AsuDwPsPhones, AsuDwPsJobs, AsuDwPsJobsLog, AsuDwPsSubAffiliations, BiodesignSubAffiliations, AsuDwPsDepartments
 from bioetl.sharedProcesses import hashThisList, BiodesignSubAffiliationCodes
 from asutobiodesign_seeds import *
 
@@ -21,13 +23,13 @@ class AppSetupTest( object ):
 
 		self.engine = create_engine( engineString )
 		BioPublic.metadata.bind = self.engine
-		self.Sessions = scoped_session( sessionmaker( bind=self.engine ) )
+		self.Sessions = scoped_session( sessionmaker( bind=self.engine, autocommit=False ) )
 		BioPublic.metadata.create_all( self.engine )
 		
 		dbOracleName = 'test_fake_oracle'
 		engineFakeString = 'mysql+mysqldb://%s:%s@%s/%s' % ( dbUser, dbPw, dbHost, dbOracleName )
 		self.engineFakeOracle = create_engine( engineFakeString )
-		self.OraSessions = scoped_session( sessionmaker( bind=self.engineFakeOracle ) )
+		self.OraSessions = scoped_session( sessionmaker( bind=self.engineFakeOracle, autoflush=False, autocommit=False ) )
 
 	def getSourceSession( self ):
 		ses = self.OraSessions()
@@ -86,6 +88,26 @@ class bioetlTests( unittest.TestCase ):
 			deptObj.source_hash = srcHash
 			deptObj.created_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			self.session.add( deptObj )
+
+################################################################################################
+################################################################################################
+################################################################################################
+	
+
+	def seedAsuDwDepartments( self ):
+		"""Seed the Departments"""
+		setDeptSeeds = copy.deepcopy( departmentsSeed )
+		for deptSeed in setDeptSeeds:
+			srcHash = hashThisList( deptSeed.values() )
+			deptObj = AsuDwPsDepartments( **deptSeed )
+			deptObj.source_hash = srcHash
+			deptObj.created_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			self.sessionOra.add( deptObj )
+
+
+################################################################################################
+################################################################################################
+	
 
 	def seedPersonJobLog( self ):
 		"""Seed the Job logs table"""
@@ -673,7 +695,8 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that setting the sub qry initialization works."""
 		from bioetl.sharedProcesses import BiodesignSubAffiliationCodes
 		# from bioetl.sharedProcesses import setSubAffiliationCodesList, getSubaffiliationCodesList
-		self.assertRaises( AssertionError, asuBdiSubAffCodes = BiodesignSubAffiliationCodes( self.session ) )
+		with self.assertRaises( AssertionError ):
+			asuBdiSubAffCodes = BiodesignSubAffiliationCodes( self.session )
 		self.seedSubAffiliation()
 		asuBdiSubAffCodes = BiodesignSubAffiliationCodes( self.session )
 		self.assertEquals( len( asuBdiSubAffCodes.subAffCodes ), 12 )
@@ -853,6 +876,7 @@ class bioetlTests( unittest.TestCase ):
 		postCount = self.session.query( JobsLog ).all()
 		self.assertNotEquals( len( preCount ),len( postCount ) )
 
+
 	def test_insertDubPersonJobsLog( self ):
 		from bioetl.processControllers.personJobLogProcessing import processData
 		self.seedPersonJobLog()
@@ -868,6 +892,7 @@ class bioetlTests( unittest.TestCase ):
 		postCount = self.session.query( JobsLog ).all()
 		self.assertEquals( len( preCount ),len( postCount ) )
 
+
 	def test_noPersonMatchForJobsLog( self ):
 		from bioetl.processControllers.personJobLogProcessing import processData
 		self.seedPersonJobLog()
@@ -876,20 +901,25 @@ class bioetlTests( unittest.TestCase ):
 			noneJobLogObj = AsuDwPsJobsLog( **noneSeed )
 			noneResult = processData( noneJobLogObj, self.session )
 
+###########################################################################################
+####  EXPAND THIS?  #######################################################################
+###########################################################################################
+
 	def test_initOfEtlProcess( self ):
 		"""Test that an etl process can be intaintiated"""
 		from bioetl.etlProcess import EtlProcess
 		etl = EtlProcess( self.appSetup )
-
 		self.assertIsInstance( etl, EtlProcess )
-		
+
+###########################################################################################
+###########################################################################################
+###########################################################################################
+
 	def test_initOfRunEtlClassNoMissingEmpids( self ):
 		"""The EtlRun class has a state, or scope of run, list or subquery. Test the subquery scope"""
 		from bioetl.etlRun import EtlRun
 		from bioetl.bioPeopleTables import BioPeopleTables
-
 		aRun = EtlRun(self.sessionOra, self.session)
-
 		self.assertIsInstance( aRun, EtlRun )
 		self.assertIsInstance( aRun.peopleRun, BioPeopleTables )
 		self.assertFalse( aRun.peopleRun.runIds )
@@ -897,17 +927,65 @@ class bioetlTests( unittest.TestCase ):
 		self.assertFalse( aRun.peopleRun.foundMissingIds )
 		self.assertIsInstance( aRun.peopleRun.foundMissingIds, list )
 
+
+	def test_initOfRunEtlSetAppState( self ):
+		"""The EtlRun class has a state, or scope of run, list or subquery. Test the subquery scope"""
+		from bioetl.etlRun import EtlRun
+		from bioetl.bioPeopleTables import BioPeopleTables
+		aRun = EtlRun(self.sessionOra, self.session)
+		with self.assertRaises( AttributeError ):
+			aRun.peopleRun.appState.subAffCodes
+		with self.assertRaises( AssertionError ):
+			aRun.peopleRun.setState()
+		self.seedSubAffiliation()
+		aRun.peopleRun.setState()
+		self.assertTrue( aRun.peopleRun.appState.subAffCodes )
+		codeList = aRun.peopleRun.appState.subAffCodes
+		self.assertIs( type(codeList), list )
+		self.assertEquals( len(codeList), 12 )
+
+
+	def test_runEtlRun( self ):
+		"""This is an area of the applicatioin with a test blind spot, lets try and get insight"""
+		from bioetl.etlRun import EtlRun
+
+		aRun = EtlRun( self.sessionOra, self.session )
+
+		self.assertTrue( aRun.runMe )
+		with self.assertRaises( ProgrammingError ):
+			aRun.runMe()
+
+
+	def test_runEtlRunWithDepartmentData( self ):
+		"""This is an area of the applicatioin with a test blind spot, not a great test MOCKING!"""
+		from bioetl.etlRun import EtlRun
+
+		aRun = EtlRun( self.sessionOra, self.session )
+
+		self.seedAsuDwDepartments()
+
+		self.assertTrue( aRun.runMe )
+		with self.assertRaises( ProgrammingError ):
+			aRun.runMe()
+
+
+	def test_runEtlRunWithList( self ):
+		"""This is an area of the applicatioin with a test blind spot, lets try and get insight"""
+		from bioetl.etlRun import EtlRun
+		aList = [1,2,3,4,5]
+		aRun = EtlRun( self.sessionOra, self.session, aList )
+		self.assertTrue( aRun.runMe )
+		with self.assertRaises( OperationalError ):
+			aRun.runMe()
+
+
 	def test_initOfRunEtlClassWithMissingEmpids( self ):
 		"""The EtlRun class Missing Emplids true"""
 		from bioetl.etlRun import EtlRun
 		from bioetl.bioPeopleTables import BioPeopleTables
-
 		aList = [1,2,3,4,5]
-
 		aRun = EtlRun(self.sessionOra, self.session)
 		aRun.peopleRun.appendMissingIds( aList )
-
-
 		self.assertIsInstance( aRun, EtlRun )
 		self.assertIsInstance( aRun.peopleRun, BioPeopleTables )
 		self.assertFalse( aRun.peopleRun.runIds )
@@ -916,31 +994,53 @@ class bioetlTests( unittest.TestCase ):
 		self.assertEquals( aList, aRun.peopleRun.foundMissingIds )
 		self.assertIsInstance( aRun.peopleRun.foundMissingIds, list )
 
+
 	def test_initOfRunEtlClassWithQueryByList( self ):
 		"""The EtlRun class Missing Emplids true"""
 		from bioetl.etlRun import EtlRun
 		from bioetl.bioPeopleTables import BioPeopleTables
-
 		aList = [1,2,3,4,5]
-
 		aRun = EtlRun(self.sessionOra, self.session, aList)
-		# aRun.peopleRun.appendMissingIds( aList )
-
-
 		self.assertIsInstance( aRun, EtlRun )
 		self.assertIsInstance( aRun.peopleRun, BioPeopleTables )
 		self.assertTrue( aRun.peopleRun.runIds )
 		self.assertEquals( aList, aRun.peopleRun.runIds )
 		self.assertIsInstance( aRun.peopleRun.runIds, list )
-
 		self.assertFalse( aRun.peopleRun.foundMissingIds )
 		self.assertIsInstance( aRun.peopleRun.foundMissingIds, list )
+
+
+###########################################################################################
+####  I'M Working here! ###################################################################
+###########################################################################################
+
+	def test_initBioPeopleTables( self ):
+		"""The test for the bioPeopleTables module processing layer of the app."""
+		from bioetl.bioPeopleTables import BioPeopleTables
+
+		aRun = BioPeopleTables( self.sessionOra, self.session )
+
+		with self.assertRaises( AttributeError ):
+			aRun.runMe()
+
+		self.seedSubAffiliation()
+		aRun.setState()
+		with self.assertRaises( ProgrammingError ):
+			aRun.runMe()
+
+		# with self.assertRaises( ProgrammingError ):
+			# aRun.runMe()
+
+
+###########################################################################################
+###########################################################################################
+###########################################################################################
+
 
 	def test_initOfModuleProcessControllerFakeModule( self ):
 		"""Test that the ModuleProcessController can be init, min default settings"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		import fakeTestingEtlModule
-
 		name = fakeTestingEtlModule.getTableName()
 		mpc = ModuleProcessController( fakeTestingEtlModule, self.session )
 		self.assertIsInstance( mpc, ModuleProcessController )
@@ -990,7 +1090,6 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the ModuleProcessController can be init, PersonProcessing"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		from bioetl.processControllers import personProcessing
-		from sqlalchemy.exc import ProgrammingError
 
 		name = personProcessing.getTableName()
 		mpc = ModuleProcessController( personProcessing, self.session, self.sessionOra )
@@ -1038,7 +1137,6 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the ModuleProcessController can be init, PersonWebProfileProcessing"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		from bioetl.processControllers import personWebProfileProcessing
-		from sqlalchemy.exc import ProgrammingError
 
 		name = personWebProfileProcessing.getTableName()
 		mpc = ModuleProcessController( personWebProfileProcessing, self.session, self.sessionOra )
@@ -1087,7 +1185,6 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the ModuleProcessController can be init, PersonSubAffiliationProcessing"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		from bioetl.processControllers import personSubAffiliationProcessing
-		from sqlalchemy.exc import ProgrammingError
 
 		name = personSubAffiliationProcessing.getTableName()
 		mpc = ModuleProcessController( personSubAffiliationProcessing, self.session, self.sessionOra )
@@ -1134,7 +1231,6 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the ModuleProcessController can be init, PersonPhoneProcessing"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		from bioetl.processControllers import personPhoneProcessing
-		from sqlalchemy.exc import ProgrammingError
 
 		name = personPhoneProcessing.getTableName()
 		mpc = ModuleProcessController( personPhoneProcessing, self.session, self.sessionOra )
@@ -1181,7 +1277,6 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the ModuleProcessController can be init, PersonProcessing"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		from bioetl.processControllers import personJobsProcessing
-		from sqlalchemy.exc import ProgrammingError
 
 		name = personJobsProcessing.getTableName()
 		mpc = ModuleProcessController( personJobsProcessing, self.session, self.sessionOra )
@@ -1228,7 +1323,6 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the ModuleProcessController can be init, PersonProcessing"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		from bioetl.processControllers import personJobLogProcessing
-		from sqlalchemy.exc import ProgrammingError
 
 		name = personJobLogProcessing.getTableName()
 		mpc = ModuleProcessController( personJobLogProcessing, self.session, self.sessionOra )
@@ -1275,7 +1369,6 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the ModuleProcessController can be init, PersonProcessing"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		from bioetl.processControllers import personExternalLinkProcessing
-		from sqlalchemy.exc import ProgrammingError
 
 		name = personExternalLinkProcessing.getTableName()
 		mpc = ModuleProcessController( personExternalLinkProcessing, self.session, self.sessionOra )
@@ -1322,7 +1415,6 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the ModuleProcessController can be init, PersonProcessing"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		from bioetl.processControllers import personAddressProcessing
-		from sqlalchemy.exc import ProgrammingError
 
 		name = personAddressProcessing.getTableName()
 		mpc = ModuleProcessController( personAddressProcessing, self.session, self.sessionOra )
@@ -1371,7 +1463,6 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the ModuleProcessController can be init, PersonProcessing"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		from bioetl.processControllers import departmentProcessing
-		from sqlalchemy.exc import ProgrammingError
 		name = departmentProcessing.getTableName()
 		mpc = ModuleProcessController( departmentProcessing, self.session, self.sessionOra )
 		self.assertIsInstance( mpc, ModuleProcessController )
@@ -1417,7 +1508,6 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the ModuleProcessController can be init, PersonProcessing"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		from bioetl.processControllers import jobProcessing
-		from sqlalchemy.exc import ProgrammingError
 		name = jobProcessing.getTableName()
 		mpc = ModuleProcessController( jobProcessing, self.session, self.sessionOra )
 		self.assertIsInstance( mpc, ModuleProcessController )
@@ -1463,7 +1553,6 @@ class bioetlTests( unittest.TestCase ):
 		"""Test that the ModuleProcessController can be init, PersonProcessing"""
 		from bioetl.moduleProcessController import ModuleProcessController
 		from bioetl.processControllers import subAffiliationProcessing
-		from sqlalchemy.exc import ProgrammingError
 		name = subAffiliationProcessing.getTableName()
 		mpc = ModuleProcessController( subAffiliationProcessing, self.session, self.sessionOra )
 		self.assertIsInstance( mpc, ModuleProcessController )

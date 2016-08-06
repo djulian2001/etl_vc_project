@@ -35,7 +35,7 @@ class BioPeopleTables( object ):
 	def appState(self):
 		return self._appState 
 	
-	def setState():
+	def setState( self ):
 		"""Not my faviorte """
 		self._appState = BiodesignSubAffiliationCodes( self.sesTarget )
 
@@ -70,9 +70,12 @@ class BioPeopleTables( object ):
 				externallinks and webprofile.
 		"""
 
+		# people
 		people = ModuleProcessController( personProcessing, self.sesTarget, self.sesSource )
 		if self.runIds:
 			people.setQryByList( self.runIds )
+		else:
+			people.setState( self.appState )
 		people.processSource()
 		if not self.runIds:
 			people.cleanTarget()
@@ -101,18 +104,25 @@ class BioPeopleTables( object ):
 			if peopleExternalLink.missingIds:
 				self.appendMissingIds( peopleExternalLink.missingIds )
 
+		# peopleAddresses
 		peopleAddresses = ModuleProcessController( personAddressProcessing, self.sesTarget, self.sesSource )
 		if self.runIds:
 			peopleAddresses.setQryByList( self.runIds )
+		else:
+			peopleAddresses.setState( self.appState )
 		peopleAddresses.processSource()
+		
 		if not self.runIds:
 			peopleAddresses.cleanTarget()
 		if peopleAddresses.missingIds:
 			self.appendMissingIds( peopleAddresses.missingIds )
 
+		# peoplePhones
 		peoplePhones = ModuleProcessController( personPhoneProcessing, self.sesTarget, self.sesSource )
 		if self.runIds:
 			peoplePhones.setQryByList( self.runIds )
+		else:
+			peoplePhones.setState( self.appState )
 		peoplePhones.processSource()
 		if not self.runIds:
 			peoplePhones.cleanTarget()
@@ -123,6 +133,8 @@ class BioPeopleTables( object ):
 		peopleJobs = ModuleProcessController( personJobsProcessing, self.sesTarget, self.sesSource )
 		if self.runIds:
 			peopleJobs.setQryByList( self.runIds )
+		else:
+			peopleJobs.setState( self.appState )
 		peopleJobs.processSource()
 		if not self.runIds:
 			peopleJobs.cleanTarget()
@@ -133,6 +145,8 @@ class BioPeopleTables( object ):
 		peopleSubAffiliations = ModuleProcessController( personSubAffiliationProcessing, self.sesTarget, self.sesSource )
 		if self.runIds:
 			peopleSubAffiliations.setQryByList( self.runIds )
+		else:
+			peopleSubAffiliations.setState( self.appState )
 		peopleSubAffiliations.processSource()
 		if not self.runIds:
 			peopleSubAffiliations.cleanTarget()
@@ -143,6 +157,8 @@ class BioPeopleTables( object ):
 		peopleJobLogs = ModuleProcessController( personJobLogProcessing, self.sesTarget, self.sesSource )
 		if self.runIds:
 			peopleJobLogs.setQryByList( self.runIds )
+		else:
+			peopleJobLogs.setState( self.appState )
 		peopleJobLogs.processSource()
 		if not self.runIds:
 			peopleJobLogs.cleanTarget()

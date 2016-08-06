@@ -42,7 +42,18 @@ def hashThisList( theList ):
 ################################################################################
 
 class BiodesignSubAffiliationCodes( object ):
-    """The class that gets and returns the biodesign subaffiliation codes."""
+    """
+        An application global variable would have been my prefered way to deal with
+            this but thats not python's way... so it's a class with hooks
+
+        This class requires a state of the target database to have been set prior to 
+            the __init__ method being called. 
+
+        Attributes:
+            sesTarget       is a sqlalchemy session obj
+            _subAffCodes    is a type list
+
+        """
     def __init__( self, sesTarget ):
         self.sesTarget = sesTarget
         self._subAffCodes = None
@@ -51,7 +62,8 @@ class BiodesignSubAffiliationCodes( object ):
     @property
     def subAffCodes( self ):
         try:
-            assert self._subAffCodes is not None, "Applications state dependency not met, set the list for subaffiliations codes"
+            assert self._subAffCodes is not None, "Applications state dependency not met, set the target database subaffiliations (codes required)"
+            assert type( self._subAffCodes ) is list, "Applications state altered, attribute type no longer a list."
             return self._subAffCodes
         except AssertionError as e:
             raise e
@@ -62,7 +74,7 @@ class BiodesignSubAffiliationCodes( object ):
             if biodesignSubAffObjs:
                 self._subAffCodes = [ bdiSubAffObj.code for bdiSubAffObj in biodesignSubAffObjs ]
             else:
-                self._subAffCodes = None
+                self.subAffCodes
 
 
 

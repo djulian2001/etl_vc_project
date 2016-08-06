@@ -27,7 +27,9 @@ class ModuleProcessController( object ):
 	@property
 	def appState( self ):
 		return self._appState
-	
+
+	def setState( self, aState ):
+		self._appState = aState
 
 	def processSource( self ):
 		"""

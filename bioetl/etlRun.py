@@ -69,7 +69,7 @@ class EtlRun( object ):
 			logger.info("Configure Application State Dependencies:  BEGINNING")
 			try:
 				"""This is where gobal variables used by the application are set for data warehouse emplid subquery"""
-				self.peopleRun.setState()				
+				self.peopleRun.setState()
 			 	
 				logger.info("Application State has been configured:  COMPLETED")
 			except Exception as e:
