@@ -67,6 +67,7 @@ def processData( srcJob, sesTarget ):
 				Jobs.emplid == srcJob.emplid ).filter(
 				Jobs.title == srcJob.title ).filter(
 				Jobs.deptid == srcJob.deptid ).filter(
+				Jobs.job_indicator == srcJob.job_indicator).filter(
 				Jobs.updated_flag == False ).all()
 
 		return ret
@@ -180,7 +181,8 @@ def softDeleteData( tgtRecord, srcRecords ):
 		return not any(
 			srcRecord.emplid == tgtRecord.emplid and
 			srcRecord.title == tgtRecord.title and
-			srcRecord.deptid == tgtRecord.deptid for srcRecord in srcRecords )
+			srcRecord.deptid == tgtRecord.deptid and 
+			srcRecord.job_indicator == tgtRecord.job_indicator for srcRecord in srcRecords )
 
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
