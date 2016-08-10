@@ -101,7 +101,7 @@ class AsuDwPsJobs( AsuDwPs ):
     last_update = Column( DateTime(), nullable=False )
     department_directory = Column( String(255))
 
-    __mapper_args__ = {"primary_key":[emplid,title,deptid]}
+    __mapper_args__ = {"primary_key":[emplid,title,deptid,job_indicator]}
     __table_args__ = { "schema": schema }
 
 
