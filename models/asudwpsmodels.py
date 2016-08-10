@@ -79,7 +79,7 @@ class AsuDwPsAddresses( AsuDwPs ):
     country_descr = Column( String(31), nullable=False )
     last_update = Column( DateTime(), nullable=False )
 
-    __mapper_args__ = {"primary_key":[emplid,address_type]}
+    __mapper_args__ = {"primary_key":[emplid,address_type,address1,city,postal]}
     __table_args__ = { "schema": schema }
 
 class AsuDwPsJobs( AsuDwPs ):
@@ -167,7 +167,7 @@ class AsuDwPsJobCodes( AsuDwPs ):
     job_family = Column( String(7), nullable = False)
     flsa_status = Column( String(1), nullable = False)
 
-    __mapper_args__ = { "primary_key" : [jobcode,effdt] }
+    __mapper_args__ = { "primary_key" : [jobcode,descr,effdt] }
     __table_args__ = { "schema" : schema }
 
 

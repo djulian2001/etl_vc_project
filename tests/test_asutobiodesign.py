@@ -138,11 +138,15 @@ class bioetlTests( unittest.TestCase ):
 	
 	def seedPhones( self ):
 		"""Seed the phone data and dependent persons"""
+		from bioetl.processControllers.personPhoneProcessing import cleanPhoneNumber
 		self.seedPeople()
 		setPhonesSeeds = copy.deepcopy( phonesSeed )
 		for phoneSeed in setPhonesSeeds:
 			srcHash = hashThisList( phoneSeed.values() )
-			phoneSeedObj = Phones( **phoneSeed )
+			phoneSeedObj = Phones()
+			phoneSeedObj.emplid = phoneSeed['emplid']
+			phoneSeedObj.phone_type = phoneSeed['phone_type']
+			phoneSeedObj.phone = cleanPhoneNumber( phoneSeed['phone'] )
 			getPersonId = self.session.query( People.id ).filter( People.emplid == phoneSeedObj.emplid ).one()
 			phoneSeedObj.person_id = getPersonId.id
 			phoneSeedObj.source_hash = srcHash
@@ -461,20 +465,26 @@ class bioetlTests( unittest.TestCase ):
 			The phone updates represent a core logic of the application.  This tests that the update of
 			one phone number will be caught and the change made.
 		"""
-		from bioetl.processControllers.personPhoneProcessing import processData
+		from bioetl.processControllers.personPhoneProcessing import processData, cleanPhoneNumber
 		self.seedPhones()
 		testPhones = copy.deepcopy( phonesSeed )
 		oldPhone = testPhones[0]['phone']
-		newPhone = '3334445555'
+		newPhone = '(333)444-5555+'
 		testPhones[0]['phone'] = newPhone
 		testObj = AsuDwPsPhones( **testPhones[0] )
 		testResult = processData( testObj, self.session )
-		getMeBack = self.session.query( Phones ).filter( Phones.emplid==testObj.emplid ).filter( Phones.phone==testObj.phone ).filter( Phones.phone_type==testObj.phone_type ).all()
+		self.assertIsNotNone( testResult )
+		self.session.add( testResult )
+		getMeBack = self.session.query( Phones ).filter( 
+							Phones.emplid==testObj.emplid ).filter(
+							Phones.phone== cleanPhoneNumber( testObj.phone ) ).filter(
+							Phones.phone_type==testObj.phone_type ).all()
 		self.assertIs( getMeBack[0], testResult )
 		self.assertIsInstance( testResult, Phones )
 		self.assertNotEquals( testResult.phone, oldPhone )
-		self.assertEquals( testResult.phone, newPhone )
-		self.assertEquals( testResult.phone, testPhones[0]['phone'] )
+		self.assertEquals( testResult.phone, cleanPhoneNumber( newPhone ) )
+		self.assertNotEquals( testResult.phone, testPhones[0]['phone'] )
+		self.assertEquals( testResult.phone, cleanPhoneNumber( testPhones[0]['phone'] ) )
 		self.assertEquals( testResult.phone_type, testPhones[0]['phone_type'] )
 
 	def test_updateManyPersonPhone( self ):
@@ -482,27 +492,35 @@ class bioetlTests( unittest.TestCase ):
 			This test looks into the applications handling of many records associated to a person record
 			where differing between unique records would be difficult
 		"""
-		from bioetl.processControllers.personPhoneProcessing import processData
+		from bioetl.processControllers.personPhoneProcessing import processData, cleanPhoneNumber
 		self.seedPhones()
 		testPhones = copy.deepcopy( phonesSeed )
 		updateMe = testPhones[4]
 		noChanges = testPhones[3]
 		oldPhone = updateMe['phone']
-		newPhone = "3334445555"
+		newPhone = "1+333-444-5-555"
 		updateMe['phone'] = newPhone
 
 		self.assertEquals( updateMe['phone_type'], noChanges['phone_type'] )
 
 		testUpdateObj = AsuDwPsPhones( **updateMe )
 		testUpdateResults = processData( testUpdateObj, self.session )
+		self.assertIsNotNone( testUpdateResults )
+		self.session.add( testUpdateResults )
 
-		getMeBack = self.session.query( Phones ).filter( Phones.emplid==testUpdateObj.emplid ).filter( Phones.phone==testUpdateObj.phone ).filter( Phones.phone_type==testUpdateObj.phone_type ).all()
+		getMeBack = self.session.query( Phones ).filter(
+							Phones.emplid==testUpdateObj.emplid ).filter(
+							Phones.phone== cleanPhoneNumber( testUpdateObj.phone ) ).filter(
+							Phones.phone_type==testUpdateObj.phone_type ).all()
 		self.assertIs( getMeBack[0], testUpdateResults )
-		self.recordEqualsTest( getMeBack[0], updateMe, Phones )
+		self.assertEquals( getMeBack[0].emplid, updateMe['emplid'] )
+		self.assertEquals( getMeBack[0].phone_type, updateMe['phone_type'] )
+		self.assertEquals( getMeBack[0].phone, cleanPhoneNumber( updateMe['phone'] ) )
 		self.assertIsInstance( testUpdateResults, Phones )
 		self.assertNotEquals( testUpdateResults.phone, oldPhone )
 		self.assertTrue( testUpdateResults.updated_flag )
-		self.assertEquals( testUpdateResults.phone, newPhone )
+		self.assertNotEquals( testUpdateResults.phone, newPhone )
+		self.assertEquals( testUpdateResults.phone, cleanPhoneNumber( newPhone ) )
 		self.assertEquals( testUpdateResults.emplid, updateMe['emplid'] )
 		self.assertEquals( testUpdateResults.phone, updateMe['phone'] )
 		self.assertEquals( testUpdateResults.phone_type, updateMe['phone_type'] )

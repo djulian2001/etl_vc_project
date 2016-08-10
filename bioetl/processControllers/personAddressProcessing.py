@@ -63,6 +63,9 @@ def processData( srcPersonAddress, sesTarget ):
 			Addresses ).filter(
 				Addresses.emplid == srcPersonAddress.emplid ).filter(
 				Addresses.address_type == srcPersonAddress.address_type ).filter(
+				Addresses.address_type == srcPersonAddress.address1 ).filter(
+				Addresses.address_type == srcPersonAddress.city ).filter(
+				Addresses.address_type == srcPersonAddress.postal ).filter(
 				Addresses.updated_flag == False ).all()
 
 		return ret
