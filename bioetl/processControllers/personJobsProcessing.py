@@ -18,7 +18,7 @@ def getSourceData( sesSource, appState=None, qryList=None ):
 		srcEmplidsSubQry = srcFilters.getAllBiodesignEmplidList( True )
 
 		return sesSource.query(
-			AsuDwPsJobs ).join(
+			AsuDwPsJobs ).filter( AsuDwPsJobs.job_indicator=='P' ).join(
 				srcEmplidsSubQry, AsuDwPsJobs.emplid==srcEmplidsSubQry.c.emplid ).order_by(
 					AsuDwPsJobs.emplid ).all()
 	else:

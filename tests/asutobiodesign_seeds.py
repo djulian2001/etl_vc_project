@@ -28,7 +28,31 @@ departmentsSeed = [
 personJobSeed = [
 	{'emplid':1000091891,'empl_rcd':0,'title':'Database Analyst (IT)','department':'Biodesign ITS','mailcode':5001,'empl_class':'University Staff','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'A','fte':1.000000,'department_directory':'Biodesign ITS'},
 	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0817','empl_status':'A','fte':1.000000,'department_directory':'Biodesign Smb'},
-	{'emplid':1202751454,'empl_rcd':0,'title':'Web Application Developer (IT)','department':'Biodesign ITS','mailcode':5001,'empl_class':'University Staff','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'A','fte':1.000000,'department_directory':'Biodesign ITS'},]
+	{'emplid':1202751454,'empl_rcd':0,'title':'Web Application Developer (IT)','department':'Biodesign ITS','mailcode':5001,'empl_class':'University Staff','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'A','fte':1.000000,'department_directory':'Biodesign ITS'},
+	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'N','location':'TEMPE','hr_status':'A','deptid':'E0817','empl_status':'A','fte':1.000000,'department_directory':'Biodesign Smb'},
+	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'N','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'W','fte':1.000000,'department_directory':'Biodesign Smb'},]
+
+dwPersonJobSeed = [
+	{'emplid':1000091891,'empl_rcd':0,'title':'Database Analyst (IT)','department':'Biodesign ITS','mailcode':5001,'empl_class':'University Staff','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'A','fte':1.000000,'department_directory':'Biodesign ITS'},
+	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0817','empl_status':'A','fte':1.000000,'department_directory':'Biodesign Smb'},
+	{'emplid':1202751454,'empl_rcd':0,'title':'Web Application Developer (IT)','department':'Biodesign ITS','mailcode':5001,'empl_class':'University Staff','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'A','fte':1.000000,'department_directory':'Biodesign ITS'},
+	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'N','location':'TEMPE','hr_status':'A','deptid':'E0817','empl_status':'A','fte':1.000000,'department_directory':'Biodesign Smb'},
+	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'N','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'W','fte':1.000000,'department_directory':'Biodesign Smb'},]
+
+dwPersonJobSeedWithChanges = [
+	{'emplid':1000091891,'empl_rcd':0,'title':'Database Analyst (IT)','department':'Biodesign ITS','mailcode':5001,'empl_class':'University Staff','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'A','fte':1.000000,'department_directory':'Biodesign ITS'},
+	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0817','empl_status':'A','fte':1.000000,'department_directory':'Biodesign Smb'},
+	{'emplid':1202751454,'empl_rcd':0,'title':'Web Application Developer (IT)','department':'Biodesign ITS','mailcode':5001,'empl_class':'University Staff','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'A','fte':1.000000,'department_directory':'Biodesign ITS'},
+	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'N','location':'TEMPE','hr_status':'A','deptid':'E0817','empl_status':'A','fte':1.000000,'department_directory':'Biodesign Smb'},
+	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist(IT)','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0817','empl_status':'A','fte':1.000000,'department_directory':'Biodesign Smb'},
+	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'N','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'W','fte':1.000000,'department_directory':'Biodesign Smb'},]
+
+dwPersonJobSeedWithDeletes = [
+	{'emplid':1202751454,'empl_rcd':0,'title':'Web Application Developer (IT)','department':'Biodesign ITS','mailcode':5001,'empl_class':'University Staff','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'A','fte':1.000000,'department_directory':'Biodesign ITS'},
+	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist(IT)','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'P','location':'TEMPE','hr_status':'A','deptid':'E0817','empl_status':'A','fte':1.000000,'department_directory':'Biodesign Smb'},
+	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'N','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'W','fte':1.000000,'department_directory':'Biodesign Smb'},]
+
+
 
 personSubAffiliationSeed = [
 	{'emplid':1000091891,'deptid':'E0802001','subaffiliation_code':'ALUM','campus':None ,'title':None,'short_description':'Alumni','description':'Alumni','directory_publish':'N','department':'Arizona State University','department_directory':'Arizona State University'},

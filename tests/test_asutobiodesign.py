@@ -89,10 +89,6 @@ class bioetlTests( unittest.TestCase ):
 			deptObj.created_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			self.session.add( deptObj )
 
-################################################################################################
-################################################################################################
-################################################################################################
-	
 
 	def seedAsuDwDepartments( self ):
 		"""Seed the Departments"""
@@ -104,10 +100,6 @@ class bioetlTests( unittest.TestCase ):
 			deptObj.created_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			self.sessionOra.add( deptObj )
 
-
-################################################################################################
-################################################################################################
-	
 
 	def seedPersonJobLog( self ):
 		"""Seed the Job logs table"""
@@ -588,7 +580,223 @@ class bioetlTests( unittest.TestCase ):
 		self.session.add( appAction )
 		returnRecords = self.session.query( Jobs ).all()
 		self.assertNotEquals( len( returnRecords ), 3 )
-		self.assertEquals( len( returnRecords ), 4 )
+		self.assertEquals( len( returnRecords ), 6 )
+
+
+	def test_personJobsDuplicateRecords( self ):
+		"""The following will attempt to isolate the issue of the job_indicator value """
+		from bioetl.processControllers.personJobsProcessing import processData
+		self.seedPersonJobs()
+		dwSrcRecords = copy.deepcopy( dwPersonJobSeed )
+		dwSrcList = []
+		for dwSrcRecord in dwSrcRecords:
+			jobObj = AsuDwPsJobs( **dwSrcRecord )
+			dwSrcList.append( jobObj )
+
+		tgtPreProcess = self.session.query( Jobs ).all()
+		self.assertEquals(len ( tgtPreProcess ), 5 )
+		self.assertEquals(len( dwSrcList ), 5)
+
+		for dwSrcObj in dwSrcList:
+			tgtAction = processData( dwSrcObj, self.session )
+			self.session.add( tgtAction )
+		
+		tgtPostProcess = self.session.query( Jobs ).all()
+		self.assertEquals(len ( tgtPostProcess ), 5 )
+
+		for tgtPostP in tgtPostProcess:
+			for tgtPreP in tgtPreProcess:
+				if tgtPreP.emplid==tgtPostP.emplid and tgtPreP.deptid==tgtPostP.deptid and tgtPreP.title==tgtPostP.title and tgtPreP.job_indicator==tgtPostP.job_indicator:
+					self.assertEquals( tgtPreP.emplid, tgtPostP.emplid )
+					self.assertEquals( tgtPreP.empl_rcd, tgtPostP.empl_rcd )
+					self.assertEquals( tgtPreP.title, tgtPostP.title )
+					self.assertEquals( tgtPreP.department, tgtPostP.department )
+					self.assertEquals( tgtPreP.mailcode, tgtPostP.mailcode )
+					self.assertEquals( tgtPreP.empl_class, tgtPostP.empl_class )
+					self.assertEquals( tgtPreP.job_indicator, tgtPostP.job_indicator )
+					self.assertEquals( tgtPreP.location, tgtPostP.location )
+					self.assertEquals( tgtPreP.hr_status, tgtPostP.hr_status )
+					self.assertEquals( tgtPreP.deptid, tgtPostP.deptid )
+					self.assertEquals( tgtPreP.empl_status, tgtPostP.empl_status )
+					self.assertEquals( tgtPreP.fte, tgtPostP.fte )
+					self.assertEquals( tgtPreP.department_directory, tgtPostP.department_directory )
+
+
+	def test_personJobsDuplicateRecordsWithChanges( self ):
+		"""The following will attempt to isolate the issue of the job_indicator value """
+		from bioetl.processControllers.personJobsProcessing import processData
+		self.seedPersonJobs()
+		dwSrcRecords = copy.deepcopy( dwPersonJobSeedWithChanges )
+		dwSrcList = []
+		for dwSrcRecord in dwSrcRecords:
+			jobObj = AsuDwPsJobs( **dwSrcRecord )
+			dwSrcList.append( jobObj )
+
+		tgtPreProcess = self.session.query( Jobs ).all()
+		self.assertEquals(len ( tgtPreProcess ), 5 )
+		self.assertEquals(len( dwSrcList ), 6)
+
+		for dwSrcObj in dwSrcList:
+			tgtAction = processData( dwSrcObj, self.session )
+			self.session.add( tgtAction )
+		
+		tgtPostProcess = self.session.query( Jobs ).all()
+		self.assertEquals(len ( tgtPostProcess ), 6 )
+
+		for tgtPostP in tgtPostProcess:
+			for tgtPreP in tgtPreProcess:
+				if tgtPreP.emplid==tgtPostP.emplid and tgtPreP.deptid==tgtPostP.deptid and tgtPreP.title==tgtPostP.title and tgtPreP.job_indicator==tgtPostP.job_indicator:
+					self.assertEquals( tgtPreP.emplid, tgtPostP.emplid )
+					self.assertEquals( tgtPreP.empl_rcd, tgtPostP.empl_rcd )
+					self.assertEquals( tgtPreP.title, tgtPostP.title )
+					self.assertEquals( tgtPreP.department, tgtPostP.department )
+					self.assertEquals( tgtPreP.mailcode, tgtPostP.mailcode )
+					self.assertEquals( tgtPreP.empl_class, tgtPostP.empl_class )
+					self.assertEquals( tgtPreP.job_indicator, tgtPostP.job_indicator )
+					self.assertEquals( tgtPreP.location, tgtPostP.location )
+					self.assertEquals( tgtPreP.hr_status, tgtPostP.hr_status )
+					self.assertEquals( tgtPreP.deptid, tgtPostP.deptid )
+					self.assertEquals( tgtPreP.empl_status, tgtPostP.empl_status )
+					self.assertEquals( tgtPreP.fte, tgtPostP.fte )
+					self.assertEquals( tgtPreP.department_directory, tgtPostP.department_directory )
+
+############################################################################################################
+############################################################################################################
+############################################################################################################
+
+	def test_personJobsDuplicateRecordsWithNoDeletes( self ):
+		"""The following will attempt to isolate the issue of the job_indicator value """
+		from bioetl.processControllers.personJobsProcessing import processData, softDeleteData
+		self.seedPersonJobs()
+		dwSrcRecords = copy.deepcopy( dwPersonJobSeed )
+		dwSrcList = []
+		for dwSrcRecord in dwSrcRecords:
+			jobObj = AsuDwPsJobs( **dwSrcRecord )
+			dwSrcList.append( jobObj )
+
+		tgtPreProcess = self.session.query( Jobs ).all()
+		self.assertEquals(len ( tgtPreProcess ), 5 )
+		self.assertEquals(len( dwSrcList ), 5)
+
+		for dwSrcObj in dwSrcList:
+			tgtAction = processData( dwSrcObj, self.session )
+			self.session.add( tgtAction )
+		
+		tgtPostProcess = self.session.query( Jobs ).all()
+		self.assertEquals(len ( tgtPostProcess ), 5 )
+		for dataRemoval in tgtPostProcess:
+			processedDataRemoval = softDeleteData( dataRemoval, dwSrcList )
+			self.assertIsNone( processedDataRemoval )
+			if processedDataRemoval:
+				self.assertIsInstance( processedDataRemoval, Jobs )
+				self.session.add( processedDataRemoval )
+		
+		tgtPostDeleted = self.session.query( Jobs ).all()
+
+		self.assertEquals( len( tgtPostDeleted ), 5)
+
+
+	def test_personJobsDuplicateRecordsWithChangesWithNoDeletes( self ):
+		"""The following will attempt to isolate the issue of the job_indicator value """
+		from bioetl.processControllers.personJobsProcessing import processData, softDeleteData
+		self.seedPersonJobs()
+		dwSrcRecords = copy.deepcopy( dwPersonJobSeedWithChanges )
+		dwSrcList = []
+		for dwSrcRecord in dwSrcRecords:
+			jobObj = AsuDwPsJobs( **dwSrcRecord )
+			dwSrcList.append( jobObj )
+
+		tgtPreProcess = self.session.query( Jobs ).all()
+		self.assertEquals(len ( tgtPreProcess ), 5 )
+		self.assertEquals(len( dwSrcList ), 6)
+
+		for dwSrcObj in dwSrcList:
+			tgtAction = processData( dwSrcObj, self.session )
+			self.session.add( tgtAction )
+		
+		tgtPostProcess = self.session.query( Jobs ).all()
+		self.assertEquals(len ( tgtPostProcess ), 6 )
+		for dataRemoval in tgtPostProcess:
+			processedDataRemoval = softDeleteData( dataRemoval, dwSrcList )
+			if processedDataRemoval:
+				self.session.add( processedDataRemoval )
+		
+		tgtPostDeleted = self.session.query( Jobs ).all()
+
+		self.assertEquals( len( tgtPostDeleted ), 6)
+
+
+	def test_personJobsDuplicateRecordsWithChangesWithDeletes( self ):
+		"""The following will attempt to isolate the issue of the job_indicator value """
+		from bioetl.processControllers.personJobsProcessing import processData, softDeleteData
+		self.seedPersonJobs()
+		dwSrcRecords = copy.deepcopy( dwPersonJobSeedWithDeletes )
+		dwSrcList = []
+		for dwSrcRecord in dwSrcRecords:
+			jobObj = AsuDwPsJobs( **dwSrcRecord )
+			dwSrcList.append( jobObj )
+
+		tgtPreProcess = self.session.query( Jobs ).all()
+		self.assertEquals(len ( tgtPreProcess ), 5 )
+		self.assertEquals(len( dwSrcList ), 3)
+
+		# aRec = [this for this in tgtPreProcess if this.emplid==1000130992  and this.deptid=='E0817'  and this.title=='Associate Research Scientist'  and this.job_indicator=='N']
+
+		# preDeleteObj = copy.deepcopy(aRec[0])
+
+		# print( preDeleteObj )
+		
+		# print( preDeleteObj.deleted_at )
+		# print( preDeleteObj.emplid )
+		# print( preDeleteObj.empl_rcd )
+		# print( preDeleteObj.title )
+		# print( preDeleteObj.department )
+		# print( preDeleteObj.mailcode )
+		# print( preDeleteObj.empl_class )
+		# print( preDeleteObj.job_indicator )
+		# print( preDeleteObj.location )
+		# print( preDeleteObj.hr_status )
+		# print( preDeleteObj.deptid )
+		# print( preDeleteObj.empl_status )
+		# print( preDeleteObj.fte )
+		# print( preDeleteObj.department_directory )
+
+		for dwSrcObj in dwSrcList:
+			tgtAction = processData( dwSrcObj, self.session )
+			self.session.add( tgtAction )
+		
+		tgtPostProcess = self.session.query( Jobs ).all()
+		self.assertEquals(len ( tgtPostProcess ), 6 )
+		# print('\n')
+		for dataRemoval in tgtPostProcess:
+			processedDataRemoval = softDeleteData( dataRemoval, dwSrcList )
+			if processedDataRemoval:
+				# print(processedDataRemoval)
+				# print( processedDataRemoval.deleted_at )
+				# print( processedDataRemoval.emplid )
+				# print( processedDataRemoval.empl_rcd )
+				# print( processedDataRemoval.title )
+				# print( processedDataRemoval.department )
+				# print( processedDataRemoval.mailcode )
+				# print( processedDataRemoval.empl_class )
+				# print( processedDataRemoval.job_indicator )
+				# print( processedDataRemoval.location )
+				# print( processedDataRemoval.hr_status )
+				# print( processedDataRemoval.deptid )
+				# print( processedDataRemoval.empl_status )
+				# print( processedDataRemoval.fte )
+				# print( processedDataRemoval.department_directory )
+				self.session.add( processedDataRemoval )
+		# print('\n')
+		tgtPostDeleted = self.session.query( Jobs ).filter( Jobs.deleted_at ).all()
+
+		self.assertEquals( len( tgtPostDeleted ), 3)
+
+
+
+############################################################################################################
+############################################################################################################
+############################################################################################################
 
 	def test_updatePersonJobsTitle( self ):
 		"""When a part of a records uniqueness is changed, the record will look as if it's new"""
@@ -607,7 +815,8 @@ class bioetlTests( unittest.TestCase ):
 		self.session.add( appAction )
 		returnRecords = self.session.query( Jobs ).all()
 		self.assertNotEquals( len( returnRecords ), 3 )
-		self.assertEquals( len( returnRecords ), 4 )
+		self.assertEquals( len( returnRecords ), 6 )
+
 
 	def test_softDeleteDataJobsAfterUpdate( self ):
 		"""As reflected in other tests of the personJobs processing, updates to the compound keys will
@@ -615,15 +824,15 @@ class bioetlTests( unittest.TestCase ):
 		from bioetl.processControllers.personJobsProcessing import processData, softDeleteData
 		self.seedPersonJobs()
 		testJobs = copy.deepcopy( personJobSeed )
-		newDeptid = 'hehe-haha expert'
-		testJobs[0]['title'] = newDeptid
+		newTitle = 'hehe-haha expert'
+		testJobs[0]['title'] = newTitle
 		newUpdateObj = AsuDwPsJobs( **testJobs[0] )
 		appAction = processData( newUpdateObj, self.session )
 		self.assertIsInstance( appAction, Jobs )
 		self.session.add( appAction )
 		returnRecords = self.session.query( Jobs ).filter( Jobs.deleted_at==None ).all()
 		self.assertNotEquals( len( returnRecords ), 3 )
-		self.assertEquals( len( returnRecords ), 4 )
+		self.assertEquals( len( returnRecords ), 6 )
 		fakeSourceList = [ AsuDwPsJobs( **testJob ) for testJob in testJobs ]
 
 		for tgtRecord in returnRecords:
@@ -633,7 +842,7 @@ class bioetlTests( unittest.TestCase ):
 
 		myReturnRecords = self.session.query( Jobs ).filter( Jobs.deleted_at==None ).all()
 		self.assertNotEquals( len( myReturnRecords ), 4 )
-		self.assertEquals( len( myReturnRecords ), 3 )
+		self.assertEquals( len( myReturnRecords ), 5 )
 		
 
 	def test_deployedSubAffiliationRecordSelect( self ):
