@@ -522,18 +522,28 @@ class bioetlTests( unittest.TestCase ):
 		self.assertNotEquals( testUpdateResults.phone, newPhone )
 		self.assertEquals( testUpdateResults.phone, cleanPhoneNumber( newPhone ) )
 		self.assertEquals( testUpdateResults.emplid, updateMe['emplid'] )
-		self.assertEquals( testUpdateResults.phone, updateMe['phone'] )
+		self.assertNotEquals( testUpdateResults.phone, updateMe['phone'] )
+		self.assertEquals( testUpdateResults.phone, cleanPhoneNumber( updateMe['phone'] ) )
 		self.assertEquals( testUpdateResults.phone_type, updateMe['phone_type'] )
-		
-		testThis = self.session.query( Phones ).filter( Phones.emplid==noChanges['emplid'] ).filter( Phones.updated_flag==False ).filter( Phones.phone_type==noChanges['phone_type'] ).all()
+		testThis = self.session.query( Phones ).filter( 
+							Phones.emplid==noChanges['emplid'] ).filter( 
+							Phones.updated_flag==False ).filter( 
+							Phones.phone==noChanges['phone'] ).filter( 
+							Phones.phone_type==noChanges['phone_type'] ).all()
 		self.assertEquals( len(testThis),1 )
 		self.assertFalse( testThis[0].updated_flag )
-		self.assertNotEquals( testThis[0].phone, noChanges['phone'] )
+		self.assertEquals( testThis[0].phone, noChanges['phone'] )
 
 		testNoChangeObj = AsuDwPsPhones( **noChanges )
 		testNoChangeResults = processData( testNoChangeObj, self.session )
-
-		getUpdateBack = self.session.query( Phones ).filter( Phones.emplid==testNoChangeResults.emplid ).filter( Phones.phone==testNoChangeResults.phone ).filter( Phones.phone_type==testNoChangeResults.phone_type ).all()
+		self.assertIsNotNone( testNoChangeResults )
+		self.session.add( testNoChangeResults )
+		getUpdateBack = self.session.query( Phones ).filter(
+							Phones.emplid==testNoChangeResults.emplid ).filter(
+							Phones.phone==testNoChangeResults.phone ).filter( 
+							Phones.phone_type==testNoChangeResults.phone_type ).filter(
+							Phones.updated_flag==True).all()
+		self.assertEquals( len(getUpdateBack), 1 )
 		self.assertIs( getUpdateBack[0], testNoChangeResults )
 		self.assertIsInstance( testNoChangeResults, Phones )
 		self.assertTrue( testNoChangeResults.updated_flag )
