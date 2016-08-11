@@ -70,5 +70,5 @@ class EtlProcess( object ):
 			raise e
 
 		self.manager.goodRun( ", ".join( runSubQ_mode.getMissingEmplid() ) )
-
+		self.manager.removeOldRuns()
 

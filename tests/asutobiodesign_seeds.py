@@ -53,6 +53,13 @@ dwPersonJobSeedWithDeletes = [
 	{'emplid':1000130992,'empl_rcd':1,'title':'Associate Research Scientist','department':'Biodesign Smb','mailcode':5601,'empl_class':'Academic Professional','job_indicator':'N','location':'TEMPE','hr_status':'A','deptid':'E0802004','empl_status':'W','fte':1.000000,'department_directory':'Biodesign Smb'},]
 
 
+processManagerSeeds = [
+	{"source_hash":"7172407c479015bb50ef3dd7a9b7240358e239609fdc90f8c7536de3641d7217","created_at":"2015-08-10 15:30:47","updated_flag":0,"run_status":"ETL process starting","started_at":"2016-08-10 15:30:47","ended_at":"2016-08-10 15:30:49","ending_status":0,"emplids_not_processed":None},
+	{"source_hash":"13da3e6a9f4d0c091b4db26f586fcef5cf3d49317e62bf7642e7b8a46a3af0df","created_at":"2014-08-10 00:16:13","updated_flag":0,"run_status":"ETL process ended cleanly","started_at":"2016-08-10 00:16:13","ended_at":"2016-08-10 00:20:54","ending_status":1,"emplids_not_processed":"1211305092"},]
+	
+
+
+
 
 personSubAffiliationSeed = [
 	{'emplid':1000091891,'deptid':'E0802001','subaffiliation_code':'ALUM','campus':None ,'title':None,'short_description':'Alumni','description':'Alumni','directory_publish':'N','department':'Arizona State University','department_directory':'Arizona State University'},

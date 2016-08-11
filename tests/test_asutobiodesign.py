@@ -5,10 +5,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from datetime import datetime, date
+from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import ProgrammingError, OperationalError
 
 
-from models.biopublicmodels import BioPublic, People, PersonWebProfile, Phones, Departments, Jobs, JobCodes, JobsLog, SubAffiliations, PersonSubAffiliations
+from models.biopublicmodels import BioPublic, People, PersonWebProfile, Phones, Departments, Jobs, JobCodes, JobsLog, SubAffiliations, PersonSubAffiliations, EtlProcessManager
 from models.asudwpsmodels import AsuDwPsPerson, AsuDwPsPhones, AsuDwPsJobs, AsuDwPsJobsLog, AsuDwPsSubAffiliations, BiodesignSubAffiliations, AsuDwPsDepartments
 from bioetl.sharedProcesses import hashThisList, BiodesignSubAffiliationCodes
 from asutobiodesign_seeds import *
@@ -69,6 +70,15 @@ class bioetlTests( unittest.TestCase ):
 			personSeedObj.created_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			self.session.add( personSeedObj )
 
+
+	def seedProcessManager( self ):
+		"""Seed the processManager"""
+		setMgnSeeds = copy.deepcopy( processManagerSeeds )
+		for mgnSeed in setMgnSeeds:
+			mgnObj = EtlProcessManager( **mgnSeed )
+			self.session.add( mgnObj )
+
+
 	def seedJobs( self ):
 		"""Seed the Jobs"""
 		setJobsSeeds = copy.deepcopy(jobsSeed)
@@ -78,6 +88,7 @@ class bioetlTests( unittest.TestCase ):
 			jobObj.source_hash = srcHash
 			jobObj.created_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 			self.session.add( jobObj )
+
 
 	def seedDepartments( self ):
 		"""Seed the Departments"""
@@ -1247,10 +1258,6 @@ class bioetlTests( unittest.TestCase ):
 		self.assertIsInstance( aRun.peopleRun.foundMissingIds, list )
 
 
-###########################################################################################
-####  I'M Working here! ###################################################################
-###########################################################################################
-
 	def test_initBioPeopleTables( self ):
 		"""The test for the bioPeopleTables module processing layer of the app."""
 		from bioetl.bioPeopleTables import BioPeopleTables
@@ -1267,11 +1274,6 @@ class bioetlTests( unittest.TestCase ):
 
 		# with self.assertRaises( ProgrammingError ):
 			# aRun.runMe()
-
-
-###########################################################################################
-###########################################################################################
-###########################################################################################
 
 
 	def test_initOfModuleProcessControllerFakeModule( self ):
@@ -1891,9 +1893,69 @@ class bioetlTests( unittest.TestCase ):
 
 		self.assertEquals( aList, mpc.missingIds )
 
-	def seedProcessManager( self ):
-		from models.biopublicmodels import EtlProcessManager
-		pass
+
+###########################################################################################
+####  I'M Working here! ###################################################################
+###########################################################################################
+
+	def test_sqlAlchemyRemoveEtlManagerRecords( self ):
+		"""Testing the removal ove older records"""
+		# seedOld seeds that should be removed set 2
+		self.seedProcessManager()
+		# seedNew seeds that should not be overwritten.
+		for i in range(5):
+			hashed = hashThisList( [i,"An ETL process run.", datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )] )
+			addObj = EtlProcessManager()
+			addObj.source_hash			= hashed
+			addObj.created_at			= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			addObj.started_at			= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			addObj.run_status 			= "ETL process ended cleanly"
+			addObj.updated_at 			= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			addObj.ended_at 			= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			addObj.ending_status 		= True
+			addObj.emplids_not_processed= None
+			self.session.add( addObj )
+		testResults = self.session.query( EtlProcessManager ).all()
+		self.assertEquals( len(testResults), 7 )
+		oneMonthAgo = datetime.utcnow() - relativedelta(months=1)
+		olderRecords = self.session.query( EtlProcessManager ).filter( EtlProcessManager.created_at < oneMonthAgo ).all()
+		self.assertEquals( len( olderRecords ), 2 )
+		for oldRec in olderRecords:
+			self.session.delete( oldRec )
+		postDeletes = self.session.query( EtlProcessManager ).all()
+		self.assertEquals( len( postDeletes ), 5 )
+
+
+	def test_processManagerRemoveEtlManagerRecords( self ):
+		"""Testing the removal ove older records"""
+		# seedOld seeds that should be removed set 2
+		from bioetl.processManager import ProcessManager
+		self.seedProcessManager()
+		# seedNew seeds that should not be overwritten.
+		for i in range(5):
+			hashed = hashThisList( [i,"An ETL process run.", datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )] )
+			addObj = EtlProcessManager()
+			addObj.source_hash			= hashed
+			addObj.created_at			= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			addObj.started_at			= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			addObj.run_status 			= "ETL process ended cleanly"
+			addObj.updated_at 			= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			addObj.ended_at 			= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+			addObj.ending_status 		= True
+			addObj.emplids_not_processed= None
+			self.session.add( addObj )
+		aRun = ProcessManager( self.session )
+		preDeletes = self.session.query( EtlProcessManager ).all()
+		self.assertEquals( len( preDeletes ), 8 )
+		aRun.removeOldRuns() # should remove 2 records
+		postDeletes = self.session.query( EtlProcessManager ).all()
+		self.assertEquals( len( postDeletes ), 6 )
+
+
+###########################################################################################
+###########################################################################################
+###########################################################################################
+
 
 
 	def test_processManagerMethods( self ):

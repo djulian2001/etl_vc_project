@@ -1,13 +1,11 @@
-# This is an implicit value, here for clarity
---index-url https://pypi.python.org/simple/
-
-# git repo:  will do this on cmd line
-# -e git+https://git.biodesign.asu.edu/primusdj/asuToBiodesign.git@dc530355e3e3036243dc6116598580be4a1b3fcc#egg=asuToBiodesign
-
-alembic==0.8.6
+alembic==0.8.7
+-e git+https://git.biodesign.asu.edu/primusdj/asuToBiodesign.git@a1b22fd4ae7e8de4ad4950735abfbeb0549873d9#egg=asuToBiodesign
 cx-Oracle==5.2.1
 Mako==1.0.4
 MarkupSafe==0.23
 MySQL-python==1.2.5
-python-editor==1.0
-SQLAlchemy==1.0.12
+PyMySQL==0.7.2
+python-dateutil==2.5.3
+python-editor==1.0.1
+six==1.10.0
+SQLAlchemy==1.0.14

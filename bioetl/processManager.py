@@ -1,4 +1,5 @@
-import datetime
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 from models.biopublicmodels import EtlProcessManager
 from bioetl.sharedProcesses import hashThisList
@@ -11,12 +12,12 @@ class ProcessManager( object ):
 	"""
 	def __init__( self, sesManager ):
 		self.sesManager = sesManager
-		hashed = hashThisList( [ "An ETL process run.", datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) ] )
+		hashed = hashThisList( [ "An ETL process run.", datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ) ] )
 
 		self.runManager = EtlProcessManager(
 					source_hash= hashed,
-					created_at= datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ),
-					started_at= datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ), )
+					created_at= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ),
+					started_at= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' ), )
 
 		self.commitThis()
 
@@ -32,15 +33,15 @@ class ProcessManager( object ):
 	def updateRunStatus( self, runStatus ):
 		""" This is the only value that will ever really be updated during process run."""
 		self.runManager.run_status = runStatus
-		self.runManager.updated_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		self.runManager.updated_at = datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		self.commitThis()
 
 	def badRun( self, missingIds=None ):
 		"""The run needs to report it was terminated premature, sad face. :("""
 		if not missingIds:
 			missingIds = None
-		self.runManager.updated_at 				= datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-		self.runManager.ended_at 			  	= datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		self.runManager.updated_at 				= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		self.runManager.ended_at 			  	= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		self.runManager.ending_status 			= False
 		self.runManager.emplids_not_processed 	= missingIds
 		self.commitThis()
@@ -50,10 +51,18 @@ class ProcessManager( object ):
 		if not missingIds:
 			missingIds = None
 		self.runManager.run_status 				= "ETL process ended cleanly"
-		self.runManager.updated_at 				= datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
-		self.runManager.ended_at 			  	= datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		self.runManager.updated_at 				= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
+		self.runManager.ended_at 			  	= datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
 		self.runManager.ending_status 			= True
 		self.runManager.emplids_not_processed 	= missingIds
 		self.commitThis()
 
+	def removeOldRuns( self ):
+		"""At some point we have to clean up the old records, why not just pop the older records, 1 month back"""
+		oneMonthAgo = datetime.utcnow() - relativedelta(months=1)
+		oldEtlProcessRuns = self.sesManager.query( EtlProcessManager ).filter( EtlProcessManager.created_at < oneMonthAgo ).all()
 
+		for oldRun in oldEtlProcessRuns:
+			self.sesManager.delete( oldRun )
+
+		self.commitThis()
