@@ -63,9 +63,9 @@ def processData( srcPersonAddress, sesTarget ):
 			Addresses ).filter(
 				Addresses.emplid == srcPersonAddress.emplid ).filter(
 				Addresses.address_type == srcPersonAddress.address_type ).filter(
-				Addresses.address_type == srcPersonAddress.address1 ).filter(
-				Addresses.address_type == srcPersonAddress.city ).filter(
-				Addresses.address_type == srcPersonAddress.postal ).filter(
+				Addresses.address1 == srcPersonAddress.address1 ).filter(
+				Addresses.city == srcPersonAddress.city ).filter(
+				Addresses.postal == srcPersonAddress.postal ).filter(
 				Addresses.updated_flag == False ).all()
 
 		return ret
@@ -164,9 +164,8 @@ def softDeleteData( tgtRecord, srcRecords ):
 			srcRecord.emplid == tgtRecord.emplid and
 			srcRecord.address_type == tgtRecord.address_type and
 			srcRecord.address1 == tgtRecord.address1 and
-			srcRecord.address2 == tgtRecord.address2 and
-			srcRecord.address3 == tgtRecord.address3 and
-			srcRecord.address4 == tgtRecord.address4 for srcRecord in srcRecords )
+			srcRecord.city == tgtRecord.city and
+			srcRecord.postal == tgtRecord.postal for srcRecord in srcRecords )
 
 	if dataMissing():
 		tgtRecord.deleted_at = datetime.datetime.utcnow().strftime( '%Y-%m-%d %H:%M:%S' )
