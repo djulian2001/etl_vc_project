@@ -44,7 +44,7 @@ def processData( srcPersonPhone, sesTarget ):
 			Phones ).filter( 
 				Phones.emplid == srcPersonPhone.emplid ).filter(
 				Phones.phone_type == srcPersonPhone.phone_type ).filter(
-				Phones.phone_type == cleanPhoneNumber( srcPersonPhone.phone ) ).filter(
+				Phones.phone == cleanPhoneNumber( srcPersonPhone.phone ) ).filter(
 				Phones.updated_flag == False ).all()
 
 		return ret

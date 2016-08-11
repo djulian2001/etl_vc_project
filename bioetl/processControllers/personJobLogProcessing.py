@@ -194,7 +194,7 @@ def softDeleteData( tgtRecord, srcRecords ):
 			@True: Means update the records deleted_at column
 			@False: Do nothing
 		"""
-		return not any( 
+		return not any(		
 			srcRecord.emplid == tgtRecord.emplid and
 			srcRecord.deptid == tgtRecord.deptid and
 			srcRecord.jobcode == tgtRecord.jobcode and
