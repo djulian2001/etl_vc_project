@@ -23,7 +23,8 @@ def getSourceData( sesSource, appState=None, qryList=None ):
 	else:
 		return sesSource.query(
 			AsuDwPsAddresses ).filter(
-				AsuDwPsAddresses.emplid.in_( qryList ) ).all()
+				AsuDwPsAddresses.emplid.in_( qryList ) ).filter(
+					AsuDwPsAddresses.address_type=='CLOC' ).all()
 
 def processData( srcPersonAddress, sesTarget ):
 	"""
