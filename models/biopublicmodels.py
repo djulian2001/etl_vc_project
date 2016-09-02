@@ -187,6 +187,7 @@ class SubAffiliations( BioPublic ):
     __tablename__ = 'subaffiliations'
 
     code = Column( String(7), unique = True, nullable=False )
+    display_title = Column( String(127), nullable=False, default='tbd' )
     title = Column( String(63), nullable=False )
     description = Column( String(287), nullable=False )
     proximity_scope = Column( String(15), nullable=False )
@@ -218,7 +219,10 @@ class PersonSubAffiliations( BioPublic ):
     campus = Column( String(7), nullable=True )
     title = Column( String(39), nullable=True )
     short_description = Column( String(23), nullable=False )
-    description = Column( String(47), nullable=False )
+    # this jury-rigged data juggle is because the web dev didn't join the subaffiliations table to this table within the internal application.
+    # The subaffiliations.display_title value will be written into this field by the application.  description MUST be preserved.
+    bio_override_description = Column( 'description', String(127), nullable=False, default='ASU' )
+    description = Column('dwps_description', String(47), nullable=False )
     directory_publish = Column( String(7), nullable=False )
     department = Column( String(31), nullable=False )
     department_directory = Column( String(255), nullable=True )

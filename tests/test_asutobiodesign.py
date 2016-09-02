@@ -199,6 +199,7 @@ class bioetlTests( unittest.TestCase ):
 		"""The person Sub Affiliation seed process..."""
 		self.seedPeople()
 		self.seedDepartments()
+		# self.seedSubAffiliationDeployed()
 		def addThis( seed ):
 			"""General add object pattern"""
 			srcHash = hashThisList( seed.values() )
@@ -779,63 +780,20 @@ class bioetlTests( unittest.TestCase ):
 		self.assertEquals(len ( tgtPreProcess ), 5 )
 		self.assertEquals(len( dwSrcList ), 3)
 
-		# aRec = [this for this in tgtPreProcess if this.emplid==1000130992  and this.deptid=='E0817'  and this.title=='Associate Research Scientist'  and this.job_indicator=='N']
-
-		# preDeleteObj = copy.deepcopy(aRec[0])
-
-		# print( preDeleteObj )
-		
-		# print( preDeleteObj.deleted_at )
-		# print( preDeleteObj.emplid )
-		# print( preDeleteObj.empl_rcd )
-		# print( preDeleteObj.title )
-		# print( preDeleteObj.department )
-		# print( preDeleteObj.mailcode )
-		# print( preDeleteObj.empl_class )
-		# print( preDeleteObj.job_indicator )
-		# print( preDeleteObj.location )
-		# print( preDeleteObj.hr_status )
-		# print( preDeleteObj.deptid )
-		# print( preDeleteObj.empl_status )
-		# print( preDeleteObj.fte )
-		# print( preDeleteObj.department_directory )
-
 		for dwSrcObj in dwSrcList:
 			tgtAction = processData( dwSrcObj, self.session )
 			self.session.add( tgtAction )
 		
 		tgtPostProcess = self.session.query( Jobs ).all()
 		self.assertEquals(len ( tgtPostProcess ), 6 )
-		# print('\n')
 		for dataRemoval in tgtPostProcess:
 			processedDataRemoval = softDeleteData( dataRemoval, dwSrcList )
 			if processedDataRemoval:
-				# print(processedDataRemoval)
-				# print( processedDataRemoval.deleted_at )
-				# print( processedDataRemoval.emplid )
-				# print( processedDataRemoval.empl_rcd )
-				# print( processedDataRemoval.title )
-				# print( processedDataRemoval.department )
-				# print( processedDataRemoval.mailcode )
-				# print( processedDataRemoval.empl_class )
-				# print( processedDataRemoval.job_indicator )
-				# print( processedDataRemoval.location )
-				# print( processedDataRemoval.hr_status )
-				# print( processedDataRemoval.deptid )
-				# print( processedDataRemoval.empl_status )
-				# print( processedDataRemoval.fte )
-				# print( processedDataRemoval.department_directory )
 				self.session.add( processedDataRemoval )
-		# print('\n')
 		tgtPostDeleted = self.session.query( Jobs ).filter( Jobs.deleted_at ).all()
 
 		self.assertEquals( len( tgtPostDeleted ), 3)
 
-
-
-############################################################################################################
-############################################################################################################
-############################################################################################################
 
 	def test_updatePersonJobsTitle( self ):
 		"""When a part of a records uniqueness is changed, the record will look as if it's new"""
@@ -882,7 +840,48 @@ class bioetlTests( unittest.TestCase ):
 		myReturnRecords = self.session.query( Jobs ).filter( Jobs.deleted_at==None ).all()
 		self.assertNotEquals( len( myReturnRecords ), 4 )
 		self.assertEquals( len( myReturnRecords ), 5 )
-		
+
+
+
+
+
+
+
+############################################################################################################
+############################################################################################################
+############################################################################################################
+
+
+	def test_personDepartmentSubAffiliationDisplayTitles( self ):
+		"""This test will look at the subaffilation.display_title value translation for the person_department_subaffilation.title"""
+		from bioetl.processControllers.personSubAffiliationProcessing import processData
+
+		self.seedPersonSubAffiliation()
+		self.seedSubAffiliationDeployed()
+
+		subAffs = copy.deepcopy( subAffiliationsCodesSeed )
+		peepSubAffs = copy.deepcopy( bdiPersonSubAffiliationSeeds )
+
+		subAffObjs = self.session.query( SubAffiliations ).all()
+
+		for newValue in peepSubAffs:
+			addNewObj = AsuDwPsSubAffiliations( **newValue )
+
+			newObj = processData( addNewObj, self.session )
+
+			if newObj.subaffiliation_id:
+				dTitle = self.session.query( SubAffiliations ).filter( SubAffiliations.id == newObj.subaffiliation_id ).all()
+
+				self.assertEquals( newObj.bio_override_description, dTitle[0].display_title )
+
+
+
+
+
+############################################################################################################
+############################################################################################################
+############################################################################################################
+
 
 	def test_deployedSubAffiliationRecordSelect( self ):
 		"""We are testing subAffiliationProcessing """

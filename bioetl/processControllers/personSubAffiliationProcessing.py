@@ -53,6 +53,11 @@ def processData( srcPersonSubAffiliation, sesTarget ):
 
 	srcHash = hashThisList( recordToList )
 
+	def getSubAffiliations():
+		return sesTarget.query(
+				SubAffiliations.id, SubAffiliations.display_title ).filter(
+					SubAffiliations.code == srcPersonSubAffiliation.subaffiliation_code ).first()
+	
 	def getTargetRecords():
 		"""
 			determine the personSubAffiliation exists in the target database.
@@ -69,6 +74,15 @@ def processData( srcPersonSubAffiliation, sesTarget ):
 		return ret
 
 	tgtRecords = getTargetRecords()
+
+	srcGetSubAffiliationId = getSubAffiliations()
+
+	if srcGetSubAffiliationId:
+		srcSubaffiliationId = srcGetSubAffiliationId.id
+		srcSubaffiliationDisplayTitle = srcGetSubAffiliationId.display_title
+	else:
+		srcSubaffiliationId = None
+		srcSubaffiliationDisplayTitle = srcPersonSubAffiliation.description
 
 	if tgtRecords:
 		""" 
@@ -90,6 +104,8 @@ def processData( srcPersonSubAffiliation, sesTarget ):
 			if tgtRecord.source_hash == srcHash:
 				tgtRecord.updated_flag = True
 				tgtRecord.deleted_at = None
+				tgtRecord.subaffiliation_id = srcSubaffiliationId
+				tgtRecord.bio_override_description = srcSubaffiliationDisplayTitle
 				return tgtRecord
 				break
 
@@ -100,6 +116,8 @@ def processData( srcPersonSubAffiliation, sesTarget ):
 			tgtRecord.updated_flag = True
 			tgtRecord.emplid = srcPersonSubAffiliation.emplid
 			tgtRecord.deptid = srcPersonSubAffiliation.deptid
+			tgtRecord.subaffiliation_id = srcSubaffiliationId
+			tgtRecord.bio_override_description = srcSubaffiliationDisplayTitle
 			tgtRecord.subaffiliation_code = srcPersonSubAffiliation.subaffiliation_code
 			tgtRecord.campus = srcPersonSubAffiliation.campus
 			tgtRecord.title = srcPersonSubAffiliation.title
@@ -124,15 +142,6 @@ def processData( srcPersonSubAffiliation, sesTarget ):
 
 		if srcGetPersonId and srcGetDepartmentId:
 			
-			srcGetSubAffiliationId = sesTarget.query(
-				SubAffiliations.id ).filter(
-					SubAffiliations.code == srcPersonSubAffiliation.subaffiliation_code ).first()
-
-			if srcGetSubAffiliationId:
-				srcSubaffiliationId = srcGetSubAffiliationId.id
-			else:
-				srcSubaffiliationId = None
-
 			insertPersonSubAffiliation = PersonSubAffiliations(
 				person_id = srcGetPersonId.id,
 				department_id = srcGetDepartmentId.id,
@@ -145,6 +154,7 @@ def processData( srcPersonSubAffiliation, sesTarget ):
 				campus = srcPersonSubAffiliation.campus,
 				title = srcPersonSubAffiliation.title,
 				short_description = srcPersonSubAffiliation.short_description,
+				bio_override_description = srcSubaffiliationDisplayTitle,
 				description = srcPersonSubAffiliation.description,
 				directory_publish = srcPersonSubAffiliation.directory_publish,
 				department = srcPersonSubAffiliation.department,
