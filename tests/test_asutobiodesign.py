@@ -927,10 +927,10 @@ class bioetlTests( unittest.TestCase ):
 		asuBdiSubAffCodes = BiodesignSubAffiliationCodes( self.session )
 		appFilter = AsuPsBioFilters( self.sessionOra, asuBdiSubAffCodes.subAffCodes )
 		sqlDeptNeedle = '"SYSADM"."PS_DEPT_TBL".deptid LIKE :deptid_1 GROUP BY "SYSADM"."PS_DEPT_TBL".deptid'
-		appDeptSubQry = appFilter.getBiodesignDeptids( False )
-		deptMatch = sqlDeptNeedle in str( appDeptSubQry )
-		self.assertTrue( appDeptSubQry )
-		self.assertTrue( deptMatch )
+		# appDeptSubQry = appFilter.getBiodesignDeptids( False )
+		# deptMatch = sqlDeptNeedle in str( appDeptSubQry )
+		# self.assertTrue( appDeptSubQry )
+		# self.assertTrue( deptMatch )
 		appEmplidSubQry = appFilter.getAllBiodesignEmplidList( False )
 		self.assertTrue( appEmplidSubQry )
 		sqlEmplidNeedle='"DIRECTORY"."SUBAFFILIATION".subaffiliation_code IN (:subaffiliation_code_1, :subaffiliation_code_2, :subaffiliation_code_3, :subaffiliation_code_4, :subaffiliation_code_5, :subaffiliation_code_6, :subaffiliation_code_7, :subaffiliation_code_8, :subaffiliation_code_9, :subaffiliation_code_10, :subaffiliation_code_11, :subaffiliation_code_12)'
