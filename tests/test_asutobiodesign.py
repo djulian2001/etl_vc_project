@@ -18,6 +18,7 @@ class AppSetupTest( object ):
 	def __init__( self ):
 		dbUser = 'app_tester'
 		dbPw = 'tannersNeedLove2Plz'
+		# dbPw = 'Plz'
 		dbHost = 'localhost'
 		dbName	= 'test_bio_public'
 		engineString = 'mysql+mysqldb://%s:%s@%s/%s' % ( dbUser, dbPw, dbHost, dbName )
@@ -1268,7 +1269,7 @@ class bioetlTests( unittest.TestCase ):
 
 		self.seedSubAffiliation()
 		aRun.setState()
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			aRun.runMe()
 
 		# with self.assertRaises( ProgrammingError ):
@@ -1350,9 +1351,9 @@ class bioetlTests( unittest.TestCase ):
 			mpc.module.getSourceData()
 		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
 			mpc.module.getSourceData( mpc.sesSource )
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
 		self.assertTrue( mpc.module.processData )
 		with self.assertRaises( TypeError ):
@@ -1445,9 +1446,12 @@ class bioetlTests( unittest.TestCase ):
 			mpc.module.getSourceData()
 		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
 			mpc.module.getSourceData( mpc.sesSource )
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
-		with self.assertRaises( ProgrammingError ):
+		# OperationalError
+		# with self.assertRaises( ProgrammingError ):
+		# 	self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
+		with self.assertRaises( OperationalError ):
 			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
 		self.assertTrue( mpc.module.processData )
 		with self.assertRaises( TypeError ):
@@ -1491,9 +1495,9 @@ class bioetlTests( unittest.TestCase ):
 			mpc.module.getSourceData()
 		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
 			mpc.module.getSourceData( mpc.sesSource )
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
 		self.assertTrue( mpc.module.processData )
 		with self.assertRaises( TypeError ):
@@ -1537,9 +1541,9 @@ class bioetlTests( unittest.TestCase ):
 			mpc.module.getSourceData()
 		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
 			mpc.module.getSourceData( mpc.sesSource )
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
 		self.assertTrue( mpc.module.processData )
 		with self.assertRaises( TypeError ):
@@ -1583,9 +1587,9 @@ class bioetlTests( unittest.TestCase ):
 			mpc.module.getSourceData()
 		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
 			mpc.module.getSourceData( mpc.sesSource )
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
 		self.assertTrue( mpc.module.processData )
 		with self.assertRaises( TypeError ):
@@ -1675,9 +1679,9 @@ class bioetlTests( unittest.TestCase ):
 			mpc.module.getSourceData()
 		with self.assertRaises( AttributeError ) or self.assertRaises( ProgrammingError ):
 			mpc.module.getSourceData( mpc.sesSource )
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			self.assertTrue( mpc.module.getSourceData( mpc.sesSource, mpc.appState ) )
-		with self.assertRaises( ProgrammingError ):
+		with self.assertRaises( OperationalError ):
 			mpc.module.getSourceData( mpc.sesSource, mpc.appState, mpc.queryByList )
 		self.assertTrue( mpc.module.processData )
 		with self.assertRaises( TypeError ):

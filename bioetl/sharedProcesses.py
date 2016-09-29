@@ -2,7 +2,7 @@ from sqlalchemy.sql import text
 from sqlalchemy import func
 import hashlib
 
-from models.asudwpsmodels import AsuDwPsDepartments, AsuDwPsPerson, AsuDwPsSubAffiliations, AsuDwPsJobsLog
+from models.asudwpsmodels import AsuDwPsDepartments, AsuDwPsJobs, AsuDwPsPerson, AsuDwPsSubAffiliations, AsuDwPsJobsLog
 from models.biopublicmodels import SubAffiliations
 
 ###############################################################################
@@ -95,26 +95,6 @@ class AsuPsBioFilters():
         self.session = session
         self.subAffsCodes = subAffsCodes
 
-    # def getBiodesignDeptids( self, subQuery=True ):
-    #     """
-    #         The list of department ids that have the matching condition of 'E08%' in the
-    #         deptid.
-
-    #     """
-    #     # biodesignDeptids = []
-    #     sub_groups = (
-    #         self.session.query(
-    #             AsuDwPsDepartments.deptid ).filter(
-    #                 AsuDwPsDepartments.deptid.like( "E08%" )
-    #             ).group_by( AsuDwPsDepartments.deptid )
-    #         )
-        
-    #     if subQuery == True:
-    #         return sub_groups.subquery()
-    #     else:
-    #         return sub_groups
-
-
     def getAllBiodesignEmplidList(self, subQuery=True ):
         """ 
         The primary list of people that will be used to define the list of emplid we
@@ -130,10 +110,6 @@ class AsuPsBioFilters():
         the current ASU log, making them, inactive and not a record we wish to get.
         """
         
-        jobActionExcludeCodes = ['TER','RET']
-        
-        # sub_groups = self.getBiodesignDeptids()
-
         affiliation_emplid_list = (
             self.session.query(
                 AsuDwPsSubAffiliations.emplid.label( "emplid" ) ).join(
@@ -142,23 +118,11 @@ class AsuPsBioFilters():
                         AsuDwPsSubAffiliations.deptid.like( "E08%" ) ).filter(
                         AsuDwPsSubAffiliations.subaffiliation_code.in_( self.subAffsCodes ) ) )
 
-        sub_jobs = (
-            self.session.query(
-                AsuDwPsJobsLog.emplid, 
-                AsuDwPsJobsLog.deptid, 
-                AsuDwPsJobsLog.effdt, 
-                AsuDwPsJobsLog.action,
-                func.row_number().over(
-                    partition_by = [AsuDwPsJobsLog.emplid],
-                    order_by = AsuDwPsJobsLog.action_dt.desc()
-                    ).label( 'rn' ) ).filter( 
-                        ~AsuDwPsJobsLog.action.in_( ['DTA'] ) ) ).subquery()
-
+       
         employee_emplid_list = (
-            self.session.query( sub_jobs.c.emplid.label( "emplid" ) ).filter(
-                    sub_jobs.c.rn == 1 ).filter(
-                    ~sub_jobs.c.action.in_( jobActionExcludeCodes ) ).filter(
-                    sub_jobs.c.deptid.like( "E08%" ) ) )
+            self.session.query(
+                AsuDwPsJobs.emplid.label( "emplid" ) ).filter(
+                    AsuDwPsJobs.deptid.like( "E08%") ) )
 
         emplid_list = ( employee_emplid_list.union( affiliation_emplid_list ) )
 
